@@ -10,11 +10,10 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 
 public class HistoryFrame extends JFrame{
     private List<Task> tasksHistory;
-    public HistoryFrame(int userId){
+    public HistoryFrame(int userId, AppFrame appFrame){
         setTitle("History");
         ImageIcon appIcon = new ImageIcon("src/assets/app_icon.png");
         setIconImage(appIcon.getImage());
@@ -26,6 +25,14 @@ public class HistoryFrame extends JFrame{
         JPanel taskPanel = new JPanel();
         taskPanel.setLayout(new BoxLayout(taskPanel, BoxLayout.Y_AXIS));
         JScrollPane taskScrollPane = new JScrollPane(taskPanel);
+
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+                appFrame.saveChangesDB();
+                appFrame.updateTaskList();
+            }
+        });
         
         for(Task task : tasksHistory){
             JLabel taskTitle = new JLabel(task.getTaskTitle());

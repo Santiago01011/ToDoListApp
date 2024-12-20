@@ -60,6 +60,8 @@ public class AppFrame extends JFrame {
 
         //load tasks from the database
         loadTasksFromDatabase();
+        updateTaskList();
+        
 
         // Add window listener to save changes on close
         addWindowListener(new java.awt.event.WindowAdapter() {
@@ -147,6 +149,7 @@ public class AppFrame extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 tasks.removeIf(task -> task.getIsDone());
+                saveChangesToDatabase();
                 updateTaskList();
             }
         });
@@ -155,7 +158,8 @@ public class AppFrame extends JFrame {
         historyButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                new HistoryFrame(currentUserId);
+                saveChangesToDatabase();
+                new HistoryFrame(currentUserId, AppFrame.this);
             }
         });
 
@@ -202,9 +206,12 @@ public class AppFrame extends JFrame {
     // Method to load tasks from the database
     private void loadTasksFromDatabase(){
         tasks = TaskDAO.loadTasksFromDatabase(currentUserId, false);
-        updateTaskList();
+        //updateTaskList();
     }
 
+    public void saveChangesDB(){
+        saveChangesToDatabase();
+    }
     // Method to save changes to the database
     private void saveChangesToDatabase(){
         for (Task task : tasksToAdd){
@@ -226,98 +233,99 @@ public class AppFrame extends JFrame {
         Task task = new Task(tasks.size() + 1, taskTitle, description, 1);
         tasks.add(task);
         tasksToAdd.add(task);
+        saveChangesToDatabase();
         updateTaskList();
     }
 
-    // Method to update the task list display
-    private void updateTaskList() {
+    // Method to update the task list
+    public void updateTaskList() {
         centerPanel.removeAll();
+        loadTasksFromDatabase();
         for (Task task : tasks) {
-            JPanel taskPanel = new JPanel(new BorderLayout());
-        
-            // Create a panel for the checkbox
-            JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-            JCheckBox updateCheckBox = new JCheckBox("", task.getIsDone());
-            updateCheckBox.setToolTipText("Mark as Done");
-            checkboxPanel.add(updateCheckBox);
-
-            // Create a panel for the task title
-            JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
-            JLabel taskLabel = new JLabel(task.getTaskTitle());
-            titlePanel.add(taskLabel);
-
-            // Load icons for view and delete buttons
-            ImageIcon viewIcon = new ImageIcon("src/assets/view.png");
-            ImageIcon deleteIcon = new ImageIcon("src/assets/delete.png");
-            // scale the icons to fit the button            
-            viewIcon = new ImageIcon(viewIcon.getImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH));
-            deleteIcon = new ImageIcon(deleteIcon.getImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH));
-
-            JButton viewButton = new JButton(viewIcon);
-            viewButton.setPreferredSize(new Dimension(20, 20));
-            viewButton.setBorderPainted(false);
-            viewButton.setContentAreaFilled(false);
-            viewButton.setToolTipText("View Task Details");
-
-            JButton deleteButton = new JButton(deleteIcon);
-            deleteButton.setPreferredSize(new Dimension(20, 20));
-            deleteButton.setBorderPainted(false);
-            deleteButton.setContentAreaFilled(false);
-            deleteButton.setToolTipText("Delete Task");
-
-            // Add action listener to the update checkbox
-            updateCheckBox.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    task.setIsDone(!task.getIsDone());
-                    if(!tasksToUpdate.contains(task)){
-                        tasksToUpdate.add(task);
-                    }
-                    updateTaskList();
-                }
-            });
-
-            // Add action listener to the view button
-            viewButton.addActionListener(new ActionListener() {
-                @Override
-                public void actionPerformed(ActionEvent e) {
-                    viewTaskDetails(task);
-                }
-            });
-
-            // Add action listener to the delete button
-            deleteButton.addActionListener(new ActionListener(){
-                @Override
-                public void actionPerformed(ActionEvent e){
-                    if(tasksToAdd.contains(task)){
-                        tasksToAdd.remove(task);
-                    } else {
-                        tasksToDelete.add(task);
-                    }
-                    tasks.remove(task);
-                    updateTaskList();
-                }
-            });
-
-            // Panel for the action buttons
-            JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            actionPanel.add(viewButton);
-            actionPanel.add(deleteButton);
-
-            // Add space between the title and the actions
-            taskPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-
-            // Add the panels to the taskPanel
-            taskPanel.add(checkboxPanel, BorderLayout.WEST);
-            taskPanel.add(titlePanel, BorderLayout.CENTER);
-            taskPanel.add(actionPanel, BorderLayout.EAST);
+            JPanel taskPanel = createTaskPanel(task);
             centerPanel.add(taskPanel);
         }
         centerPanel.revalidate();
         centerPanel.repaint();
     }
-
-
-
     
+    private JPanel createTaskPanel(Task task) {
+        JPanel taskPanel = new JPanel(new BorderLayout());
+        taskPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        taskPanel.add(createCheckboxPanel(task), BorderLayout.WEST);
+        taskPanel.add(createTitlePanel(task), BorderLayout.CENTER);
+        taskPanel.add(createActionPanel(task), BorderLayout.EAST);
+        return taskPanel;
+    }
+    
+    private JPanel createCheckboxPanel(Task task) {
+        JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JCheckBox updateCheckBox = new JCheckBox("", task.getIsDone());
+        updateCheckBox.setToolTipText("Mark as Done");
+        updateCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                task.setIsDone(!task.getIsDone());
+                if (!tasksToUpdate.contains(task)) {
+                    tasksToUpdate.add(task);
+                }
+                saveChangesToDatabase();
+                updateTaskList();
+            }
+        });
+        checkboxPanel.add(updateCheckBox);
+        return checkboxPanel;
+    }
+    
+    private JPanel createTitlePanel(Task task) {
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        JLabel taskLabel = new JLabel(task.getTaskTitle());
+        titlePanel.add(taskLabel);
+        return titlePanel;
+    }
+    
+    private JPanel createActionPanel(Task task) {
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+    
+        ImageIcon viewIcon = new ImageIcon("src/assets/view.png");
+        ImageIcon deleteIcon = new ImageIcon("src/assets/delete.png");
+        viewIcon = new ImageIcon(viewIcon.getImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH));
+        deleteIcon = new ImageIcon(deleteIcon.getImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH));
+    
+        JButton viewButton = new JButton(viewIcon);
+        viewButton.setPreferredSize(new Dimension(20, 20));
+        viewButton.setBorderPainted(false);
+        viewButton.setContentAreaFilled(false);
+        viewButton.setToolTipText("View Task Details");
+        viewButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewTaskDetails(task);
+            }
+        });
+    
+        JButton deleteButton = new JButton(deleteIcon);
+        deleteButton.setPreferredSize(new Dimension(20, 20));
+        deleteButton.setBorderPainted(false);
+        deleteButton.setContentAreaFilled(false);
+        deleteButton.setToolTipText("Delete Task");
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (tasksToAdd.contains(task)) {
+                    tasksToAdd.remove(task);
+                } else {
+                    tasksToDelete.add(task);
+                }
+                tasks.remove(task);
+                saveChangesToDatabase();
+                updateTaskList();
+            }
+        });
+    
+        actionPanel.add(viewButton);
+        actionPanel.add(deleteButton);
+        return actionPanel;
+    }
+
 }

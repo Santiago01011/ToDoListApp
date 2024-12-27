@@ -1,4 +1,6 @@
-package classes;
+package main.DBH;
+
+import main.model.Task;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -7,11 +9,12 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+
 public class TaskDAO {
     public static List<Task> loadTasksFromDatabase(int userId, boolean isDone) {
         List<Task> tasks = new ArrayList<>();
         String sql = "SELECT * FROM tasks WHERE user_id = ? AND is_done = ?";
-        try (Connection conn = DatabaseHelper.connect();
+        try (Connection conn = PSQLtdldbh.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
             pstmt.setBoolean(2, isDone);
@@ -36,7 +39,7 @@ public class TaskDAO {
 
     public static void saveTaskToDatabase(Task task) {
         String sql = "INSERT INTO tasks (task_title, description, date_added, is_done, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id";
-        try (Connection conn = DatabaseHelper.connect();
+        try (Connection conn = PSQLtdldbh.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, task.getTaskTitle());
             pstmt.setString(2, task.getDescription());
@@ -55,7 +58,7 @@ public class TaskDAO {
 
     public static void updateTaskInDatabase(Task task) {
         String sql = "UPDATE tasks SET task_title = ?, description = ?, is_done = ? WHERE id = ?";
-        try (Connection conn = DatabaseHelper.connect();
+        try (Connection conn = PSQLtdldbh.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, task.getTaskTitle());
             pstmt.setString(2, task.getDescription());
@@ -70,7 +73,7 @@ public class TaskDAO {
 
     public static void deleteTaskFromDatabase(Task task) {
         String sql = "DELETE FROM tasks WHERE id = ?";
-        try (Connection conn = DatabaseHelper.connect();
+        try (Connection conn = PSQLtdldbh.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, task.getId());
             pstmt.executeUpdate();

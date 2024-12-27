@@ -1,10 +1,15 @@
 package main.UI;
 
 import main.COMMON.common;
+import main.DBH.TaskDAO;
 import main.model.Task;
 
+import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
+import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
@@ -21,12 +26,19 @@ import java.awt.event.ActionListener;
 
 public class TasksFrame extends Frame{
     public List<Task> tasks;
+    public List<Task> tasksToAdd;
+    public List<Task> tasksToDelete;
+    public List<Task> tasksToUpdate;
+    
     private JTextArea taskDetailsArea;
+    private JPanel centerPanel;
     public TasksFrame(String title, int userId){
         super(title);
         addUIComponentsNorth();
         addUIComponentsCenter();
         addUIComponentsSouth();
+        tasks = TaskDAO.loadTasksFromDatabase(userId, false);
+        updateTaskList();
     }
 
     private void addUIComponentsNorth(){
@@ -104,25 +116,156 @@ public class TasksFrame extends Frame{
         
     }
 
-    //this panel is gonna be updated by other methods
+    //this panel is gonna be updated by other methods   
     private void addUIComponentsCenter(){
-        //Panel to display the tasks and their actions buttons
-        JPanel centerPanel = new JPanel(new GridLayout(0,1));
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        JScrollPane scrollPane = new JScrollPane(centerPanel);
-        scrollPane.getViewport().setBackground(common.PRIMARY_COLOR);
+        centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        taskDetailsArea = new JTextArea(10, 20);
+        centerPanel.setBackground(common.PRIMARY_COLOR);
+
+        JScrollPane scrollPane = new JScrollPane(centerPanel);
+        scrollPane.getViewport().setBackground(common.PRIMARY_COLOR); // Set the background color of the scroll pane viewport
+        scrollPane.setOpaque(false); // Make the scroll pane transparent
+        scrollPane.getViewport().setOpaque(true);        taskDetailsArea = new JTextArea(10, 20);
+        
         taskDetailsArea.setEditable(false);
         taskDetailsArea.setLineWrap(true);
         taskDetailsArea.setWrapStyleWord(true);
         taskDetailsArea.setBackground(common.TERTIARY_COLOR);
         taskDetailsArea.setForeground(common.TEXT_COLOR);
         taskDetailsArea.setFont(new java.awt.Font("Dialog", Font.PLAIN, 14));
-        scrollPane.setViewportView(taskDetailsArea);
+        
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setOpaque(false);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
         mainPanel.add(taskDetailsArea, BorderLayout.SOUTH);
+        
         add(mainPanel, BorderLayout.CENTER);
     }
 
+    public void updateTaskList(){
+        centerPanel.removeAll();
+        //load all the tasks from the database
+        tasks = TaskDAO.loadTasksFromDatabase(1, false);
+        //display the tasks in the centerPanel
+        for(Task task : tasks){
+            JPanel taskPanel = createTaskPanel(task);
+            centerPanel.add(taskPanel);
+        }
+        centerPanel.revalidate();
+        centerPanel.repaint();
+    }
+
+    private JPanel createTaskPanel(Task task) {
+        JPanel taskPanel = new JPanel(new BorderLayout());
+        taskPanel.setOpaque(false);
+        taskPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        taskPanel.add(createCheckboxPanel(task), BorderLayout.WEST);
+        taskPanel.add(createTitlePanel(task), BorderLayout.CENTER);
+        taskPanel.add(createActionPanel(task), BorderLayout.EAST);
+        return taskPanel;
+    }
+
+    private JPanel createCheckboxPanel(Task task) {
+        JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        checkboxPanel.setOpaque(false);
+        JCheckBox updateCheckBox = new JCheckBox("", task.getIsDone());
+        updateCheckBox.setToolTipText("Mark as Done");
+        updateCheckBox.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        updateCheckBox.setOpaque(false);
+        updateCheckBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                task.setIsDone(!task.getIsDone());
+                if (!tasksToUpdate.contains(task)) {
+                    tasksToUpdate.add(task);
+                }
+                saveChangesToDatabase();
+                updateTaskList();
+            }
+        });
+        checkboxPanel.add(updateCheckBox);
+        return checkboxPanel;
+    }
+    
+    private JPanel createTitlePanel(Task task) {
+        JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        titlePanel.setOpaque(false);
+        JLabel taskLabel = new JLabel(task.getTaskTitle());
+        titlePanel.add(taskLabel);
+        return titlePanel;
+    }
+    
+    private JPanel createActionPanel(Task task) {
+        JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        actionPanel.setOpaque(false);
+    
+        ImageIcon viewIcon = new ImageIcon("src/main/assets/view.png");
+        ImageIcon deleteIcon = new ImageIcon("src/main/assets/delete.png");
+        viewIcon = new ImageIcon(viewIcon.getImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH));
+        deleteIcon = new ImageIcon(deleteIcon.getImage().getScaledInstance(20, 20, java.awt.Image.SCALE_SMOOTH));
+    
+        JButton viewButton = new JButton(viewIcon);
+        viewButton.setPreferredSize(new Dimension(20, 20));
+        viewButton.setBorderPainted(false);
+        viewButton.setContentAreaFilled(false);
+        viewButton.setToolTipText("View Task Details");
+        viewButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                viewTaskDetails(task);
+            }
+        });
+    
+        JButton deleteButton = new JButton(deleteIcon);
+        deleteButton.setPreferredSize(new Dimension(20, 20));
+        deleteButton.setBorderPainted(false);
+        deleteButton.setContentAreaFilled(false);
+        deleteButton.setToolTipText("Delete Task");
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (tasksToAdd.contains(task)) {
+                    tasksToAdd.remove(task);
+                } else {
+                    tasksToDelete.add(task);
+                }
+                tasks.remove(task);
+                saveChangesToDatabase();
+                updateTaskList();
+            }
+        });
+    
+        actionPanel.add(viewButton);
+        actionPanel.add(deleteButton);
+        return actionPanel;
+    }
+
+    // Method to view the task details
+    private void viewTaskDetails(Task task) {
+        taskDetailsArea.setText(task.viewTaskDesc());
+    }
+    
+    // Method to save changes to the database
+    private void saveChangesToDatabase(){
+        for (Task task : tasksToAdd){
+            TaskDAO.saveTaskToDatabase(task);
+        }
+        for (Task task : tasksToUpdate){
+            TaskDAO.updateTaskInDatabase(task);
+        }
+        for (Task task : tasksToDelete){
+            TaskDAO.deleteTaskFromDatabase(task);
+        }
+        tasksToAdd.clear();
+        tasksToUpdate.clear();
+        tasksToDelete.clear();
+    }
+
+    // Method to add a new task
+    public void addTask(String taskTitle, String description) {
+        Task task = new Task(tasks.size() + 1, taskTitle, description, 1);
+        tasks.add(task);
+        tasksToAdd.add(task);
+        updateTaskList();
+    }
 }

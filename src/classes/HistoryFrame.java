@@ -31,6 +31,8 @@ public class HistoryFrame extends JFrame{
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
                 appFrame.saveChangesDB();
                 appFrame.updateTaskList();
+                appFrame.dispose();
+                new AppFrame();
             }
         });
         

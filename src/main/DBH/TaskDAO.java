@@ -82,4 +82,71 @@ public class TaskDAO {
             e.printStackTrace();
         }
     }
+
+    public static boolean validateUserFromDatabase(String username, String password) {
+        String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+        try (Connection conn = PSQLtdldbh.connect();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            ResultSet rs = pstmt.executeQuery();
+            if (!rs.next()) {
+                System.out.println("Invalid username or password");
+                return false;
+            } else {
+                System.out.println("User validated");
+                return true;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error validating user from the database");
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static int getUserId(String username) {
+        String sql = "SELECT id FROM users WHERE username = ?";
+        try (Connection conn = PSQLtdldbh.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting user id from the database");
+            e.printStackTrace();
+        }
+        return -1;
+    }
+
+    public static boolean getUsername(String username) {
+        String sql = "SELECT * FROM users WHERE username = ?";
+        try (Connection conn = PSQLtdldbh.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return true;
+            }
+        } catch (SQLException e) {
+            System.out.println("Error getting username from the database");
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static void registerUser(String username, String password) {
+        String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+        try (Connection conn = PSQLtdldbh.connect();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            pstmt.setString(2, password);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Error registering user to the database");
+            e.printStackTrace();
+        }
+    }
+
 }

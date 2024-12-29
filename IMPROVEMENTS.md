@@ -26,3 +26,21 @@ This file tracks the expected improvements and steps for each day.
 - Implement users profiles with private tasks. ✔
 - Implement a history of completed tasks by user. ✔
 - Implement functionality to restore tasks from history. ✔
+
+### Day 3
+
+- Re-code all the project using the MVC pattern. ✔
+- Now the project is divided into three packages: model, UI, and DBHandler. ✔
+- Implement a toggle button to switch between day and night mode. ✔
+- Improve the UI with additional styling and layout adjustments. ✔
+- Now the application has a Day and Night mode switch. ✔
+- Improve the aplicattion performance. ✔
+- Now the history updates the TaskFrame when a task is restored. ✔
+- Now the update function is more efficient. ✔
+- Now the database handler works with the MVC pattern. ✔
+- Implement a login and register screen. ✔
+
+### Day 4
+
+- Implement a file handler to save the user's data whitout a database. 
+- Implement a way to use the app without a database.

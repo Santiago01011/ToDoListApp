@@ -1,7 +1,7 @@
-package main.java.UI;
+package UI;
 
-import main.java.COMMON.common;
-import main.java.DBH.TaskDAO;
+import COMMON.common;
+import DBH.TaskDAO;
 
 import javax.swing.*;
 import java.awt.*;

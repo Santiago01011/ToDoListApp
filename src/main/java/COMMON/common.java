@@ -1,4 +1,4 @@
-package main.java.COMMON;
+package COMMON;
 
 import java.awt.Color;
 import java.io.FileInputStream;

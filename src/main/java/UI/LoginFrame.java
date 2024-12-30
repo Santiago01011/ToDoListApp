@@ -1,9 +1,10 @@
-package main.java.UI;
+package UI;
 
-import main.java.COMMON.common;
-import main.java.DBH.TaskDAO;
+import COMMON.common;
+import DBH.TaskDAO;
 
 import javax.swing.*;
+
 import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -27,43 +28,28 @@ public class LoginFrame extends Frame{
 
     private void addLoginUIComponents(){
         JLabel titleLabel = new JLabel("Login");
-        titleLabel.setFont(new Font("Dialog", Font.BOLD, 25));
-        titleLabel.setForeground(common.getTextColor());
-        titleLabel.setBounds(160, 20, 400, 30);
-        
+        titleLabel.setFont(new Font("Dialog", Font.BOLD, 30));
+        titleLabel.setBounds(150, 30, 100, 35);
+
         JTextField usernameField = new JTextField("Username");
-        usernameField.setFont(new Font("Dialog", Font.PLAIN, 15));
-        usernameField.setForeground(common.getTextColor());
         usernameField.setBounds(100, 100, 200, 30);
-        usernameField.setBackground(common.getTertiaryColor());
 
         JPasswordField passwordField = new JPasswordField("Password");
-        passwordField.setFont(new Font("Dialog", Font.PLAIN, 15));
-        passwordField.setForeground(common.getTextColor());
         passwordField.setBounds(100, 150, 200, 30);
-        passwordField.setBackground(common.getTertiaryColor());
 
         ImageIcon toggleColorIcon = common.getModeIcon();
         JButton toggleColorButton = new JButton(toggleColorIcon);
-        toggleColorButton.setBackground(common.getSecondaryColor());
-        toggleColorButton.setForeground(common.getTextColor());
-        toggleColorButton.setFont(new Font("Dialog", Font.BOLD, 12));
         toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        toggleColorButton.setBounds(340, 20, 30, 30);
+        toggleColorButton.setBounds(340, 30, 30, 30);
         toggleColorButton.setToolTipText("Toggle color mode");
 
         JButton loginButton = new JButton("Login");
-        loginButton.setBackground(common.getSecondaryColor());
-        loginButton.setForeground(common.getTextColor());
-        loginButton.setFont(new Font("Dialog", Font.BOLD, 12));
         loginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         loginButton.setBounds(150, 210, 100, 30);
 
         JLabel registerLabel = new JLabel("Don't have an account? Register here");
-        registerLabel.setFont(new Font("Dialog", Font.PLAIN, 12));
-        registerLabel.setForeground(common.getTextColor());
-        registerLabel.setBounds(100, 250, 250, 30);
         registerLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        registerLabel.setBounds(100, 250, 250, 30);
 
         addFocusListeners(usernameField, "Username");
         addFocusListeners(passwordField, "Password");

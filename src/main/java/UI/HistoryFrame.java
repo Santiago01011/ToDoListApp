@@ -1,9 +1,9 @@
-package main.java.UI;
+package UI;
 
 
-import main.java.COMMON.common;
-import main.java.DBH.TaskDAO;
-import main.java.model.Task;
+import COMMON.common;
+import DBH.TaskDAO;
+import model.Task;
 
 import java.awt.BorderLayout;
 

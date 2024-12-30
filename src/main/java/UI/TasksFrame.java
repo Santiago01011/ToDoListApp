@@ -1,8 +1,8 @@
-package main.java.UI;
+package UI;
 
-import main.java.COMMON.common;
-import main.java.DBH.TaskDAO;
-import main.java.model.Task;
+import COMMON.common;
+import DBH.TaskDAO;
+import model.Task;
 
 import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
@@ -50,7 +50,6 @@ public class TasksFrame extends Frame{
         addUIComponentsNorth();
         addUIComponentsCenter();
         addUIComponentsSouth();
-        tasks = TaskDAO.loadTasksFromDatabase(userId, false);
         updateTaskList();
     }
     
@@ -60,43 +59,33 @@ public class TasksFrame extends Frame{
         JPanel northPanel = new JPanel(new GridLayout(3,1));
         //subpanels
         JPanel todoTitlePanel = new JPanel(new FlowLayout());
-        JPanel titlePanel = new JPanel(new FlowLayout());
+        JPanel taskTitlePanel = new JPanel(new FlowLayout()); //taskTitlePanel
         JPanel descriptionPanel = new JPanel(new FlowLayout());
         // Make panel transparent
         northPanel.setOpaque(false);
         todoTitlePanel.setOpaque(false);
-        titlePanel.setOpaque(false);
+        taskTitlePanel.setOpaque(false);
         descriptionPanel.setOpaque(false);
         //create components
         todoLabel = new JLabel("To Do List");
         todoLabel.setFont(new Font("Dialog", Font.BOLD, 20));
-        todoLabel.setForeground(common.getTextColor());
         
         JButton addButton = new JButton("Add Task");
-        addButton.setBackground(common.getSecondaryColor());
         addButton.setPreferredSize(new Dimension(100, 20));
-        addButton.setForeground(common.getTextColor());
-        addButton.setFont(new Font("Dialog", Font.BOLD, 12));
         addButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        JTextField taskField = new JTextField("Task title", 20);   
-        taskField.setBackground(common.getTertiaryColor());
-        taskField.setForeground(common.getTextColor());
-        taskField.setFont(new Font("Dialog", Font.BOLD, 14));
+        JTextField taskField = new JTextField("Task title", 20);
         
         JTextField taskDescriptionField = new JTextField("Task description",32);
-        taskDescriptionField.setBackground(common.getTertiaryColor());
-        taskDescriptionField.setForeground(common.getTextColor());
-        taskDescriptionField.setFont(new Font("Dialog", Font.PLAIN, 14));
         
         //add components to subpanels
         todoTitlePanel.add(todoLabel);
-        titlePanel.add(taskField);
-        titlePanel.add(addButton);
+        taskTitlePanel.add(taskField);
+        taskTitlePanel.add(addButton);
         descriptionPanel.add(taskDescriptionField);
         //add subpanels to northPanel
         northPanel.add(todoTitlePanel);
-        northPanel.add(titlePanel);
+        northPanel.add(taskTitlePanel);
         northPanel.add(descriptionPanel);
         //add northPanel to the frame
         add(northPanel, BorderLayout.NORTH);
@@ -151,22 +140,13 @@ public class TasksFrame extends Frame{
         southPanel.setOpaque(false);
         //create components
         JButton updateButton = new JButton("Update");
-        updateButton.setBackground(common.getSecondaryColor());
-        updateButton.setForeground(common.getTextColor());
-        updateButton.setFont(new Font("Dialog", Font.BOLD, 12));
         updateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         ImageIcon toggleColorIcon = common.getModeIcon();
         toggleColorButton = new JButton(toggleColorIcon);
-        toggleColorButton.setBackground(common.getSecondaryColor());
-        toggleColorButton.setForeground(common.getTextColor());
-        toggleColorButton.setFont(new Font("Dialog", Font.BOLD, 12));
         toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JButton historyButton = new JButton("History");
-        historyButton.setBackground(common.getSecondaryColor());
-        historyButton.setForeground(common.getTextColor());
-        historyButton.setFont(new Font("Dialog", Font.BOLD, 12));
         historyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         //add components to southPanel
         southPanel.add(updateButton);
@@ -201,6 +181,7 @@ public class TasksFrame extends Frame{
     //Method to initialize the Center Panel
     //this panel is gonna be updated by other methods   
     private void addUIComponentsCenter(){
+
         centerPanel = new JPanel();
         centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
         centerPanel.setBackground(common.getPrimaryColor());
@@ -209,14 +190,12 @@ public class TasksFrame extends Frame{
         scrollPane.getViewport().setBackground(common.getPrimaryColor()); // Set the background color of the scroll pane viewport
         scrollPane.setOpaque(false); // Make the scroll pane transparent
         scrollPane.getViewport().setOpaque(true);        
-        taskDetailsArea = new JTextArea(10, 20);
         
+        taskDetailsArea = new JTextArea(10, 20);        
         taskDetailsArea.setEditable(false);
         taskDetailsArea.setLineWrap(true);
         taskDetailsArea.setWrapStyleWord(true);
-        taskDetailsArea.setBackground(common.getTertiaryColor());
-        taskDetailsArea.setForeground(common.getTextColor());
-        taskDetailsArea.setFont(new java.awt.Font("Dialog", Font.PLAIN, 14));
+
         //add gap between the text area and the boarders
         taskDetailsArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 5));
         JPanel mainPanel = new JPanel(new BorderLayout());
@@ -237,12 +216,13 @@ public class TasksFrame extends Frame{
         return taskPanel;
     }
     
+    //Method to create the checkbox panel  //modify
     private JPanel createCheckboxPanel(Task task) {
         JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         checkboxPanel.setOpaque(false);
         JCheckBox updateCheckBox = new JCheckBox("", task.getIsDone());
         updateCheckBox.setToolTipText("Mark as Done");
-        updateCheckBox.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+        updateCheckBox.setCursor(new Cursor(Cursor.HAND_CURSOR));
         updateCheckBox.setOpaque(false);
         updateCheckBox.addActionListener(new ActionListener() {
             @Override
@@ -262,8 +242,7 @@ public class TasksFrame extends Frame{
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         titlePanel.setOpaque(false);
         JLabel taskLabel = new JLabel(task.getTaskTitle());
-        taskLabel.setFont(new java.awt.Font("Dialog", Font.BOLD, 13));
-        taskLabel.setForeground(common.getTextColor());
+        taskLabel.setFont(new Font("Dialog", Font.BOLD, 13));
         titlePanel.add(taskLabel);
         return titlePanel;
     }
@@ -312,8 +291,8 @@ public class TasksFrame extends Frame{
         actionPanel.add(deleteButton);
         return actionPanel;
     }
-    
-    //Method to show the changes in the center Panel
+
+    //Method to show the changes in the center Panel  //modify
     public void updateTaskList(){
         centerPanel.removeAll();
         //load all the tasks from the database
@@ -336,13 +315,11 @@ public class TasksFrame extends Frame{
     }
 
     // Method to view the task details
-
-    // Method to view the task details
     private void viewTaskDetails(Task task) {
         taskDetailsArea.setText(task.viewTaskDesc());
     }
     
-    // Method to save changes to the database
+    // Method to save changes to the database  //modify
     private void saveChangesToDatabase(){
         for (Task task : tasksToAdd){
             TaskDAO.saveTaskToDatabase(task);
@@ -358,7 +335,7 @@ public class TasksFrame extends Frame{
         tasksToDelete.clear();
     }
 
-    // Method to add a new task
+    // Method to add a new task  //modify
     public void addTask(String taskTitle, String description) {
         Task task = new Task(tasks.size() + 1, taskTitle, description, getUserId());
         tasks.add(task);

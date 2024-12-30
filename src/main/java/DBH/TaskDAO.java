@@ -1,4 +1,4 @@
-package main.java.DBH;
+package DBH;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -7,7 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-import main.java.model.Task;
+import model.Task;
 
 
 public class TaskDAO {

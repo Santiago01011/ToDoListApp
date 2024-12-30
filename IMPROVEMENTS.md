@@ -44,3 +44,18 @@ This file tracks the expected improvements and steps for each day.
 
 - Implement a file handler to save the user's data whitout a database. 
 - Implement a way to use the app without a database.
+
+### Day 5
+
+- Host the database in a server. ✔
+- Implement the app to work with the server database. ✔
+- Make a JAR file to run the app in any computer. ✔
+- Improve the structure and security of the database. ✔
+- Decrease the number of connections to the database. 
+
+
+### Day 6
+
+- Resolve all the problems in the functions with modify statment.
+- Finish day 4 and 5 improvements.
+

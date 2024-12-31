@@ -14,7 +14,7 @@ public class TaskDAO {
     public static List<Task> loadTasksFromDatabase(int userId, boolean isDone) {
         List<Task> tasks = new ArrayList<>();
         String sql = "SELECT * FROM tasks WHERE user_id = ? AND is_done = ?";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, userId);
             pstmt.setBoolean(2, isDone);
@@ -39,7 +39,7 @@ public class TaskDAO {
 
     public static void saveTaskToDatabase(Task task) {
         String sql = "INSERT INTO tasks (task_title, description, date_added, is_done, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, task.getTaskTitle());
             pstmt.setString(2, task.getDescription());
@@ -56,9 +56,28 @@ public class TaskDAO {
         }
     }
 
+    public static void saveTasks(List<Task> tasks){
+        String sql = "INSERT INTO tasks (id, title, description, user_id) VALUES (?, ?, ?, ?)";
+
+        try (Connection conn = PSQLtdldbh.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            for (Task task : tasks) {
+                pstmt.setInt(1, task.getId());
+                pstmt.setString(2, task.getTaskTitle());
+                pstmt.setString(3, task.getDescription());
+                pstmt.setInt(4, task.getUserId());
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     public static void updateTaskInDatabase(Task task) {
         String sql = "UPDATE tasks SET task_title = ?, description = ?, is_done = ? WHERE id = ?";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, task.getTaskTitle());
             pstmt.setString(2, task.getDescription());
@@ -73,7 +92,7 @@ public class TaskDAO {
 
     public static void deleteTaskFromDatabase(Task task) {
         String sql = "DELETE FROM tasks WHERE id = ?";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, task.getId());
             pstmt.executeUpdate();
@@ -85,7 +104,7 @@ public class TaskDAO {
 
     public static boolean validateUserFromDatabase(String username, String password) {
         String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, password);
@@ -104,17 +123,17 @@ public class TaskDAO {
         return false;
     }
 
-    public static int getUserId(String username) {
+    public static int getUserId(String username){
         String sql = "SELECT id FROM users WHERE username = ?";
-        try (Connection conn = PSQLtdldbh.connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return rs.getInt("id");
             }
         } catch (SQLException e) {
-            System.out.println("Error getting user id from the database");
+            System.out.println("Error getting user id from the database :c");
             e.printStackTrace();
         }
         return -1;
@@ -122,7 +141,7 @@ public class TaskDAO {
 
     public static boolean getUsername(String username) {
         String sql = "SELECT * FROM users WHERE username = ?";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
@@ -138,7 +157,7 @@ public class TaskDAO {
 
     public static void registerUser(String username, String password) {
         String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
-        try (Connection conn = PSQLtdldbh.connect();
+        try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, password);

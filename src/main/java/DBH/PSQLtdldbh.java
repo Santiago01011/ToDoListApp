@@ -1,35 +1,35 @@
 package DBH;
 
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 
 import io.github.cdimascio.dotenv.Dotenv;
 
 public class PSQLtdldbh {
+    private static final HikariDataSource dataSource;
     private static final Dotenv dotenv = Dotenv.load();
-    private static final String JDBC_URL;
-    private static final String DB_USER;
-    private static final String DB_PASSWORD;
+
 
     static{
-        JDBC_URL = dotenv.get("DB_URL");
-        DB_USER = dotenv.get("DB_USERNAME");
-        DB_PASSWORD = dotenv.get("DB_PASSWORD");
-
-        if (JDBC_URL == null || DB_USER == null || DB_PASSWORD == null) {
-            throw new IllegalStateException("Environment variables for database connection are not set properly.");
-        }
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(dotenv.get("DB_URL"));
+        config.setUsername(dotenv.get("DB_USERNAME"));
+        config.setPassword(dotenv.get("DB_PASSWORD"));
+        config.setMaximumPoolSize(10); // Maximum number of connections
+        config.setMinimumIdle(2); // Minimum idle connections
+        config.setIdleTimeout(30000); // 30 seconds idle timeout
+        config.setMaxLifetime(1800000); // 30 minutes max lifetime for a connection
+        dataSource = new HikariDataSource(config);
     }
 
-    public static Connection connect() {
-        Connection conn = null;
-        try {
-            conn = DriverManager.getConnection(JDBC_URL, DB_USER, DB_PASSWORD);
-            System.out.println("Connected to the PostgreSQL server successfully.");
-        } catch (SQLException e) {
-            System.out.println("Connection failed: " + e.getMessage());
-        }
-        return conn;
+    public static Connection getConnection() throws SQLException {
+        return dataSource.getConnection(); // Get a connection from the pool
+    }
+
+    public static void closePool() {
+        dataSource.close(); // Close the pool when the app shuts down
     }
 }

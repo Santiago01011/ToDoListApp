@@ -1,6 +1,7 @@
 package UI;
 
 import COMMON.common;
+import DBH.PSQLtdldbh;
 import DBH.TaskDAO;
 import model.Task;
 
@@ -51,6 +52,15 @@ public class TasksFrame extends Frame{
         addUIComponentsCenter();
         addUIComponentsSouth();
         updateTaskList();
+
+
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                saveChangesToDatabase();
+                PSQLtdldbh.closePool();
+            }
+        });
     }
     
     //Method to initialize the North Panel

@@ -29,7 +29,7 @@ import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class TasksFrame extends Frame{
+public class TasksFrame extends Frame{ 
     private int userId;
     public List<Task> tasks;
     public List<Task> tasksToAdd;

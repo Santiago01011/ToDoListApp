@@ -40,7 +40,7 @@ public class TasksFrame extends Frame{
     private JTextArea taskDetailsArea;
     private JPanel centerPanel;
     private JLabel todoLabel;
-    private JButton toggleColorButton;
+    public JButton updateButton;
     public TasksFrame(String title, int userId){
         super(title);
         this.userId = userId;
@@ -126,6 +126,7 @@ public class TasksFrame extends Frame{
                 }
             }
         });
+
         taskField.addActionListener(new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent e){
@@ -137,7 +138,7 @@ public class TasksFrame extends Frame{
             }            
         });
 
-        taskDescriptionField.addActionListener(new ActionListener() {
+        taskDescriptionField.addActionListener(new ActionListener(){
             @Override
             public void actionPerformed(ActionEvent e){
                 addTask(taskField.getText(), taskDescriptionField.getText());
@@ -154,11 +155,11 @@ public class TasksFrame extends Frame{
         // Make panel transparent
         southPanel.setOpaque(false);
         //create components
-        JButton updateButton = new JButton("Update");
+        updateButton = new JButton("Update");
         updateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         ImageIcon toggleColorIcon = common.getModeIcon();
-        toggleColorButton = new JButton(toggleColorIcon);
+        JButton toggleColorButton = new JButton(toggleColorIcon);
         toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
         JButton historyButton = new JButton("History");
@@ -176,6 +177,8 @@ public class TasksFrame extends Frame{
     private void addSouthActionListeners(JButton updateButton, JButton toggleColorButton, JButton historyButton){
         //add action listeners to the buttons
         updateButton.addActionListener(e -> {
+            saveChangesToDatabase();
+            tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
             updateTaskList();
         });
         historyButton.addActionListener(new ActionListener(){
@@ -221,7 +224,9 @@ public class TasksFrame extends Frame{
         add(mainPanel, BorderLayout.CENTER);
     }
   
-    private JPanel createTaskPanel(Task task) {
+    //this panels manages the task components and buttons
+    //Method to create the task panel
+    private JPanel createTaskPanel(Task task){
         JPanel taskPanel = new JPanel(new BorderLayout());
         taskPanel.setOpaque(false);
         taskPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -231,29 +236,28 @@ public class TasksFrame extends Frame{
         return taskPanel;
     }
     
-    //Method to create the checkbox panel  //modify
-    private JPanel createCheckboxPanel(Task task) {
+    //Method to create the checkbox panel
+    private JPanel createCheckboxPanel(Task task){
         JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         checkboxPanel.setOpaque(false);
         JCheckBox updateCheckBox = new JCheckBox("", task.getIsDone());
         updateCheckBox.setToolTipText("Mark as Done");
         updateCheckBox.setCursor(new Cursor(Cursor.HAND_CURSOR));
         updateCheckBox.setOpaque(false);
-        updateCheckBox.addActionListener(new ActionListener() {
+        updateCheckBox.addActionListener(new ActionListener(){
             @Override
-            public void actionPerformed(ActionEvent e) {
+            public void actionPerformed(ActionEvent e){
                 task.setIsDone(!task.getIsDone());
-                if (!tasksToUpdate.contains(task)) {
+                if (!tasksToUpdate.contains(task)){
                     tasksToUpdate.add(task);
                 }
-                saveChangesToDatabase();
             }
         });
         checkboxPanel.add(updateCheckBox);
         return checkboxPanel;
     }
     
-    private JPanel createTitlePanel(Task task) {
+    private JPanel createTitlePanel(Task task){
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         titlePanel.setOpaque(false);
         JLabel taskLabel = new JLabel(task.getTaskTitle());
@@ -337,13 +341,14 @@ public class TasksFrame extends Frame{
             todoLabel.requestFocusInWindow();
         });
     }
+    
     // Method to get the user ID
-    public int getUserId() {
+    public int getUserId(){
         return userId;
     }
 
     // Method to view the task details
-    private void viewTaskDetails(Task task) {
+    private void viewTaskDetails(Task task){
         taskDetailsArea.setText(task.viewTaskDesc());
     }
     
@@ -364,7 +369,7 @@ public class TasksFrame extends Frame{
     }
 
     // Method to add a new task
-    public void addTask(String taskTitle, String description) {
+    public void addTask(String taskTitle, String description){
         Task task = new Task(tasks.size() + 1, taskTitle, description, getUserId());
         tasks.add(task);
         tasksToAdd.add(task);

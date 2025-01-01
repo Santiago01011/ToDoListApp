@@ -2,6 +2,7 @@ package UI;
 
 import COMMON.common;
 import DBH.TaskDAO;
+import io.github.cdimascio.dotenv.Dotenv;
 
 import javax.swing.*;
 
@@ -10,9 +11,11 @@ import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 
 
-
 public class LoginFrame extends Frame{
-
+    
+    private static final Dotenv dotenv = Dotenv.load();
+    public static final String appUsername = dotenv.get("APP_USERNAME");
+    private static final String password = dotenv.get("PASSWORD");
 
     public LoginFrame(String title){
         super(title);
@@ -23,7 +26,6 @@ public class LoginFrame extends Frame{
         setLayout(null);
         setResizable(false);
         addLoginUIComponents();
-
     }
 
     private void addLoginUIComponents(){
@@ -61,10 +63,16 @@ public class LoginFrame extends Frame{
         add(toggleColorButton);
         add(loginButton);
         add(registerLabel);
-        
+ 
         SwingUtilities.invokeLater(() -> {
             titleLabel.requestFocusInWindow();
+            if(appUsername != null && password != null){
+                usernameField.setText(appUsername);
+                passwordField.setText(password);
+                doLogin(usernameField, passwordField);
+            }
         });
+
         
     }
 
@@ -109,8 +117,7 @@ public class LoginFrame extends Frame{
                 dispose();
                 new RegisterFrame("Register").setVisible(true);
             }
-        });
-    
+        });    
     }
 
     public void doLogin(JTextField usernameField, JPasswordField passwordField){

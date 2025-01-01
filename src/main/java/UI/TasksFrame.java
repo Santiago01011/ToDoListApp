@@ -55,6 +55,7 @@ public class TasksFrame extends Frame{
         addUIComponentsNorth();
         addUIComponentsCenter();
         addUIComponentsSouth();
+        tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
         updateTaskList();
 
 
@@ -297,7 +298,7 @@ public class TasksFrame extends Frame{
                     tasksToDelete.add(task);
                 }
                 tasks.remove(task);
-                saveChangesToDatabase();
+                TaskDAO.deleteTaskFromDatabase(task);
                 updateTaskList();
             }
         });
@@ -315,18 +316,15 @@ public class TasksFrame extends Frame{
                 //new EditTaskFrame("Edit Task", task, TasksFrame.this).setVisible(true);
             }
         });
-
         actionPanel.add(editButton);
         actionPanel.add(viewButton);
         actionPanel.add(deleteButton);
         return actionPanel;
     }
 
-    //Method to show the changes in the center Panel  //modify
+    //Method to show the changes in the center Panel
     public void updateTaskList(){
         centerPanel.removeAll();
-        //load all the tasks from the database
-        tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
         //display the tasks in the centerPanel
         for(Task task : tasks){
             JPanel taskPanel = createTaskPanel(task);
@@ -349,7 +347,7 @@ public class TasksFrame extends Frame{
         taskDetailsArea.setText(task.viewTaskDesc());
     }
     
-    // Method to save changes to the database  //modify
+    // Method to save changes to the database
     private void saveChangesToDatabase(){
         if(!tasksToAdd.isEmpty()){
             TaskDAO.saveTasksToDatabase(tasksToAdd);
@@ -365,13 +363,11 @@ public class TasksFrame extends Frame{
         }
     }
 
-    // Method to add a new task  //modify
+    // Method to add a new task
     public void addTask(String taskTitle, String description) {
         Task task = new Task(tasks.size() + 1, taskTitle, description, getUserId());
         tasks.add(task);
         tasksToAdd.add(task);
-        saveChangesToDatabase();
         updateTaskList();
     }
-
 }

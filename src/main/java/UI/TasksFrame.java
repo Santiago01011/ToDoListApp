@@ -35,6 +35,7 @@ public class TasksFrame extends Frame{
     public List<Task> tasksToAdd;
     public List<Task> tasksToDelete;
     public List<Task> tasksToUpdate;
+    public List<Task> tasksToEdit;
     
     private JTextArea taskDetailsArea;
     private JPanel centerPanel;
@@ -44,10 +45,13 @@ public class TasksFrame extends Frame{
         super(title);
         this.userId = userId;
         setTitle(title);
+
         //Initialize the lists
         tasksToAdd = new ArrayList<>();
         tasksToDelete = new ArrayList<>();
         tasksToUpdate = new ArrayList<>();
+        tasksToEdit = new ArrayList<>();
+
         addUIComponentsNorth();
         addUIComponentsCenter();
         addUIComponentsSouth();
@@ -261,6 +265,7 @@ public class TasksFrame extends Frame{
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionPanel.setOpaque(false);
     
+        ImageIcon editIcon = common.getEditIcon();
         ImageIcon viewIcon = common.getViewIcon();
         ImageIcon deleteIcon = common.getDeleteIcon();
         
@@ -296,7 +301,22 @@ public class TasksFrame extends Frame{
                 updateTaskList();
             }
         });
-        
+
+        JButton editButton = new JButton(editIcon);
+        editButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        editButton.setPreferredSize(new Dimension(20, 20));
+        editButton.setBorderPainted(false);
+        editButton.setContentAreaFilled(false);
+        editButton.setToolTipText("Edit Task");
+
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                //new EditTaskFrame("Edit Task", task, TasksFrame.this).setVisible(true);
+            }
+        });
+
+        actionPanel.add(editButton);
         actionPanel.add(viewButton);
         actionPanel.add(deleteButton);
         return actionPanel;
@@ -331,18 +351,18 @@ public class TasksFrame extends Frame{
     
     // Method to save changes to the database  //modify
     private void saveChangesToDatabase(){
-        for (Task task : tasksToAdd){
-            TaskDAO.saveTaskToDatabase(task);
+        if(!tasksToAdd.isEmpty()){
+            TaskDAO.saveTasksToDatabase(tasksToAdd);
+            tasksToAdd.clear();
         }
-        for (Task task : tasksToUpdate){
-            TaskDAO.updateTaskInDatabase(task);
+        if(!tasksToUpdate.isEmpty()){
+            TaskDAO.updateDoneTasksInDatabase(tasksToUpdate);
+            tasksToUpdate.clear();
         }
-        for (Task task : tasksToDelete){
-            TaskDAO.deleteTaskFromDatabase(task);
+        if(!tasksToEdit.isEmpty()){
+            TaskDAO.editTasksInDatabase(tasksToEdit);
+            tasksToEdit.clear();
         }
-        tasksToAdd.clear();
-        tasksToUpdate.clear();
-        tasksToDelete.clear();
     }
 
     // Method to add a new task  //modify

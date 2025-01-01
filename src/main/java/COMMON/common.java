@@ -11,7 +11,8 @@ import java.awt.Image;
 
 public class common {
 
-    private static boolean useNightMode = true; // Flag to determine which palette to use
+    // Variable to store the current mode based on the time
+    private static boolean useNightMode = (java.time.LocalTime.now().getHour() >= 22 || java.time.LocalTime.now().getHour() < 7) ? true : false;
 
     // Day mode colors
     public static final Color PRIMARY_COLOR_DAY = Color.decode("#f6d76f");  //hex #f6d76f
@@ -42,8 +43,6 @@ public class common {
         return useNightMode ? TEXT_COLOR_NIGHT : TEXT_COLOR_DAY;
     }
 
-
-
     /*
      * Methods to get the path of the icons based on the mode
      * The icons are stored in the assets folder in the resources directory
@@ -70,43 +69,15 @@ public class common {
         return loadIcon(path);
     }
 
+    public static ImageIcon getEditIcon(){
+        String path = useNightMode ? "assets/edit_night.png" : "assets/edit_day.png";
+        return loadIcon(path);
+    }
+
     // Method to toggle the color mode
     public static void toggleColorMode(){
         useNightMode = !useNightMode;
     }
-
-    // private static ImageIcon loadIcon(String path) {  //claude solution
-    //     try {
-    //         InputStream is = common.class.getResourceAsStream(path);
-    //         if (is == null) {
-    //             System.err.println("Could not find resource: " + path);
-    //             return null;
-    //         }
-    //         Image image = ImageIO.read(is);
-    //         return new ImageIcon(image);
-    //     } catch (Exception e) {
-    //         System.err.println("Error loading icon: " + path);
-    //         e.printStackTrace();
-    //         return null;
-    //     }
-    // }
-
-    // private static ImageIcon loadIcon(String resourcePath) {  //chat gpt solution for JARs
-    //     try {
-    //         InputStream is = common.class.getClassLoader().getResourceAsStream(resourcePath);
-    //         if (is == null) {
-    //             System.err.println("Could not find resource: " + resourcePath);
-    //             return null;
-    //         }
-    //         Image image = ImageIO.read(is);
-    //         return new ImageIcon(image);
-    //     } catch (Exception e) {
-    //         System.err.println("Error loading icon: " + resourcePath);
-    //         e.printStackTrace();
-    //         return null;
-    //     }
-    // }
-
 
     private static ImageIcon loadIcon(String resourcePath){
         try {

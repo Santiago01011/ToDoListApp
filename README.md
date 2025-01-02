@@ -14,8 +14,11 @@ Icons are from [Flaticon](https://www.flaticon.com/uicons).
 
 ## Technologies Used
 
-- Java
-- Postgres SQL
+- Java openjdk 21.0.5
+- PostgreSQL 17.2
+- HikariCP 5.0.1
+- Maven 4.0.0
+
 
 ## How to run the app
 

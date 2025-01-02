@@ -1,33 +1,18 @@
 package UI;
 
+import COMMON.UserProperties;
 import COMMON.common;
-import DBH.PSQLtdldbh;
-import DBH.TaskDAO;
+import DBH.*;
 import model.Task;
 
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JCheckBox;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
+import javax.swing.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import java.awt.BorderLayout;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.*;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowAdapter;
 
 public class TasksFrame extends Frame{ 
     private int userId;
@@ -57,13 +42,13 @@ public class TasksFrame extends Frame{
         addUIComponentsSouth();
         tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
         updateTaskList();
-
-
-        addWindowListener(new java.awt.event.WindowAdapter() {
+        addWindowListener(new WindowAdapter() {
             @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
+            public void windowClosing(WindowEvent e) {
+                System.out.println("Shutting down application...");
                 saveChangesToDatabase();
                 PSQLtdldbh.closePool();
+                UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
             }
         });
     }
@@ -116,35 +101,26 @@ public class TasksFrame extends Frame{
 
     //Method to add action listeners to the north panel buttons
     private void addNorthActionListeners(JButton addButton, JTextField taskField, JTextField taskDescriptionField){
-        addButton.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                if (!taskField.getText().equals("Task title")) {
-                    addTask(taskField.getText(), taskDescriptionField.getText());
-                    taskField.setText("Task title");
-                    taskDescriptionField.setText("Task description");
-                }
-            }
-        });
-
-        taskField.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                if (!taskField.getText().equals("Task title")) {
-                    addTask(taskField.getText(), taskDescriptionField.getText());
-                    taskField.setText("Task title");
-                    taskDescriptionField.setText("Task description");
-                }
-            }            
-        });
-
-        taskDescriptionField.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
+        addButton.addActionListener(e -> {
+            if (!taskField.getText().equals("Task title")){
                 addTask(taskField.getText(), taskDescriptionField.getText());
                 taskField.setText("Task title");
                 taskDescriptionField.setText("Task description");
             }
+        });
+
+        taskField.addActionListener(e -> {
+            if (!taskField.getText().equals("Task title")){
+                addTask(taskField.getText(), taskDescriptionField.getText());
+                taskField.setText("Task title");
+                taskDescriptionField.setText("Task description");
+            }
+        });
+
+        taskDescriptionField.addActionListener(e -> {
+            addTask(taskField.getText(), taskDescriptionField.getText());
+            taskField.setText("Task title");
+            taskDescriptionField.setText("Task description");
         });
     }
     
@@ -155,6 +131,9 @@ public class TasksFrame extends Frame{
         // Make panel transparent
         southPanel.setOpaque(false);
         //create components
+        ImageIcon logOutIcon = common.getLogOutIcon();
+        JButton logOutButton = new JButton(logOutIcon);
+
         updateButton = new JButton("Update");
         updateButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
@@ -164,10 +143,15 @@ public class TasksFrame extends Frame{
         
         JButton historyButton = new JButton("History");
         historyButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        ImageIcon userConfigIcon = common.getUserConfigIcon();
+        JButton userConfigButton = new JButton(userConfigIcon);
         //add components to southPanel
+        southPanel.add(logOutButton);
         southPanel.add(updateButton);
         southPanel.add(toggleColorButton);
         southPanel.add(historyButton);
+        southPanel.add(userConfigButton);
         //add southPanel to the frame
         add(southPanel, BorderLayout.SOUTH);
         addSouthActionListeners(updateButton, toggleColorButton, historyButton);
@@ -181,18 +165,20 @@ public class TasksFrame extends Frame{
             tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
             updateTaskList();
         });
-        historyButton.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                new HistoryFrame("History", TasksFrame.this, getUserId()).setVisible(true);
-            }
+
+        historyButton.addActionListener(e -> {
+                SwingUtilities.invokeLater(() -> {
+                    new HistoryFrame("History", TasksFrame.this, getUserId()).setVisible(true);
+                });
         });
 
         toggleColorButton.addActionListener(e -> {
             common.toggleColorMode();
             //dispose frame and recall
             dispose();
-            new TasksFrame("To Do List", getUserId()).setVisible(true);
+            SwingUtilities.invokeLater(() -> {
+                new TasksFrame("ToDoList", getUserId()).setVisible(true);
+            });
         });
     }
 
@@ -240,19 +226,19 @@ public class TasksFrame extends Frame{
     private JPanel createCheckboxPanel(Task task){
         JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         checkboxPanel.setOpaque(false);
+        
         JCheckBox updateCheckBox = new JCheckBox("", task.getIsDone());
         updateCheckBox.setToolTipText("Mark as Done");
         updateCheckBox.setCursor(new Cursor(Cursor.HAND_CURSOR));
         updateCheckBox.setOpaque(false);
-        updateCheckBox.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                task.setIsDone(!task.getIsDone());
-                if (!tasksToUpdate.contains(task)){
-                    tasksToUpdate.add(task);
-                }
+
+        updateCheckBox.addActionListener(e -> {
+            task.setIsDone(!task.getIsDone());
+            if (!tasksToUpdate.contains(task)){
+                tasksToUpdate.add(task);
             }
         });
+
         checkboxPanel.add(updateCheckBox);
         return checkboxPanel;
     }
@@ -280,11 +266,9 @@ public class TasksFrame extends Frame{
         viewButton.setBorderPainted(false);
         viewButton.setContentAreaFilled(false);
         viewButton.setToolTipText("View Task Details");
-        viewButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+        
+        viewButton.addActionListener(e -> {
                 viewTaskDetails(task);
-            }
         });
         
         JButton deleteButton = new JButton(deleteIcon);
@@ -293,9 +277,8 @@ public class TasksFrame extends Frame{
         deleteButton.setBorderPainted(false);
         deleteButton.setContentAreaFilled(false);
         deleteButton.setToolTipText("Delete Task");
-        deleteButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+        
+        deleteButton.addActionListener(e -> {
                 if (tasksToAdd.contains(task)) {
                     tasksToAdd.remove(task);
                 } else {
@@ -304,7 +287,6 @@ public class TasksFrame extends Frame{
                 tasks.remove(task);
                 TaskDAO.deleteTaskFromDatabase(task);
                 updateTaskList();
-            }
         });
 
         JButton editButton = new JButton(editIcon);
@@ -314,14 +296,13 @@ public class TasksFrame extends Frame{
         editButton.setContentAreaFilled(false);
         editButton.setToolTipText("Edit Task");
 
-        editButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                tasksToEdit.add(task);
+        editButton.addActionListener(e -> {
+            tasksToEdit.add(task);
+            SwingUtilities.invokeLater(() -> {
                 new EditTaskFrame("Edit Task", task, TasksFrame.this).setVisible(true);
-
-            }
+            });
         });
+
         actionPanel.add(editButton);
         actionPanel.add(viewButton);
         actionPanel.add(deleteButton);

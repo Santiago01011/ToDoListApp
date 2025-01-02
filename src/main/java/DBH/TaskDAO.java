@@ -7,6 +7,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
+import model.PasswordUtil;
 import model.Task;
 
 
@@ -138,20 +139,21 @@ public class TaskDAO {
     }
 
     public static boolean validateUserFromDatabase(String username, String password){
-        String sql = "SELECT username, password FROM users WHERE username = ? AND password = ?";
+        String sql = "SELECT username, password FROM users WHERE username = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
-            pstmt.setString(2, password);
             ResultSet rs = pstmt.executeQuery();
-            if (!rs.next()) {
-                System.out.println("Invalid username or password");
-                return false;
-            } else {
-                System.out.println("User validated");
-                return true;
+            if(rs.next()){
+                String hashedPassword = rs.getString("password");
+                if(PasswordUtil.checkPassword(password, hashedPassword)){
+                    System.out.println("User validated");
+                    return true;
+                }else{
+                    System.out.println("Invalid password");
+                }
             }
-        } catch (SQLException e) {
+        }catch (SQLException e){
             System.out.println("Error validating user from the database");
             e.printStackTrace();
         }
@@ -195,7 +197,7 @@ public class TaskDAO {
         try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
-            pstmt.setString(2, password);
+            pstmt.setString(2, PasswordUtil.hashPassword(password));
             pstmt.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error registering user to the database");
@@ -203,4 +205,53 @@ public class TaskDAO {
         }
     }
 
+
+    // Now i need to change all the passwords to the new hashed password, this method are going to be used only once
+    public static void changePassword(String username, String password){
+        String sql = "UPDATE users SET password = ? WHERE username = ?";
+        try (Connection conn = PSQLtdldbh.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, PasswordUtil.hashPassword(password));
+            pstmt.setString(2, username);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.out.println("Error changing password in the database");
+            e.printStackTrace();
+        }
+    }
+    // This method is going to be used only once for migrate the passwords
+    public static void migratePasswords() {
+        // Get all users
+        String selectSql = "SELECT id, username, password FROM users";
+        String updateSql = "UPDATE users SET password = ? WHERE id = ?";
+        
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement selectStmt = conn.prepareStatement(selectSql);
+            PreparedStatement updateStmt = conn.prepareStatement(updateSql)) {
+            
+            ResultSet rs = selectStmt.executeQuery();
+            
+            while (rs.next()) {
+                int id = rs.getInt("id");
+                String currentPassword = rs.getString("password");
+                
+                // Hash current password if not already hashed
+                if (!currentPassword.startsWith("$2a$")) {
+                    String hashedPassword = PasswordUtil.hashPassword(currentPassword);
+                    
+                    // Update with new hashed password
+                    updateStmt.setString(1, hashedPassword);
+                    updateStmt.setInt(2, id);
+                    updateStmt.addBatch();
+                }
+            }
+            
+            updateStmt.executeBatch();
+            System.out.println("Password migration completed successfully");
+            
+        } catch (SQLException e) {
+            System.out.println("Error migrating passwords");
+            e.printStackTrace();
+        }
+    }
 }

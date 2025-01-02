@@ -1,6 +1,8 @@
 # Ignore the .env file
 .env
 
+user.yml
+
 # Ignore all the target directorie and its content
 target/
 

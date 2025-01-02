@@ -21,8 +21,8 @@ public class LoginFrame extends Frame{
         super(title);
         setTitle(title);
         setSize(400,350);
-        ImageIcon appIcon = new ImageIcon("src/main/assets/login_icon.png");
-        setIconImage(appIcon.getImage());
+        setLocationRelativeTo(null);
+        
         setLayout(null);
         setResizable(false);
         addLoginUIComponents();

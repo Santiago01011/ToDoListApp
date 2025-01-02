@@ -317,7 +317,9 @@ public class TasksFrame extends Frame{
         editButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                //new EditTaskFrame("Edit Task", task, TasksFrame.this).setVisible(true);
+                tasksToEdit.add(task);
+                new EditTaskFrame("Edit Task", task, TasksFrame.this).setVisible(true);
+
             }
         });
         actionPanel.add(editButton);

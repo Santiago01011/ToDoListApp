@@ -51,11 +51,18 @@ This file tracks the expected improvements and steps for each day.
 - Implement the app to work with the server database. ✔
 - Make a JAR file to run the app in any computer. ✔
 - Improve the structure and security of the database. ✔
-- Decrease the number of connections to the database. 
+- Decrease the number of connections to the database. ✔
 
 
 ### Day 6
 
-- Resolve all the problems in the functions with modify statment.
+- Resolve all the problems in the functions with modify statment. ✔
+- Now the app connects to the database only when it closes or the update button is pressed. ✔
 - Finish day 4 and 5 improvements.
+- Implement the edit task Frame with all functionalities. ✔
+- Add delete trigger to the database. ✔
+- Add dump.sql to the project. ✔
+- Improve UI settings. ✔
+
+
 

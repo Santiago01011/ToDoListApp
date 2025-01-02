@@ -45,7 +45,7 @@ public class Task{
         return this.dateAdded;
     }
 
-    public void settaskTitle(String taskTitle){
+    public void setTaskTitle(String taskTitle){
         this.taskTitle = taskTitle;
     }
 

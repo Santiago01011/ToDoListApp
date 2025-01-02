@@ -12,7 +12,8 @@ import java.awt.Image;
 public class common {
 
     // Variable to store the current mode based on the time
-    private static boolean useNightMode = (java.time.LocalTime.now().getHour() >= 22 || java.time.LocalTime.now().getHour() < 7) ? true : false;
+    //private static boolean useNightMode = (java.time.LocalTime.now().getHour() >= 22 || java.time.LocalTime.now().getHour() < 7) ? true : false;
+    private static boolean useNightMode = false;
 
     // Day mode colors
     public static final Color PRIMARY_COLOR_DAY = Color.decode("#f6d76f");  //hex #f6d76f
@@ -52,6 +53,10 @@ public class common {
     public static ImageIcon getModeIcon(){
         String path = useNightMode ? "assets/day_mode.png" : "assets/night_mode.png";
         return loadIcon(path);
+    }
+
+    public static ImageIcon getAppIcon(){
+        return loadIcon("assets/app_icon.png");
     }
 
     public static ImageIcon getViewIcon(){

@@ -44,7 +44,7 @@ public class Frame extends JFrame{
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         
-        ImageIcon appIcon = new ImageIcon("src/main/assets/app_icon.png");
+        ImageIcon appIcon = common.getAppIcon();
         setIconImage(appIcon.getImage());
         getContentPane().setBackground(common.getPrimaryColor());
     }

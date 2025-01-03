@@ -28,7 +28,7 @@ public class UserProperties {
     //     }
     // }
 
-    private static Map<String, Object> loadProperties() {
+    private static Map<String, Object> loadProperties(){
         Yaml yaml = new Yaml();
         try {
             if (Files.exists(Paths.get(USER_PROPS_FILE))) {
@@ -40,7 +40,7 @@ public class UserProperties {
         return new HashMap<>();
     }
 
-    public static void saveProperties() {
+    public static void saveProperties(){
         try {
             Yaml yaml = new Yaml();
             yaml.dump(properties, new FileWriter(USER_PROPS_FILE));
@@ -49,12 +49,19 @@ public class UserProperties {
         }
     }
 
-    public static void setProperty(String key, Object value) {
+    public static void setProperty(String key, Object value){
         properties.put(key, value);
         saveProperties();
     }
 
-    public static Object getProperty(String key) {
+    public static Object getProperty(String key){
         return properties.get(key);
+    }
+
+    public static void logOut(){
+        UserProperties.setProperty("rememberMe", "false");
+        UserProperties.setProperty("username", "");
+        UserProperties.setProperty("password", "");
+        UserProperties.setProperty("lastSession", "");
     }
 }

@@ -26,10 +26,6 @@ public class LoginFrame extends Frame{
             setLayout(null);
             setResizable(false);
             addLoginUIComponents();
-
-            // System.out.println("Username: |" + username + "|");
-            // System.out.println("Password: |" + password + "|");
-            // System.out.println("Keep logged in: |" + keepLoggedIn + "|");
         }
     
         private void addLoginUIComponents(){
@@ -141,7 +137,7 @@ public class LoginFrame extends Frame{
             JOptionPane.showMessageDialog(LoginFrame.this, "Invalid username or password", "Error", JOptionPane.ERROR_MESSAGE);
         }
         if(keepLoggedIn){
-            //System.out.println("Keep me logged in"); improve this to save only if the user is not already saved
+            //System.out.println("Keep me logged in");
             UserProperties.setProperty("username", usernameField.getText());
             UserProperties.setProperty("password", new String(passwordField.getPassword()));
             UserProperties.setProperty("lastSession", new SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date()));
@@ -149,10 +145,7 @@ public class LoginFrame extends Frame{
         }
         else{
             //System.out.println("Don't keep me logged in");
-            UserProperties.setProperty("username", "");
-            UserProperties.setProperty("password", "");
-            UserProperties.setProperty("lastSession", "");
-            UserProperties.setProperty("rememberMe", "false");
+            UserProperties.logOut();
         }
         usernameField.setText("Username");
         passwordField.setText("Password");

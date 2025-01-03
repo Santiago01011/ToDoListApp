@@ -154,12 +154,20 @@ public class TasksFrame extends Frame{
         southPanel.add(userConfigButton);
         //add southPanel to the frame
         add(southPanel, BorderLayout.SOUTH);
-        addSouthActionListeners(updateButton, toggleColorButton, historyButton);
+        addSouthActionListeners(logOutButton, updateButton, toggleColorButton, historyButton, userConfigButton);
     }
 
     //Method to add South Panel action listeners
-    private void addSouthActionListeners(JButton updateButton, JButton toggleColorButton, JButton historyButton){
+    private void addSouthActionListeners(JButton logOutButton, JButton updateButton, JButton toggleColorButton, JButton historyButton, JButton userConfigButton){
         //add action listeners to the buttons
+        logOutButton.addActionListener(e -> {
+            UserProperties.logOut();
+            SwingUtilities.invokeLater(() -> {
+                new LoginFrame("Login").setVisible(true);
+            });
+            dispose();
+        });
+        
         updateButton.addActionListener(e -> {
             saveChangesToDatabase();
             tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
@@ -179,6 +187,12 @@ public class TasksFrame extends Frame{
             SwingUtilities.invokeLater(() -> {
                 new TasksFrame("ToDoList", getUserId()).setVisible(true);
             });
+        });
+
+
+        userConfigButton.addActionListener(e -> {
+            // Menu m = new Menu("User Menu");
+            // centerPanel.add(m);
         });
     }
 

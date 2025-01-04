@@ -21,8 +21,7 @@ public class LoginFrame extends Frame{
             super(title);
             setTitle(title);
             setSize(400,350);
-            setLocationRelativeTo(null);
-            
+            setLocationRelativeTo(null);            
             setLayout(null);
             setResizable(false);
             addLoginUIComponents();
@@ -72,14 +71,13 @@ public class LoginFrame extends Frame{
      
             SwingUtilities.invokeLater(() -> {
                 titleLabel.requestFocusInWindow();
-                if(username != "" && password != ""){
+                System.out.println(username);
+                if(username != "" && password != "" && username != null){
                     usernameField.setText(username);
                     passwordField.setText(password);
                     doLogin(usernameField, passwordField);
                 }
-            });
-    
-            
+            });            
         }
     
         private void addLoginActionListeners(JTextField usernameField, JPasswordField passwordField, JButton toggleColorButton, JButton loginButton, JLabel registerLabel, JCheckBox keepLoggedInCheckBox){

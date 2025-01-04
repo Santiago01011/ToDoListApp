@@ -15,19 +15,38 @@ public class UserProperties {
         initialize();
     }
 
-    private static void initialize() {
+    private static void initialize(){
         // createDirectory();
         properties = loadProperties();
+        if(properties == null){
+            createDefaultProperties();
+        }
     }
+            
+        // private static void createDirectory(){  //future, for deployment
+        //     try {
+        //         Files.createDirectories(Paths.get(System.getProperty("user.home"), ".todolist"));
+        //     } catch (IOException e) {
+        //         e.printStackTrace();
+        //     }
+        // }
+            
+    private static void createDefaultProperties() {
+        properties.put("darkTheme", "false");
+        properties.put("rememberMe", "false");
+        properties.put("username", "");
+        properties.put("password", "");
+        properties.put("lastSession", "");
 
-    // private static void createDirectory() {
-    //     try {
-    //         Files.createDirectories(Paths.get(System.getProperty("user.home"), ".todolist"));
-    //     } catch (IOException e) {
-    //         e.printStackTrace();
-    //     }
-    // }
-
+        try{
+            Yaml yaml = new Yaml();
+            yaml.dump(properties, new FileWriter(USER_PROPS_FILE));
+        }catch(IOException e){
+            System.err.println("Error creating properties file");
+            e.printStackTrace();
+        }
+    }
+    
     private static Map<String, Object> loadProperties(){
         Yaml yaml = new Yaml();
         try {

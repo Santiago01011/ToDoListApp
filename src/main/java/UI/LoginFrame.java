@@ -71,8 +71,8 @@ public class LoginFrame extends Frame{
      
             SwingUtilities.invokeLater(() -> {
                 titleLabel.requestFocusInWindow();
-                System.out.println(username);
-                if(username != "" && password != "" && username != null){
+                String rememberMe = (String) UserProperties.getProperty("rememberMe");
+                if(rememberMe != null && !rememberMe.equals("false")){
                     usernameField.setText(username);
                     passwordField.setText(password);
                     doLogin(usernameField, passwordField);

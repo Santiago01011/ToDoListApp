@@ -138,6 +138,17 @@ public class TaskDAO {
         }
     }
 
+    public static void hardDeleteTaskFromDatabase(){
+        String sql = "DELETE FROM public.tasks WHERE deleted_at IS NOT NULL";
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.executeUpdate();
+        }catch (SQLException e){
+            System.out.println("Error hard deleting task from the database");
+            e.printStackTrace();
+        }
+    }
+
     public static boolean validateUserFromDatabase(String username, String password){
         String sql = "SELECT username, password FROM users WHERE username = ?";
         try (Connection conn = PSQLtdldbh.getConnection();

@@ -77,7 +77,7 @@ public class LoginFrame extends Frame{
                     passwordField.setText(password);
                     doLogin(usernameField, passwordField);
                 }
-            });            
+            });
         }
     
         private void addLoginActionListeners(JTextField usernameField, JPasswordField passwordField, JButton toggleColorButton, JButton loginButton, JLabel registerLabel, JCheckBox keepLoggedInCheckBox){

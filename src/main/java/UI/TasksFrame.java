@@ -42,11 +42,12 @@ public class TasksFrame extends Frame{
         addUIComponentsSouth();
         tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
         updateTaskList();
-        addWindowListener(new WindowAdapter() {
+        addWindowListener(new WindowAdapter(){
             @Override
-            public void windowClosing(WindowEvent e) {
+            public void windowClosing(WindowEvent e){
                 System.out.println("Shutting down application...");
                 saveChangesToDatabase();
+                TaskDAO.hardDeleteTaskFromDatabase();
                 PSQLtdldbh.closePool();
                 UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
             }
@@ -180,7 +181,7 @@ public class TasksFrame extends Frame{
                 });
         });
 
-        toggleColorButton.addActionListener(e -> {
+        toggleColorButton.addActionListener(e -> {  //it dosent update the tasks in the database, solve later
             common.toggleColorMode();
             //dispose frame and recall
             dispose();

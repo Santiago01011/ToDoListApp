@@ -5,7 +5,7 @@
 
     <groupId>com.toDoList</groupId>
     <artifactId>ToDoListApp</artifactId>
-    <version>v1.2.0-alpha</version>
+    <version>v1.2.5-alpha</version>
 
     <properties>
         <maven.compiler.source>17</maven.compiler.source>
@@ -47,6 +47,19 @@
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
             <version>2.2</version>
+        </dependency>
+
+        <!-- H2 dependency -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>2.2.224</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.netbeans.external</groupId>
+            <artifactId>AbsoluteLayout</artifactId>
+            <version>RELEASE240</version>
         </dependency>
     </dependencies>
     <build>

@@ -90,6 +90,16 @@ public class common {
         return loadIcon(path);
     }
 
+    public static ImageIcon getSaveIcon(){
+        String path = useNightMode ? "assets/save_night.png" : "assets/save_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getRestoreIcon(){
+        String path = useNightMode ? "assets/restore_night.png" : "assets/restore_day.png";
+        return loadIcon(path);
+    }
+
     // Method to toggle the color mode
     public static void toggleColorMode(){
         useNightMode = !useNightMode;

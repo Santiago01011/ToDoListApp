@@ -13,9 +13,9 @@ import model.Task;
 
 public class TaskDAO {
 
-    public static List<Task> loadTasksFromDatabase(int userId, boolean isDone){
+    public static List<Task> loadTasksFromDatabase(int userId, boolean isDone, boolean isDeleted){
         List<Task> tasks = new ArrayList<>();
-        String sql = "SELECT * FROM tasks WHERE (user_id = ? AND is_done = ?) AND deleted_at IS NULL";
+        String sql = "SELECT * FROM tasks WHERE (user_id = ? AND is_done = ?) AND deleted_at IS " + (isDeleted ? "NOT NULL" : "NULL");
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setInt(1, userId);

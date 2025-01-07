@@ -10,8 +10,41 @@ import javax.swing.UIManager;
 import COMMON.common;
 
 public class Frame extends JFrame{
+    static {
+        if ("true".equals(System.getProperty("netbeans.designTime"))) {
+            // Set the default values for the frame components
+            UIManager.put("Button.font", new Font("Consolas", Font.BOLD, 14));
+            UIManager.put("Button.background", common.getSecondaryColor());
+            UIManager.put("Button.foreground", common.getTextColor());
+
+            UIManager.put("Label.font", new Font("Consolas", Font.PLAIN, 14));
+            UIManager.put("Label.foreground", common.getTextColor());
+
+            UIManager.put("TextField.font", new Font("Consolas", Font.PLAIN, 14));
+            UIManager.put("TextField.background", common.getTertiaryColor());
+            UIManager.put("TextField.foreground", common.getTextColor());
+            UIManager.put("TextField.caretForeground", common.getTextColor());
+
+            UIManager.put("PasswordField.font", new Font("Consolas", Font.PLAIN, 14));
+            UIManager.put("PasswordField.background", common.getTertiaryColor());
+            UIManager.put("PasswordField.foreground", common.getTextColor());
+            UIManager.put("PasswordField.caretForeground", common.getTextColor());
+
+            UIManager.put("TextArea.font", new Font("Consolas", Font.PLAIN, 16));
+            UIManager.put("TextArea.background", common.getTertiaryColor());
+            UIManager.put("TextArea.foreground", common.getTextColor());
+
+            UIManager.put("Separator.background", common.getTextColor());
+        }
+    }
+    
+    // No-argument constructor for GUI Builder
+    public Frame() {
+        this("Default Title");
+    }
     //constructor
     public Frame(String title){
+        super(title);
         // Get the screen size
         java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
         // Set the size relative to the screen size
@@ -19,24 +52,24 @@ public class Frame extends JFrame{
         setLocationRelativeTo(null);
 
         //set default values for frame components
-        UIManager.put("Button.font", new Font("Dialog", Font.BOLD, 12));
+        UIManager.put("Button.font", new Font("Consolas", Font.BOLD, 14));
         UIManager.put("Button.background", common.getSecondaryColor());
         UIManager.put("Button.foreground", common.getTextColor());
 
-        UIManager.put("Label.font", new Font("Dialog", Font.PLAIN, 12));
+        UIManager.put("Label.font", new Font("Consolas", Font.PLAIN, 14));
         UIManager.put("Label.foreground", common.getTextColor());
 
-        UIManager.put("TextField.font", new Font("Dialog", Font.PLAIN, 12));
+        UIManager.put("TextField.font", new Font("Consolas", Font.PLAIN, 14));
         UIManager.put("TextField.background", common.getTertiaryColor());
         UIManager.put("TextField.foreground", common.getTextColor());
         UIManager.put("TextField.caretForeground", common.getTextColor());
 
-        UIManager.put("PasswordField.font", new Font("Dialog", Font.PLAIN, 12));
+        UIManager.put("PasswordField.font", new Font("Consolas", Font.PLAIN, 14));
         UIManager.put("PasswordField.background", common.getTertiaryColor());
         UIManager.put("PasswordField.foreground", common.getTextColor());
         UIManager.put("PasswordField.caretForeground", common.getTextColor());
 
-        UIManager.put("TextArea.font", new Font("Dialog", Font.PLAIN, 14));
+        UIManager.put("TextArea.font", new Font("Consolas", Font.PLAIN, 16));
         UIManager.put("TextArea.background", common.getTertiaryColor());
         UIManager.put("TextArea.foreground", common.getTextColor());
 
@@ -50,7 +83,7 @@ public class Frame extends JFrame{
     }
 
 
-        public void addFocusListeners(JTextField textField, String defaultText){
+    public void addFocusListeners(JTextField textField, String defaultText){
         textField.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
             public void focusGained(java.awt.event.FocusEvent e) {

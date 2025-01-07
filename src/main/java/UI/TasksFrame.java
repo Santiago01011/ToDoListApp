@@ -40,7 +40,7 @@ public class TasksFrame extends Frame{
         addUIComponentsNorth();
         addUIComponentsCenter();
         addUIComponentsSouth();
-        tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
+        tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false, false);
         updateTaskList();
         addWindowListener(new WindowAdapter(){
             @Override
@@ -126,6 +126,21 @@ public class TasksFrame extends Frame{
     }
     
     //Method to initialize the South Panel
+    /**
+     * Adds UI components to the south panel.
+     * The south panel contains buttons for various actions such as updating the task list, toggling color mode, viewing history, logging out, and user configuration.
+     * 
+     * Components:
+     * - Log Out Button: Logs out the user.
+     * - Update Button: Updates the task list.
+     * - Toggle Color Button: Toggles between light and dark modes.
+     * - History Button: Opens the history view.
+     * - User Config Button: Opens user configuration settings.
+     * 
+     * Layout:
+     * - Uses FlowLayout to center components with 10px horizontal and vertical gaps.
+     * - Makes the panel transparent and sets tooltips for better user experience.
+     */
     private void addUIComponentsSouth(){
         //Panel to add the buttons to update and view history
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -171,7 +186,7 @@ public class TasksFrame extends Frame{
         
         updateButton.addActionListener(e -> {
             saveChangesToDatabase();
-            tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false);
+            tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false, false);
             updateTaskList();
         });
 
@@ -185,6 +200,7 @@ public class TasksFrame extends Frame{
             common.toggleColorMode();
             //dispose frame and recall
             dispose();
+            saveChangesToDatabase();
             SwingUtilities.invokeLater(() -> {
                 new TasksFrame("ToDoList", getUserId()).setVisible(true);
             });
@@ -227,10 +243,16 @@ public class TasksFrame extends Frame{
   
     //this panels manages the task components and buttons
     //Method to create the task panel
-    private JPanel createTaskPanel(Task task){
+    public JPanel createTaskPanel(Task task){
         JPanel taskPanel = new JPanel(new BorderLayout());
         taskPanel.setOpaque(false);
-        taskPanel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        taskPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEmptyBorder(5, 5, 2, 5),
+            BorderFactory.createLineBorder(common.getTextColor(), 1)
+        ));
+        taskPanel.setPreferredSize(new Dimension(getWidth() - 50, 40));
+        taskPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+        
         taskPanel.add(createCheckboxPanel(task), BorderLayout.WEST);
         taskPanel.add(createTitlePanel(task), BorderLayout.CENTER);
         taskPanel.add(createActionPanel(task), BorderLayout.EAST);
@@ -258,11 +280,10 @@ public class TasksFrame extends Frame{
         return checkboxPanel;
     }
     
-    private JPanel createTitlePanel(Task task){
+    public static JPanel createTitlePanel(Task task){
         JPanel titlePanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
         titlePanel.setOpaque(false);
         JLabel taskLabel = new JLabel(task.getTaskTitle());
-        taskLabel.setFont(new Font("Dialog", Font.BOLD, 13));
         titlePanel.add(taskLabel);
         return titlePanel;
     }

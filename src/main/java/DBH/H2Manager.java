@@ -29,7 +29,21 @@ public class H2Manager {
             sync_status VARCHAR(20) DEFAULT 'LOCAL',
             last_sync TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
+            FOREIGN KEY (folder_id) REFERENCES folders(id)
         );
+
+
+        CREATE TABLE IF NOT EXISTS folders (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            folder_name VARCHAR(100) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        );
+
+        
+
         """;
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(CREATE_TABLES_H2)){

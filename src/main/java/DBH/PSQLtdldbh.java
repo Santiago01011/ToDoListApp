@@ -14,25 +14,26 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 public class PSQLtdldbh {
     private static HikariDataSource dataSource;
-    private static final boolean USE_CLOUD = true;
+    private static final boolean USE_CLOUD = false;
     // Create a connection pool that reuses the same connection 
     // rather than creating a new one every time a connection is requested
     public static HikariConfig config = new HikariConfig();
    
     static{
         init();
+        //H2Manager.createTablesIfNotExist();
     }
 
     public static void init(){        
         try{
             if(!USE_CLOUD){
                 // H2 embedded database - creates/uses a local file-based database
-                H2Manager.createTablesIfNotExist();
                 String userHome = System.getProperty("user.home");
                 String dbPath = userHome + "/.todoapp/taskdb";
                 config.setJdbcUrl("jdbc:h2:file:" + dbPath);
                 config.setUsername("sa");
                 config.setPassword("sa");
+                
             }
             else if (new File(".env").exists()){
                 System.out.println("Using .env file for database connection details");

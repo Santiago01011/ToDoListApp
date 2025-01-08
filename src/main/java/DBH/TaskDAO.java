@@ -138,7 +138,7 @@ public class TaskDAO {
         }
     }
 
-    public static void hardDeleteTaskFromDatabase(){
+    public static void hardDeleteTaskFromDatabase(){ //change, this method should use the user id to only delete the tasks from that user
         String sql = "DELETE FROM public.tasks WHERE deleted_at IS NOT NULL";
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
@@ -167,6 +167,10 @@ public class TaskDAO {
         }catch (SQLException e){
             System.out.println("Error validating user from the database");
             e.printStackTrace();
+            if(e.getMessage().contains("this database is empty")){
+                System.out.println("Database is empty");
+                H2Manager.createTablesIfNotExist();
+            }
         }
         return false;
     }
@@ -265,4 +269,6 @@ public class TaskDAO {
             e.printStackTrace();
         }
     }
+
+
 }

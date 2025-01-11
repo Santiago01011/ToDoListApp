@@ -9,7 +9,9 @@ public class Task{
     private String description;
     private int userId;
     private LocalDateTime dateAdded;
+    private LocalDateTime targetDate;
     private boolean isDone;
+    private int folderId;
 
     public Task(int id, String taskTitle, String description, int userId){
         this.id = id;
@@ -18,7 +20,6 @@ public class Task{
         this.userId = userId;
         this.dateAdded = LocalDateTime.now();
         this.isDone = false;
-
     }
 
     public int getId(){
@@ -44,6 +45,14 @@ public class Task{
     public LocalDateTime getDateAdded(){
         return this.dateAdded;
     }
+    
+    public LocalDateTime getTargetDate(){
+        return this.targetDate;
+    }
+
+    public int getFolderId(){
+        return this.folderId;
+    }
 
     public void setTaskTitle(String taskTitle){
         this.taskTitle = taskTitle;
@@ -61,8 +70,16 @@ public class Task{
         this.dateAdded = dateAdded;
     }
 
+    public void setTargetDate(LocalDateTime targetDate){
+        this.targetDate = targetDate;
+    }
+
     public void setId(int id){
         this.id = id;
+    }
+
+    public void setFolderId(int folderId){
+        this.folderId = folderId;
     }
 
     public String viewTaskDesc(){
@@ -71,7 +88,8 @@ public class Task{
         + "Task Title: " + taskTitle + "\n" 
         + "Description: " + description + "\n" 
         + "Date Added: " + dateAdded.format(formatter) + "\n" 
-        + "Status: " + (isDone ? "Done" : "Pending"); 
+        + "Status: " + (isDone ? "Done" : "Pending") + "\n"
+        + "Folder ID: " + folderId;
     }
 
 }

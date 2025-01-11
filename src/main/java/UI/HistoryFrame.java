@@ -1,7 +1,6 @@
 package UI;
 
 
-import COMMON.UserProperties;
 import COMMON.common;
 import DBH.TaskDAO;
 import model.Task;
@@ -13,10 +12,10 @@ import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridLayout;
+import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
@@ -24,41 +23,30 @@ import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
 import javax.swing.SwingUtilities;
 
 public class HistoryFrame extends Frame{
-    private final java.util.List<Task> completedTasks;
-    private final java.util.List<Task> deletedTasks;
+    private java.util.List<Task> completedTasks;
+    private java.util.List<Task> deletedTasks;
+    private java.util.List<Task> deletedTasksTemp;    
     //private JPanel centerPanel;
     private JPanel topPanel;
     private JPanel bottomPanel;
     private JButton toggleColorButton;
     private JButton updateButton;
+    private int userId;
     public HistoryFrame(String title, TasksFrame tasksFrame, int userId){
         super(title);
+        this.userId = userId;
         setLocationRelativeTo(null);
         addUIComponents();
-
         addUIComponentsSouth();
-        //load tasks from database
-        completedTasks = TaskDAO.loadTasksFromDatabase(userId, true, false);
-        deletedTasks = TaskDAO.loadTasksFromDatabase(userId, true, true);
+        initTasks();
         
-        //display history tasks
-        for(Task task : completedTasks){
-            JPanel taskPanel = createTaskPanel(task, false);
-            topPanel.add(taskPanel);
-        }
-        
-        for(Task task : deletedTasks){
-            JPanel taskPanel = createTaskPanel(task, true);
-            bottomPanel.add(taskPanel);
-        }
         //add window listener to save changes and update task list
-        addWindowListener(new java.awt.event.WindowAdapter() {
+        addWindowListener(new java.awt.event.WindowAdapter(){
             @Override
-            public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+            public void windowClosing(java.awt.event.WindowEvent windowEvent){
                 tasksFrame.updateButton.doClick();
             }
         });
@@ -72,14 +60,57 @@ public class HistoryFrame extends Frame{
             });
         });
 
-        updateButton.addActionListener(e -> {
-            dispose();
-            tasksFrame.updateButton.doClick();
-        });
+        // updateButton.addActionListener(e -> {
+        //     dispose();
+        //     tasksFrame.updateButton.doClick();
+        // });      
 
         
+    }
 
+    /**
+     * Initialize the tasks to be displayed in the frame
+     */
+
+    private void initTasks(){
+        //load tasks from database
+        completedTasks = TaskDAO.loadTasksFromDatabase(userId, true, false);
         
+        deletedTasks = TaskDAO.loadTasksFromDatabase(userId, false, true);
+        deletedTasksTemp = TaskDAO.loadTasksFromDatabase(userId, true, true);
+
+        deletedTasks.addAll(deletedTasksTemp);
+
+        //display history tasks
+        for(Task task : completedTasks){
+            JPanel taskPanel = createTaskPanel(task, false);
+            topPanel.add(taskPanel);
+        }
+        
+        for(Task task : deletedTasks){
+            JPanel taskPanel = createTaskPanel(task, true);
+            bottomPanel.add(taskPanel);
+        }
+    }
+
+
+    /**
+     * Refresh the tasks displayed in the frame
+     * @param top - this parameter is used to chose which panel to refresh
+     */
+    private void refreshTasks(boolean top, Task task){
+        if(top){
+            JPanel taskPanel = createTaskPanel(task, false);
+            topPanel.add(taskPanel);
+        }
+        else{
+            JPanel taskPanel = createTaskPanel(task, true);
+            bottomPanel.add(taskPanel);
+        }
+        topPanel.revalidate();
+        topPanel.repaint();
+        bottomPanel.revalidate();
+        bottomPanel.repaint();
     }
 
     /**
@@ -107,7 +138,7 @@ public class HistoryFrame extends Frame{
 
             checkBox.addActionListener(e -> {
                 task.setIsDone(!task.getIsDone());
-                TaskDAO.updateTaskInDatabase(task);
+                TaskDAO.updateDoneTaskInDatabase(task);
             });
         }
         
@@ -118,19 +149,13 @@ public class HistoryFrame extends Frame{
         }else{
             taskPanel.add(createActionPanel(task, isDeleted), BorderLayout.EAST);
         }
-
-
-
         return taskPanel;
     }
-
-
  
     private JPanel createActionPanel(Task task, boolean isDeleted) {
         JPanel actionPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         actionPanel.setOpaque(false);
 
-        
         ImageIcon deleteIcon = common.getDeleteIcon();
         JButton deleteButton = new JButton(deleteIcon);
         deleteButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -138,6 +163,7 @@ public class HistoryFrame extends Frame{
         deleteButton.setBorderPainted(false);
         deleteButton.setContentAreaFilled(false);
         deleteButton.setToolTipText("Delete Task");
+        
         
         if(isDeleted){
             ImageIcon restoreIcon = common.getRestoreIcon();
@@ -150,8 +176,18 @@ public class HistoryFrame extends Frame{
             actionPanel.add(restoreButton);
 
             deleteButton.addActionListener(e -> {
-                TaskDAO.deleteTaskFromDatabase(task);
+                TaskDAO.hardDeleteTaskFromDatabase(task);
                 bottomPanel.remove((Component) actionPanel.getParent());
+                bottomPanel.revalidate();
+                bottomPanel.repaint();
+            });
+
+            restoreButton.addActionListener(e -> {
+                TaskDAO.restoreTaskFromDatabase(task);
+                bottomPanel.remove((Component) actionPanel.getParent());
+                if(task.getIsDone()){
+                    refreshTasks(true, task);
+                }
                 bottomPanel.revalidate();
                 bottomPanel.repaint();
             });
@@ -170,11 +206,26 @@ public class HistoryFrame extends Frame{
                 topPanel.remove((Component) actionPanel.getParent());
                 topPanel.revalidate();
                 topPanel.repaint();
+                refreshTasks(false, task);
+            });
+
+            editButton.addActionListener(e->{    
+                SwingUtilities.invokeLater(() -> {
+                    EditTaskFrame editTaskFrame = new EditTaskFrame("Edit Task", task);
+                    editTaskFrame.setVisible(true);
+                    editTaskFrame.addWindowListener(new WindowAdapter() {
+                        @Override
+                        public void windowClosed(WindowEvent e) {
+                            topPanel.remove((Component) actionPanel.getParent());
+                            topPanel.revalidate();
+                            topPanel.repaint();
+                            refreshTasks(true, task);
+                        }
+                    });
+                });
             });
         }
-
         actionPanel.add(deleteButton);
-
         return actionPanel;
     }
 
@@ -253,7 +304,7 @@ public class HistoryFrame extends Frame{
 
         //add components to southPanel
         southPanel.add(backButton);
-        southPanel.add(updateButton);
+        //southPanel.add(updateButton);
         southPanel.add(toggleColorButton);
         //add southPanel to the frame
         add(southPanel, BorderLayout.SOUTH);

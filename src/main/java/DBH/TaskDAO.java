@@ -15,21 +15,23 @@ public class TaskDAO {
 
     public static List<Task> loadTasksFromDatabase(int userId, boolean isDone, boolean isDeleted){
         List<Task> tasks = new ArrayList<>();
-        String sql = "SELECT * FROM tasks WHERE (user_id = ? AND is_done = ?) AND deleted_at IS " + (isDeleted ? "NOT NULL" : "NULL");
+        String sql = "SELECT t.id, t.task_title, t.description, t.date_added, t.target_date, t.deleted_at, t.folder_id, f.folder_name FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id WHERE (t.user_id = ? AND t.is_done = ?) AND t.deleted_at IS " + (isDeleted ? "NOT NULL" : "NULL");
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setInt(1, userId);
             pstmt.setBoolean(2, isDone);
             ResultSet rs = pstmt.executeQuery();
-            while (rs.next()) {
+            while (rs.next()){
                 Task task = new Task(
                         rs.getInt("id"),
                         rs.getString("task_title"),
                         rs.getString("description"),
-                        rs.getInt("user_id")
+                        userId
                 );
-                task.setIsDone(rs.getBoolean("is_done"));
+                //System.out.println("Folder name: " + rs.getString("folder_name"));
+                task.setIsDone(isDone);
                 task.setDateAdded(rs.getTimestamp("date_added").toLocalDateTime());
+                task.setFolderId(rs.getInt("folder_id"));
                 tasks.add(task);
             }
         }catch (SQLException e){
@@ -40,7 +42,7 @@ public class TaskDAO {
     }
 
     public static void saveTaskToDatabase(Task task){
-        String sql = "INSERT INTO tasks (task_title, description, date_added, is_done, user_id) VALUES (?, ?, ?, ?, ?) RETURNING id";
+        String sql = "INSERT INTO tasks (task_title, description, date_added, is_done, user_id) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, task.getTaskTitle());
@@ -48,7 +50,8 @@ public class TaskDAO {
             pstmt.setObject(3, task.getDateAdded());
             pstmt.setBoolean(4, task.getIsDone());
             pstmt.setInt(5, task.getUserId());
-            ResultSet rs = pstmt.executeQuery();
+            pstmt.executeUpdate();
+            ResultSet rs = pstmt.getGeneratedKeys();
             if (rs.next()) {
                 task.setId(rs.getInt(1));
             }
@@ -87,26 +90,23 @@ public class TaskDAO {
             pstmt.setBoolean(3, task.getIsDone());
             pstmt.setInt(4, task.getId());
             pstmt.executeUpdate();
-        } catch (SQLException e) {
+        }catch (SQLException e){
             System.out.println("Error updating task in the database");
             e.printStackTrace();
         }
     }
 
-    public static void updateDoneTasksInDatabase(List <Task> tasks){
+    public static void updateDoneTaskInDatabase(Task task){
         String sql = "UPDATE tasks SET is_done = ? WHERE id = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)){
-                for(Task task : tasks){
-                    pstmt.setBoolean(1, task.getIsDone());
-                    pstmt.setInt(2, task.getId());
-                    pstmt.addBatch();
-                }
-                pstmt.executeBatch();
-            }catch(SQLException e){
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setBoolean(1, task.getIsDone());
+            pstmt.setInt(2, task.getId());
+            pstmt.executeUpdate();
+        }catch(SQLException e){
                 System.out.println("Error updating done tasks in the database");
                 e.printStackTrace();
-            }
+        }
     }
 
     public static void editTasksInDatabase(List <Task> tasks){
@@ -127,9 +127,9 @@ public class TaskDAO {
     }
 
     public static void deleteTaskFromDatabase(Task task){
-        String sql = "DELETE FROM tasks WHERE id = ?";
+        String sql = "UPDATE tasks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)){
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setInt(1, task.getId());
             pstmt.executeUpdate();
         }catch (SQLException e){
@@ -138,13 +138,26 @@ public class TaskDAO {
         }
     }
 
-    public static void hardDeleteTaskFromDatabase(){ //change, this method should use the user id to only delete the tasks from that user
-        String sql = "DELETE FROM public.tasks WHERE deleted_at IS NOT NULL";
+    public static void hardDeleteTaskFromDatabase(Task task){
+        String sql = "DELETE FROM public.tasks WHERE deleted_at IS NOT NULL AND id = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, task.getId());
             pstmt.executeUpdate();
         }catch (SQLException e){
             System.out.println("Error hard deleting task from the database");
+            e.printStackTrace();
+        }
+    }
+
+    public static void restoreTaskFromDatabase(Task task){
+        String sql = "UPDATE tasks SET deleted_at = NULL WHERE id = ?";
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, task.getId());
+            pstmt.executeUpdate();
+        }catch (SQLException e){
+            System.out.println("Error restoring task from the database");
             e.printStackTrace();
         }
     }
@@ -207,12 +220,29 @@ public class TaskDAO {
         return false;
     }
 
-    public static void registerUser(String username, String password){
-        String sql = "INSERT INTO users (username, password) VALUES (?, ?)";
+    public static boolean getEmail(String email){
+        String sql = "SELECT 1 FROM users WHERE email = ?";
+        try (Connection conn = PSQLtdldbh.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, email);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return true;
+            }
+        }catch (SQLException e){
+            System.out.println("Error getting email from the database");
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static void registerUser(String username, String email, String password){
+        String sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
         try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
-            pstmt.setString(2, PasswordUtil.hashPassword(password));
+            pstmt.setString(2, email);
+            pstmt.setString(3, PasswordUtil.hashPassword(password));
             pstmt.executeUpdate();
         } catch (SQLException e) {
             System.out.println("Error registering user to the database");

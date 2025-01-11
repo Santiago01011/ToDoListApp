@@ -30,32 +30,33 @@ public class LoginFrame extends Frame{
         private void addLoginUIComponents(){
             JLabel titleLabel = new JLabel("Login");
             titleLabel.setFont(new Font("Dialog", Font.BOLD, 30));
-            titleLabel.setBounds(150, 30, 100, 35);
+            titleLabel.setBounds(150, 30, 80, 35);
     
             JTextField usernameField = new JTextField("Username");
-            usernameField.setBounds(100, 90, 200, 30);
+            usernameField.setBounds(90, 90, 200, 30);
     
             JPasswordField passwordField = new JPasswordField("Password");
-            passwordField.setBounds(100, 140, 200, 30);
+            passwordField.setBounds(90, 140, 200, 30);
             
-            JCheckBox keepLoggedInCheckBox = new JCheckBox("  Keep me logged in");
-            keepLoggedInCheckBox.setBounds(100, 170, 200, 30);
-            keepLoggedInCheckBox.setOpaque(false);
+            JCheckBox keepLoggedInCheckBox = new JCheckBox("Keep me logged in");
+            keepLoggedInCheckBox.setFont(new Font("Consolas", Font.PLAIN, 14));
+            keepLoggedInCheckBox.setBounds(110, 170, 161, 30); // 36 -> 290
+            keepLoggedInCheckBox.setOpaque(false);             // 18 -> 145
             keepLoggedInCheckBox.setForeground(common.getTextColor());
     
             ImageIcon toggleColorIcon = common.getModeIcon();
             JButton toggleColorButton = new JButton(toggleColorIcon);
             toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            toggleColorButton.setBounds(340, 30, 30, 30);
+            toggleColorButton.setBounds(330, 30, 30, 30);
             toggleColorButton.setToolTipText("Toggle color mode");
     
             JButton loginButton = new JButton("Login");
             loginButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            loginButton.setBounds(150, 210, 100, 30);
+            loginButton.setBounds(140, 210, 100, 30);
     
             JLabel registerLabel = new JLabel("Don't have an account? Register here");
             registerLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
-            registerLabel.setBounds(100, 250, 250, 30);
+            registerLabel.setBounds(45, 250, 290, 30);
     
             addFocusListeners(usernameField, "Username");
             addFocusListeners(passwordField, "Password");

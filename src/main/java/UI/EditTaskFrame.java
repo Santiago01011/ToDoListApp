@@ -5,30 +5,26 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Image;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.util.concurrent.Flow;
 
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextArea;
-import javax.swing.JTextField;
 import javax.swing.plaf.BorderUIResource;
 
 import COMMON.common;
+import DBH.TaskDAO;
 import model.Task;
 
 
 public class EditTaskFrame extends Frame {
     
-    public EditTaskFrame(String title, Task task, TasksFrame tasksFrame){
+    public EditTaskFrame(String title, Task task/* , TasksFrame tasksFrame*/){
         super(title);
         setTitle(title);
         setSize(350, 650);
@@ -144,7 +140,8 @@ public class EditTaskFrame extends Frame {
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                tasksFrame.updateTaskList();
+                TaskDAO.updateTaskInDatabase(task);
+                System.out.println("Task title: " + task.getTaskTitle());
             }
         });
     }

@@ -21,7 +21,7 @@ public class PSQLtdldbh {
    
     static{
         init();
-        //H2Manager.createTablesIfNotExist();
+        //H2Manager.H2dbchanges();
     }
 
     public static void init(){        

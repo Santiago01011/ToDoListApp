@@ -6,4 +6,6 @@ user.yml
 # Ignore all the target directorie and its content
 target/
 
-
+# Ignore files to doccument the project
+IMPROVEMENTS.md
+doc.md

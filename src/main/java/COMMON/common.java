@@ -13,8 +13,8 @@ public class common {
 
     // Variable to store the current mode based on the time
     //private static boolean useNightMode = (java.time.LocalTime.now().getHour() >= 22 || java.time.LocalTime.now().getHour() < 7) ? true : false;
-    //private static boolean useNightMode = false;
-    public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
+    public static boolean useNightMode = true;
+    //public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
 
     // Day mode colors
     public static final Color PRIMARY_COLOR_DAY = Color.decode("#f6d76f");  //hex #f6d76f

@@ -65,4 +65,16 @@ This file tracks the expected improvements and steps for each day.
 - Improve UI settings. ✔
 
 
+### Days 7, 8, 9, 10
+
+- Change the app structure to work with a local embeded database. ✔
+- Refactor lot of the code for working with the embeded database. ✔
+- Refactor the EditTaskFrame and the button that invokes it. ✔
+- Implement folders, each task could be assigned to a folder, tasks without folder will be auto assigned to the default users folder. ✔
+- Implement a way to create, delete and rename folders.
+- Refactor all the UI code for HistoryFrame to show the completed tasks and also the deleted tasks. ✔
+- Implement a way to restore deleted tasks. ✔
+- Implement a way to delete tasks permanently. ✔
+- Implement a way to edit completed tasks in HistoryFrame. ✔
+
 

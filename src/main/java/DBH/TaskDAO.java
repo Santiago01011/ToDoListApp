@@ -15,23 +15,22 @@ public class TaskDAO {
 
     public static List<Task> loadTasksFromDatabase(int userId, boolean isDone, boolean isDeleted){
         List<Task> tasks = new ArrayList<>();
-        String sql = "SELECT t.id, t.task_title, t.description, t.date_added, t.target_date, t.deleted_at, t.folder_id, f.folder_name FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id WHERE (t.user_id = ? AND t.is_done = ?) AND t.deleted_at IS " + (isDeleted ? "NOT NULL" : "NULL");
+        String sql = "SELECT t.id, t.task_title, t.description, t.target_date, t.date_added, t.deleted_at, t.folder_id FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id WHERE (t.user_id = ? AND t.is_done = ?) AND t.deleted_at IS " 
+        + (isDeleted ? "NOT NULL" : "NULL");
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setInt(1, userId);
             pstmt.setBoolean(2, isDone);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()){
-                Task task = new Task(
-                        rs.getInt("id"),
-                        rs.getString("task_title"),
-                        rs.getString("description"),
-                        userId
-                );
-                //System.out.println("Folder name: " + rs.getString("folder_name"));
+                Task task = new Task.Builder(userId)
+                        .id(rs.getInt("id"))
+                        .taskTitle(rs.getString("task_title"))
+                        .description(rs.getString("description"))
+                        .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
+                        .folderId(rs.getInt("folder_id"))
+                        .build();
                 task.setIsDone(isDone);
-                task.setDateAdded(rs.getTimestamp("date_added").toLocalDateTime());
-                task.setFolderId(rs.getInt("folder_id"));
                 tasks.add(task);
             }
         }catch (SQLException e){
@@ -42,14 +41,14 @@ public class TaskDAO {
     }
 
     public static void saveTaskToDatabase(Task task){
-        String sql = "INSERT INTO tasks (task_title, description, date_added, is_done, user_id) VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO tasks (task_title, description, is_done, user_id) VALUES (?, ?, ?, ?)";
         try (Connection conn = PSQLtdldbh.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, task.getTaskTitle());
             pstmt.setString(2, task.getDescription());
-            pstmt.setObject(3, task.getDateAdded());
-            pstmt.setBoolean(4, task.getIsDone());
-            pstmt.setInt(5, task.getUserId());
+            //pstmt.setObject(3, task.getDateAdded());
+            pstmt.setBoolean(3, task.getIsDone());
+            pstmt.setInt(4, task.getUserId());
             pstmt.executeUpdate();
             ResultSet rs = pstmt.getGeneratedKeys();
             if (rs.next()) {
@@ -80,6 +79,36 @@ public class TaskDAO {
             e.printStackTrace();
         }
     }
+
+    public static List<String> loadFoldersFromDatabase(int userId){
+        List<String> folders = new ArrayList<>();
+        String sql = "SELECT folder_name FROM folders WHERE user_id = ?";
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()){
+                folders.add(rs.getString("folder_name"));
+            }
+        }catch (SQLException e){
+            System.out.println("Error loading folders from the database");
+            e.printStackTrace();
+        }
+        return folders;
+   }
+
+    public static void saveFolderToDatabase(String folderName, int userId){
+        String sql = "INSERT INTO folders (user_id, folder_name) VALUES (?, ?)";
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, folderName);
+            pstmt.executeUpdate();
+        }catch (SQLException e){
+            System.out.println("Error saving folder to the database");
+            e.printStackTrace();
+        }
+   }
 
     public static void updateTaskInDatabase(Task task){
         String sql = "UPDATE tasks SET task_title = ?, description = ?, is_done = ? WHERE id = ?";
@@ -251,7 +280,6 @@ public class TaskDAO {
     }
 
 
-    // Now i need to change all the passwords to the new hashed password, this method are going to be used only once
     public static void changePassword(String username, String password){
         String sql = "UPDATE users SET password = ? WHERE username = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
@@ -265,7 +293,7 @@ public class TaskDAO {
         }
     }
     // This method is going to be used only once for migrate the passwords
-    public static void migratePasswords() {
+    /*public static void migratePasswords() {
         // Get all users
         String selectSql = "SELECT id, username, password FROM users";
         String updateSql = "UPDATE users SET password = ? WHERE id = ?";
@@ -298,7 +326,7 @@ public class TaskDAO {
             System.out.println("Error migrating passwords");
             e.printStackTrace();
         }
-    }
+    }*/
 
 
 }

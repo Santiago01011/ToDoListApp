@@ -7,6 +7,7 @@ import javax.swing.JFrame;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 
+
 import COMMON.common;
 
 public class Frame extends JFrame{
@@ -45,6 +46,7 @@ public class Frame extends JFrame{
     //constructor
     public Frame(String title){
         super(title);
+        common.toggleColorMode(); //for testing purposes
         // Get the screen size
         java.awt.Dimension screenSize = java.awt.Toolkit.getDefaultToolkit().getScreenSize();
         // Set the size relative to the screen size
@@ -69,9 +71,20 @@ public class Frame extends JFrame{
         UIManager.put("PasswordField.foreground", common.getTextColor());
         UIManager.put("PasswordField.caretForeground", common.getTextColor());
 
+        UIManager.put("ComboBox.font", new Font("Consolas", Font.PLAIN, 14));
+        UIManager.put("ComboBox.background", common.getTertiaryColor());
+        UIManager.put("ComboBox.foreground", common.getTextColor());
+        
         UIManager.put("TextArea.font", new Font("Consolas", Font.PLAIN, 16));
         UIManager.put("TextArea.background", common.getTertiaryColor());
         UIManager.put("TextArea.foreground", common.getTextColor());
+
+        //add the default balues to BorderFactory.createTitledBorder("Add New Task", TitledBorder.CENTER, TitledBorder.TOP);
+        UIManager.put("TitledBorder.font", new Font("Consolas", Font.BOLD, 14));
+        UIManager.put("TitledBorder.titleColor", common.getTextColor());
+        UIManager.put("TitledBorder.border", javax.swing.BorderFactory.createLineBorder(common.getTextColor()));
+
+        UIManager.put("Panel.background", common.getPanelColor());
 
 
 
@@ -101,4 +114,5 @@ public class Frame extends JFrame{
             }
         });
     }
+
 }

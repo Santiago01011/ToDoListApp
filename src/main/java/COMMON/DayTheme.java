@@ -12,10 +12,8 @@ public class DayTheme extends FlatLightLaf {
     }
 
     public static boolean setup() {
-        // Install the theme
         boolean success = FlatLightLaf.setup(new DayTheme());
 
-        // Apply custom UI defaults
         UIDefaults defaults = UIManager.getLookAndFeelDefaults();
         defaults.put("Component.background", common.getPrimaryColor());
         defaults.put("Component.foreground", common.getTextColor());
@@ -41,5 +39,4 @@ public class DayTheme extends FlatLightLaf {
     public String getDescription() {
         return "Day theme for the application";
     }
-    
 }

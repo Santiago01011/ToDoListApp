@@ -22,8 +22,8 @@ public class H2Manager {
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             folder_name VARCHAR(100) NOT NULL,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP,
+            created_at TIMESTAMP default CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP default CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id)
         );
         
@@ -33,7 +33,7 @@ public class H2Manager {
             task_title VARCHAR(50) NOT NULL,
             description TEXT,
             is_done BOOLEAN NOT NULL DEFAULT FALSE,
-            date_added TIMESTAMP NOT NULL,
+            date_added TIMESTAMP default CURRENT_TIMESTAMP,
             target_date TIMESTAMP,
             deleted_at TIMESTAMP,
             updated_at TIMESTAMP,
@@ -54,6 +54,8 @@ public class H2Manager {
     }
 
     public static void H2dbchanges(){
+
+        //createTablesIfNotExist();
 
         try {
             org.h2.tools.Server.createWebServer("-web").start();

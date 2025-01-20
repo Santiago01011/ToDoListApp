@@ -34,7 +34,7 @@ public class NightTheme extends FlatDarkLaf {
 
     @Override
     public boolean isDark() {
-        return true;    
+        return true;
     }
 
     @Override

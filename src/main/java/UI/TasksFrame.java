@@ -372,7 +372,11 @@ public class TasksFrame extends Frame{
 
     // Method to add a new task
     public void addTask(String taskTitle, String description){
-        Task task = new Task(tasks.size() + 1, taskTitle, description, getUserId());
+        Task task = new Task.Builder(getUserId())
+            .taskTitle(taskTitle)
+            .description(description)
+            .folderId(1)
+            .build();
         tasks.add(task);
         TaskDAO.saveTaskToDatabase(task);
         updateTaskList();

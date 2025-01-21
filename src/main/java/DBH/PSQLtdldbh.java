@@ -99,18 +99,5 @@ public class PSQLtdldbh {
         return cloudDataSource != null;
     }
 
-    // Method to sync databases
-    public static void syncDatabases() {
-        if (!isCloudAvailable()) {
-            return; // Skip if cloud isn't configured
-        }
-        
-        // try {
-        //     DatabaseSynchronizer syncer = new DatabaseSynchronizer();
-        //     syncer.synchronize();
-        // } catch (SQLException e) {
-        //     // Log error or notify user
-        //     e.printStackTrace();
-        // }
-    }
+    
 }

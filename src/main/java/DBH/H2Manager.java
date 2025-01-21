@@ -4,7 +4,6 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-
 public class H2Manager {
 
      // SQL for creating tables in H2 database
@@ -45,7 +44,7 @@ public class H2Manager {
         ALTER TABLE tasks ADD COLUMN folder_id INT DEFAULT NULL;
         ALTER TABLE tasks ADD FOREIGN KEY (folder_id) REFERENCES folders(id);
         """;
-        try (Connection conn = PSQLtdldbh.getConnection();
+        try (Connection conn = PSQLtdldbh.getLocalConnection();
             PreparedStatement pstmt = conn.prepareStatement(CREATE_TABLES_H2)){
             pstmt.executeUpdate();
         } catch (SQLException e){
@@ -55,7 +54,7 @@ public class H2Manager {
 
     public static void H2dbchanges(){
 
-        //createTablesIfNotExist();
+        createTablesIfNotExist();
 
         try {
             org.h2.tools.Server.createWebServer("-web").start();
@@ -92,8 +91,7 @@ public class H2Manager {
         // System.out.println("");
     }
 
-    public static void syncWithCloudDatabase(){
-        
-    }
+    
+
 
 }

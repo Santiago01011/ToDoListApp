@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,12 +24,15 @@ public class TaskDAO {
             pstmt.setBoolean(2, isDone);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()){
+                int folderId = rs.getInt("folder_id");
+                String folderName = getFolderNameById(conn, folderId);
                 Task task = new Task.Builder(userId)
                         .id(rs.getInt("id"))
                         .taskTitle(rs.getString("task_title"))
                         .description(rs.getString("description"))
                         .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
-                        .folderId(rs.getInt("folder_id"))
+                        .folderId(folderId)
+                        .folderName(folderName)
                         .build();
                 task.setIsDone(isDone);
                 tasks.add(task);
@@ -40,22 +44,88 @@ public class TaskDAO {
         return tasks;
     }
 
-    public static void saveTaskToDatabase(Task task){
-        String sql = "INSERT INTO tasks (task_title, description, is_done, user_id) VALUES (?, ?, ?, ?)";
+    public static List<Task> loadTasksFromDatabaseByFolder(int userId, boolean isDone, String folderName){
+        List<Task> tasks = new ArrayList<>();
+        String sql = "SELECT t.id, t.task_title, t.description, t.target_date, t.date_added, t.deleted_at, t.folder_id FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id WHERE (t.user_id = ? AND t.is_done = ?) AND f.folder_name = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, task.getTaskTitle());
-            pstmt.setString(2, task.getDescription());
-            //pstmt.setObject(3, task.getDateAdded());
-            pstmt.setBoolean(3, task.getIsDone());
-            pstmt.setInt(4, task.getUserId());
-            pstmt.executeUpdate();
-            ResultSet rs = pstmt.getGeneratedKeys();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, userId);
+            pstmt.setBoolean(2, isDone);
+            pstmt.setString(3, folderName);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()){
+                int folderId = rs.getInt("folder_id");
+                Task task = new Task.Builder(userId)
+                        .id(rs.getInt("id"))
+                        .taskTitle(rs.getString("task_title"))
+                        .description(rs.getString("description"))
+                        .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
+                        .folderId(folderId)
+                        .folderName(folderName)
+                        .build();
+                task.setIsDone(isDone);
+                tasks.add(task);
+            }
+        }catch (SQLException e){
+            System.out.println("Error loading tasks from the database by folder");
+            e.printStackTrace();
+        }
+        return tasks;
+    }
+
+    private static String getFolderNameById(Connection conn, int folderId) throws SQLException {
+        String sql = "SELECT folder_name FROM folders WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, folderId);
+            ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
-                task.setId(rs.getInt(1));
+                return rs.getString("folder_name");
+            } else {
+                throw new SQLException("Folder not found for id: " + folderId);
+            }
+        }
+    }
+
+    public static void saveTaskToDatabase(Task task) {
+        try (Connection conn = PSQLtdldbh.getConnection()) {
+            conn.setAutoCommit(false);
+            try {
+                // Get folder_id first
+                int folderId;
+                String folderSql = "SELECT id FROM folders WHERE FOLDER_NAME = ? AND user_id = ?";
+                try (PreparedStatement folderStmt = conn.prepareStatement(folderSql)){
+                    folderStmt.setString(1, task.getFolderName());
+                    folderStmt.setInt(2, task.getUserId());
+                    ResultSet rs = folderStmt.executeQuery();
+                    if (!rs.next()){
+                        throw new SQLException("Folder not found: " + task.getFolderName());
+                    }
+                    folderId = rs.getInt("id");
+                }
+    
+                // Then insert task
+                String taskSql = "INSERT INTO tasks (task_title, description, is_done, user_id, folder_id) VALUES (?, ?, ?, ?, ?)";
+                try (PreparedStatement taskStmt = conn.prepareStatement(taskSql, Statement.RETURN_GENERATED_KEYS)){
+                    taskStmt.setString(1, task.getTaskTitle());
+                    taskStmt.setString(2, task.getDescription());
+                    taskStmt.setBoolean(3, task.getIsDone());
+                    taskStmt.setInt(4, task.getUserId());
+                    taskStmt.setInt(5, folderId);
+                    taskStmt.executeUpdate();
+                    
+                    ResultSet rs = taskStmt.getGeneratedKeys();
+                    if (rs.next()) {
+                        task.setId(rs.getInt(1));
+                    }
+                }
+                
+                conn.commit();
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e;
             }
         } catch (SQLException e) {
-            System.out.println("Error saving task to the database");
+            System.out.println("Error saving task to database");
             e.printStackTrace();
         }
     }
@@ -155,11 +225,11 @@ public class TaskDAO {
         }
     }
 
-    public static void deleteTaskFromDatabase(Task task){
+    public static void deleteTaskFromDatabase(int taskId){
         String sql = "UPDATE tasks SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
-            pstmt.setInt(1, task.getId());
+            pstmt.setInt(1, taskId);
             pstmt.executeUpdate();
         }catch (SQLException e){
             System.out.println("Error deleting task from the database");
@@ -167,11 +237,11 @@ public class TaskDAO {
         }
     }
 
-    public static void hardDeleteTaskFromDatabase(Task task){
+    public static void hardDeleteTaskFromDatabase(int taskId){
         String sql = "DELETE FROM public.tasks WHERE deleted_at IS NOT NULL AND id = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)){
-            pstmt.setInt(1, task.getId());
+            pstmt.setInt(1, taskId);
             pstmt.executeUpdate();
         }catch (SQLException e){
             System.out.println("Error hard deleting task from the database");
@@ -277,6 +347,14 @@ public class TaskDAO {
             System.out.println("Error registering user to the database");
             e.printStackTrace();
         }
+    }
+
+    public static void syncDatabases(int userId){
+        //use the local conection and cloud conection methods to sync between the two databases,
+        //using the sync_status and last_sync columns to determine which tasks to sync
+
+        //String sql = "SELECT id, task_title, "
+
     }
 
 

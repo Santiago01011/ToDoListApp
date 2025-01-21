@@ -25,7 +25,7 @@ public class common {
 
     // Night mode colors
     public static final Color PRIMARY_COLOR_NIGHT = Color.decode("#1a144b");  //hex #1a144b
-    public static final Color PANEL_COLOR_NIGHT = Color.decode("#251d5f");  //hex #251d5f
+    public static final Color PANEL_COLOR_NIGHT = Color.decode("#0c005b");  //hex #0c005b
     public static final Color SECONDARY_COLOR_NIGHT = Color.decode("#221f1f");  //hex #221f1f
     public static final Color TERTIARY_COLOR_NIGHT = Color.decode("#130814");  //hex #130814
     public static final Color TEXT_COLOR_NIGHT = Color.decode("#fab500");  //hex #fab500

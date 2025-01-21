@@ -35,6 +35,19 @@ public class HistoryFrame extends Frame{
     private JButton toggleColorButton;
     private JButton updateButton;
     private int userId;
+    /**
+     * Constructs a HistoryFrame with the specified title, associated TasksFrame, and user ID.
+     * 
+     * @param title The title of the HistoryFrame window.
+     * @param tasksFrame The associated TasksFrame instance.
+     * @param userId The ID of the user.
+     * 
+     * This constructor initializes the HistoryFrame by setting its title, user ID, and location.
+     * It adds UI components and initializes tasks. It also sets up a window listener to save changes
+     * and update the task list when the window is closing. Additionally, it adds action listeners to
+     * the buttons in the south panel, including a toggle color button that switches the color mode
+     * and reopens the HistoryFrame.
+     */
     public HistoryFrame(String title, TasksFrame tasksFrame, int userId){
         super(title);
         this.userId = userId;
@@ -176,7 +189,7 @@ public class HistoryFrame extends Frame{
             actionPanel.add(restoreButton);
 
             deleteButton.addActionListener(e -> {
-                TaskDAO.hardDeleteTaskFromDatabase(task);
+                TaskDAO.hardDeleteTaskFromDatabase(task.getId());
                 bottomPanel.remove((Component) actionPanel.getParent());
                 bottomPanel.revalidate();
                 bottomPanel.repaint();
@@ -202,7 +215,7 @@ public class HistoryFrame extends Frame{
             actionPanel.add(editButton);
 
             deleteButton.addActionListener(e -> {
-                TaskDAO.deleteTaskFromDatabase(task);
+                TaskDAO.deleteTaskFromDatabase(task.getId());
                 topPanel.remove((Component) actionPanel.getParent());
                 topPanel.revalidate();
                 topPanel.repaint();
@@ -313,6 +326,12 @@ public class HistoryFrame extends Frame{
             dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
         });
 
+    }
+
+    public static void main(String[] args){
+        SwingUtilities.invokeLater(() -> {
+            new HistoryFrame("History", null, 1).setVisible(true);
+        });
     }
 
 

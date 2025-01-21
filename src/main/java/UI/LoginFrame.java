@@ -141,7 +141,7 @@ public class LoginFrame extends Frame {
             dispose();
             String usernameLogged = usernameField.getText();
             SwingUtilities.invokeLater(() -> {
-                new TasksFrame("ToDoList", TaskDAO.getUserId(usernameLogged)).setVisible(true);
+                new MainFrame(TaskDAO.getUserId(usernameLogged)).setVisible(true);
             });
         } else {
             JOptionPane.showMessageDialog(this, "Invalid username or password", "Error", JOptionPane.ERROR_MESSAGE);

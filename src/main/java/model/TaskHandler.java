@@ -15,7 +15,6 @@ public class TaskHandler{
             .folderName(folder)
             .build();
 
-
         List<String> folders = TaskDAO.loadFoldersFromDatabase(userId);
         if (!folders.contains(folder)) {
             TaskDAO.saveFolderToDatabase(folder, userId);

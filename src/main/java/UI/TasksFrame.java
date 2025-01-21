@@ -294,7 +294,7 @@ public class TasksFrame extends Frame{
         viewButton.setToolTipText("View Task Details");
         
         viewButton.addActionListener(e -> {
-                viewTaskDetails(task);
+            viewTaskDetails(task);
         });
         
         JButton deleteButton = new JButton(deleteIcon);
@@ -305,8 +305,8 @@ public class TasksFrame extends Frame{
         deleteButton.setToolTipText("Delete Task");
         
         deleteButton.addActionListener(e -> {
-                TaskDAO.deleteTaskFromDatabase(task);
-                updateTaskList();
+            TaskDAO.deleteTaskFromDatabase(task.getId());
+            updateTaskList();
         });
 
         JButton editButton = new JButton(editIcon);

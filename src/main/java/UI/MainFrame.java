@@ -223,6 +223,7 @@ public class MainFrame extends Frame{
         });
         
         updateButton.addActionListener(e -> {
+            TaskDAO.syncDatabases(userId);
             refreshTaskList(null);
         });
 

@@ -9,41 +9,45 @@ public class H2Manager {
      // SQL for creating tables in H2 database
     public static void createTablesIfNotExist() {
         String CREATE_TABLES_H2 = """       
-        CREATE TABLE IF NOT EXISTS users (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(50) UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            email TEXT
-        );
+            CREATE TABLE IF NOT EXISTS users (
+                -- id UUID PRIMARY KEY,
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                username VARCHAR(50) UNIQUE NOT NULL,
+                password TEXT NOT NULL,
+                email TEXT
+            );
 
-        
-        CREATE TABLE IF NOT EXISTS folders (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            folder_name VARCHAR(100) NOT NULL,
-            created_at TIMESTAMP default CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP default CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
-        
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            task_title VARCHAR(50) NOT NULL,
-            description TEXT,
-            is_done BOOLEAN NOT NULL DEFAULT FALSE,
-            date_added TIMESTAMP default CURRENT_TIMESTAMP,
-            target_date TIMESTAMP,
-            deleted_at TIMESTAMP,
-            updated_at TIMESTAMP,
-            sync_status VARCHAR(20) DEFAULT 'LOCAL',
-            last_sync TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        );
+            CREATE TABLE IF NOT EXISTS folders (
+                -- id UUID PRIMARY KEY,
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                user_id INT NOT NULL,  -- Change this to UUID
+                folder_name VARCHAR(100) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                deleted_at TIMESTAMP,
+                sync_status VARCHAR(20) DEFAULT 'LOCAL',
+                FOREIGN KEY (user_id) REFERENCES users(id) -- Change this to UUID
+            );
 
-        ALTER TABLE tasks ADD COLUMN folder_id INT DEFAULT NULL;
-        ALTER TABLE tasks ADD FOREIGN KEY (folder_id) REFERENCES folders(id);
-        """;
+            CREATE TABLE IF NOT EXISTS tasks (
+                -- id UUID PRIMARY KEY,
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                user_id INT NOT NULL,  -- Change this to UUID
+                task_title VARCHAR(50) NOT NULL,
+                description TEXT,
+                is_done BOOLEAN NOT NULL DEFAULT FALSE,
+                date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                target_date TIMESTAMP,
+                deleted_at TIMESTAMP,
+                updated_at TIMESTAMP,
+                sync_status VARCHAR(20) DEFAULT 'LOCAL',
+                last_sync TIMESTAMP,
+                folder_id INT DEFAULT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id), -- Change this to UUID
+                FOREIGN KEY (folder_id) REFERENCES folders(id) -- Change this to UUID
+            );
+        
+            """;
         try (Connection conn = PSQLtdldbh.getLocalConnection();
             PreparedStatement pstmt = conn.prepareStatement(CREATE_TABLES_H2)){
             pstmt.executeUpdate();

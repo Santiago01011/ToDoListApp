@@ -349,13 +349,93 @@ public class TaskDAO {
         }
     }
 
-    public static void syncDatabases(int userId){
-        //use the local conection and cloud conection methods to sync between the two databases,
-        //using the sync_status and last_sync columns to determine which tasks to sync
+    public static void syncDatabases(int userId) {
+        String tempTable = """
+            CREATE TEMPORARY TABLE temp_tasks (
+                id INT PRIMARY KEY,
+                user_id INT,
+                task_title VARCHAR(50),
+                description TEXT,
+                is_done BOOLEAN,
+                target_date TIMESTAMP,
+                deleted_at TIMESTAMP,
+                updated_at TIMESTAMP,
+                sync_status VARCHAR(20),
+                last_sync TIMESTAMP,
+                folder_id INT
+            );
+            """;
+    
+        String insertTempTasks = """
+            INSERT INTO temp_tasks (id, user_id, task_title, description, is_done, target_date, deleted_at, 
+                                    updated_at, sync_status, last_sync, folder_id)
+            SELECT id, user_id, task_title, description, is_done, target_date, deleted_at, updated_at, 
+                    sync_status, last_sync,
+                    COALESCE(folder_id, (SELECT id FROM folders WHERE user_id = ? AND folder_name = 'Default Folder'))
+            FROM tasks
+            WHERE user_id = ?;
+            """;
 
-        //String sql = "SELECT id, task_title, "
+            //SELECT all the tasks with the sync_status = 'LOCAL'  from the tasks table and insert them into the same cloud table
+        String fetchFromLocal = """
+                SELECT * FROM tasks WHERE sync_status = 'LOCAL' AND user_id = ?;
+            """;
+    
+        try (Connection localConn = PSQLtdldbh.getLocalConnection();
+             Connection cloudConn = PSQLtdldbh.getCloudConnection()) {
+    
+            
+        } catch (SQLException e) {
+            System.out.println("Error syncing databases");
+            e.printStackTrace();
+        }
+    }    
+    
 
-    }
+    /* sync try
+     * 
+     * try (Connection cloudConn = PSQLtdldbh.getCloudConnection();
+                 PreparedStatement loadCloud = cloudConn.prepareStatement(sql);
+                 PreparedStatement insertCloud = cloudConn.prepareStatement("INSERT INTO tasks (id, task_title, description, is_done, target_date, deleted_at, updated_at, sync_status, last_sync, folder_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                 PreparedStatement updateCloud = cloudConn.prepareStatement("UPDATE tasks SET task_title = ?, description = ?, is_done = ?, target_date = ?, deleted_at = ?, updated_at = ?, sync_status = ?, last_sync = ?, folder_id = ? WHERE id = ?");
+                 PreparedStatement deleteCloud = cloudConn.prepareStatement("DELETE FROM tasks WHERE id = ?");
+                 PreparedStatement updateLocal = conn.prepareStatement("UPDATE tasks SET sync_status = 'SYNCED' WHERE id = ?")){
+                // Load local tasks
+                loadLocal.setInt(1, userId);
+                ResultSet rs = loadLocal.executeQuery();
+                while (rs.next()){
+                    insertCloud.setInt(1, rs.getInt("id"));
+                    insertCloud.setString(2, rs.getString("task_title"));
+                    insertCloud.setString(3, rs.getString("description"));
+                    insertCloud.setBoolean(4, rs.getBoolean("is_done"));
+                    insertCloud.setObject(5, rs.getObject("target_date"));
+                    insertCloud.setObject(6, rs.getObject("deleted_at"));
+                    insertCloud.setObject(7, rs.getObject("updated_at"));
+                    insertCloud.setString(8, rs.getString("sync_status"));
+                    insertCloud.setObject(9, rs.getObject("last_sync"));
+                    insertCloud.setInt(10, rs.getInt("folder_id"));
+                    insertCloud.setInt(11, userId);
+                    insertCloud.addBatch();
+                }
+
+                // Load cloud tasks
+                loadCloud.setInt(1, userId);
+                rs = loadCloud.executeQuery();
+                while (rs.next()){
+                    int id = rs.getInt("id");
+                    Task task = new Task.Builder(userId)
+                            .id(id)
+                            .taskTitle(rs.getString("task_title"))
+                            .description(rs.getString("description"))
+                            .isDone(rs.getBoolean("is_done"))
+                            .targetDate(rs.getTimestamp("target_date"))
+                            .deletedAt(rs.getTimestamp("deleted_at"))
+                            .updatedAt(rs.getTimestamp("updated_at"))
+                            .syncStatus(rs.getString("sync_status"))
+                            .lastSync(rs.getTimestamp("last_sync"))
+                            .folderId(rs.getInt("folder_id"))
+                            .build();
+     */
 
 
     public static void changePassword(String username, String password){

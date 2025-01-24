@@ -71,7 +71,7 @@ public class MainFrame extends Frame{
         inputPanel.add(addTaskButton, "span, align center");
 
         addTaskButton.addActionListener(e -> {
-            if(!titleField.getText().isEmpty() /*&& isalidDate(targetDate) */){ //add validation for date
+            if(!titleField.getText().isEmpty() /*&& isValidDate(targetDate) */){ //add validation for date
                 String targetDate = dateField.getText();
                 Task task = new Task.Builder(userId)
                 .taskTitle(titleField.getText())

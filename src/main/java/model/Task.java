@@ -11,6 +11,7 @@ public class Task {
     private LocalDateTime updatedAt;
     private LocalDateTime dateAdded;
     private LocalDateTime targetDate;
+    private LocalDateTime deletedAt;
     private boolean isDone;
     private int folderId;
     private String folderName;
@@ -22,6 +23,7 @@ public class Task {
         this.userId = builder.userId;
         this.dateAdded = builder.dateAdded;
         this.updatedAt = builder.updatedAt != null ? builder.updatedAt : LocalDateTime.now();
+        this.deletedAt = builder.deletedAt;
         this.targetDate = builder.targetDate;
         this.isDone = builder.isDone;
         this.folderId = builder.folderId;
@@ -45,6 +47,7 @@ public class Task {
         private LocalDateTime dateAdded;
         private LocalDateTime updatedAt;
         private LocalDateTime targetDate;
+        private LocalDateTime deletedAt;
         private boolean isDone = false;
         private int folderId;
         private String folderName;
@@ -75,6 +78,16 @@ public class Task {
 
         public Builder dateAdded(LocalDateTime dateAdded){
             this.dateAdded = dateAdded;
+            return this;
+        }
+
+        public Builder deletedAt(LocalDateTime deletedAt){
+            this.deletedAt = deletedAt;
+            return this;
+        }
+
+        public Builder updatedAt(LocalDateTime updatedAt){
+            this.updatedAt = updatedAt;
             return this;
         }
 
@@ -123,6 +136,10 @@ public class Task {
 
     public LocalDateTime getUpdatedAt(){
         return this.updatedAt;
+    }
+
+    public LocalDateTime getDeletedAt(){
+        return this.deletedAt;
     }
 
     public int getFolderId(){

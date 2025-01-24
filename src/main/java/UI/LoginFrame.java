@@ -140,8 +140,10 @@ public class LoginFrame extends Frame {
         if (TaskDAO.validateUserFromDatabase(usernameField.getText(), new String(passwordField.getPassword()))) {
             dispose();
             String usernameLogged = usernameField.getText();
-            SwingUtilities.invokeLater(() -> {
-                new MainFrame(TaskDAO.getUserId(usernameLogged)).setVisible(true);
+            int userId = TaskDAO.getUserId(usernameLogged);
+            TaskDAO.syncDatabases(userId);
+            SwingUtilities.invokeLater(() -> {    
+                new MainFrame(userId).setVisible(true);
             });
         } else {
             JOptionPane.showMessageDialog(this, "Invalid username or password", "Error", JOptionPane.ERROR_MESSAGE);

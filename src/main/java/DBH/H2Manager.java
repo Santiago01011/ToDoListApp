@@ -19,7 +19,7 @@ public class H2Manager {
 
             CREATE TABLE IF NOT EXISTS folders (
                 -- id UUID PRIMARY KEY,
-                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                id INT PRIMARY KEY,
                 user_id INT NOT NULL,  -- Change this to UUID
                 folder_name VARCHAR(100) NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

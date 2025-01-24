@@ -16,23 +16,22 @@ public class TaskDAO {
 
     public static List<Task> loadTasksFromDatabase(int userId, boolean isDone, boolean isDeleted){
         List<Task> tasks = new ArrayList<>();
-        String sql = "SELECT t.id, t.task_title, t.description, t.target_date, t.date_added, t.deleted_at, t.folder_id FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id WHERE (t.user_id = ? AND t.is_done = ?) AND t.deleted_at IS " 
-        + (isDeleted ? "NOT NULL" : "NULL");
+        String sql = "SELECT t.id, t.task_title, t.description, t.target_date, t.date_added, t.deleted_at, t.folder_id, f.folder_name " +
+                     "FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id " +
+                     "WHERE (t.user_id = ? AND t.is_done = ?) AND t.deleted_at IS " + (isDeleted ? "NOT NULL" : "NULL");
         try (Connection conn = PSQLtdldbh.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql)){
+             PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setInt(1, userId);
             pstmt.setBoolean(2, isDone);
             ResultSet rs = pstmt.executeQuery();
             while (rs.next()){
-                int folderId = rs.getInt("folder_id");
-                String folderName = getFolderNameById(conn, folderId);
                 Task task = new Task.Builder(userId)
                         .id(rs.getInt("id"))
                         .taskTitle(rs.getString("task_title"))
                         .description(rs.getString("description"))
                         .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
-                        .folderId(folderId)
-                        .folderName(folderName)
+                        .folderId(rs.getInt("folder_id"))
+                        .folderName(rs.getString("folder_name"))
                         .build();
                 task.setIsDone(isDone);
                 tasks.add(task);
@@ -44,7 +43,7 @@ public class TaskDAO {
         return tasks;
     }
 
-    public static List<Task> loadTasksFromDatabaseByFolder(int userId, boolean isDone, String folderName){
+    public static List<Task> loadTasksFromDatabaseByFolder(int userId, boolean isDone, String folderName){ //try to not use it
         List<Task> tasks = new ArrayList<>();
         String sql = "SELECT t.id, t.task_title, t.description, t.target_date, t.date_added, t.deleted_at, t.folder_id FROM tasks t LEFT JOIN folders f ON t.folder_id = f.id WHERE (t.user_id = ? AND t.is_done = ?) AND f.folder_name = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
@@ -73,17 +72,33 @@ public class TaskDAO {
         return tasks;
     }
 
-    private static String getFolderNameById(Connection conn, int folderId) throws SQLException {
-        String sql = "SELECT folder_name FROM folders WHERE id = ?";
-        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, folderId);
+    public static void loadTasksFromCloud(int userId){
+        List<Task> tasks = new ArrayList<>();
+        //get all the rows with sync_status = 'CLOUD' from the selected user
+        String sql = "SELECT * FROM tasks WHERE user_id = ? AND sync_status = 'CLOUD'";
+        try (Connection conn = PSQLtdldbh.getCloudConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, userId);
             ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return rs.getString("folder_name");
-            } else {
-                throw new SQLException("Folder not found for id: " + folderId);
+            while (rs.next()){
+                Task task = new Task.Builder(userId)
+                        .id(rs.getInt("id"))
+                        .taskTitle(rs.getString("task_title"))
+                        .description(rs.getString("description"))
+                        .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
+                        .targetDate(rs.getTimestamp("target_date") != null ? rs.getTimestamp("target_date").toLocalDateTime() : null)
+                        .folderId(rs.getInt("folder_id"))
+                        .deletedAt(rs.getTimestamp("deleted_at") != null ? rs.getTimestamp("deleted_at").toLocalDateTime() : null)
+                        .updatedAt(rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toLocalDateTime() : null)
+                        .build();
+                    task.setIsDone(rs.getBoolean("is_done"));
+                    tasks.add(task);
             }
+        }catch (SQLException e){
+            System.out.println("Error loading tasks from the cloud");
+            e.printStackTrace();
         }
+        saveTasksToDatabase(tasks);
     }
 
     public static void saveTaskToDatabase(Task task) {
@@ -130,8 +145,10 @@ public class TaskDAO {
         }
     }
 
-    public static void saveTasksToDatabase(List<Task> tasks){
-        String sql = "INSERT INTO tasks (task_title, description, date_added, is_done, user_id) VALUES (?, ?, ?, ?, ?)";
+    public static void saveTasksToDatabase(List<Task> tasks){ //modify
+        String sql = """
+            INSERT INTO tasks (task_title, description, date_added, is_done, user_id, )
+            """;
 
         try (Connection conn = PSQLtdldbh.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)){
@@ -165,6 +182,54 @@ public class TaskDAO {
             e.printStackTrace();
         }
         return folders;
+           }
+
+    public static void loadFoldersFromCloud(int userId){
+        List<String> folders = new ArrayList<>();
+        List<Integer> folderIds = new ArrayList<>();
+        String sql = "SELECT folder_name, id FROM folders WHERE user_id = ?";
+        try (Connection conn = PSQLtdldbh.getCloudConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()){
+            folders.add(rs.getString("folder_name"));
+            folderIds.add(rs.getInt("id"));
+            }
+        }catch (SQLException e){
+            System.out.println("Error loading folders from the cloud");
+            e.printStackTrace();
+        }
+        String sqlSaveFolders = "INSERT INTO folders (user_id, folder_name, id) VALUES (?, ?, ?)";
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sqlSaveFolders)){
+            for(int i = 0; i < folders.size(); i++){
+            pstmt.setInt(1, userId);
+            pstmt.setString(2, folders.get(i));
+            pstmt.setInt(3, folderIds.get(i));
+            pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        }catch (SQLException e){
+            System.out.println("Error inserting folders to the local database");
+            e.printStackTrace();
+        }
+    }
+
+    public static void saveFoldersToDatabase(List<String> folders, int userId){
+        String sql = "INSERT INTO folders (user_id, folder_name) VALUES (?, ?)";
+        try (Connection conn = PSQLtdldbh.getConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)){
+            for(String folder : folders){
+                pstmt.setInt(1, userId);
+                pstmt.setString(2, folder);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        }catch (SQLException e){
+            System.out.println("Error saving folders to the database");
+            e.printStackTrace();
+        }
    }
 
     public static void saveFolderToDatabase(String folderName, int userId){
@@ -191,6 +256,67 @@ public class TaskDAO {
             pstmt.executeUpdate();
         }catch (SQLException e){
             System.out.println("Error updating task in the database");
+            e.printStackTrace();
+        }
+    }
+
+    public static void updateLocalTasksToCloud(int userId){
+        List <Task> tasks = new ArrayList<>();
+        String sqlLocalTasks = "SELECT * FROM tasks WHERE sync_status = 'LOCAL' AND user_id = ?";
+
+        //fetch local tasks
+        try (Connection localConn = PSQLtdldbh.getLocalConnection(); 
+             PreparedStatement pstmt = localConn.prepareStatement(sqlLocalTasks)){
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Task task = new Task.Builder(userId)
+                    .id(rs.getInt("id"))
+                    .taskTitle(rs.getString("task_title"))
+                    .description(rs.getString("description"))
+                    .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
+                    .targetDate(rs.getTimestamp("target_date") != null ? rs.getTimestamp("target_date").toLocalDateTime() : null)
+                    .deletedAt(rs.getTimestamp("deleted_at") != null ? rs.getTimestamp("deleted_at").toLocalDateTime() : null)
+                    .updatedAt(rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toLocalDateTime() : null)
+                    .folderId(rs.getInt("folder_id"))
+                    .build();
+                task.setIsDone(rs.getBoolean("is_done"));
+                tasks.add(task);
+            }
+            //update the sync status to CLOUD
+            String sqlUpdateSyncStatus = "UPDATE tasks SET sync_status = 'CLOUD' WHERE sync_status = 'LOCAL' AND user_id = ?";
+            try (PreparedStatement updatePstmt = localConn.prepareStatement(sqlUpdateSyncStatus)){
+                updatePstmt.setInt(1, userId);
+                updatePstmt.executeUpdate();
+            }catch(SQLException e){
+                System.out.println("Error updating sync status to CLOUD");
+                e.printStackTrace();
+            }
+        } catch(SQLException e){
+            System.out.println("Error fetching local tasks for upload");
+            e.printStackTrace();
+        }
+        //send them to cloud
+        String sqlCloudTasks = "INSERT INTO tasks (task_title, description, date_added, is_done, target_date, deleted_at, updated_at, sync_status, last_sync, folder_id, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (Connection cloudConn = PSQLtdldbh.getCloudConnection();
+             PreparedStatement pstmt = cloudConn.prepareStatement(sqlCloudTasks)){
+            for(Task task : tasks){
+                pstmt.setString(1, task.getTaskTitle());
+                pstmt.setString(2, task.getDescription());
+                pstmt.setObject(3, task.getDateAdded());
+                pstmt.setBoolean(4, task.getIsDone());
+                pstmt.setObject(5, task.getTargetDate() != null ? task.getTargetDate() : null);
+                pstmt.setObject(6, task.getDeletedAt() != null ? task.getDeletedAt() : null);
+                pstmt.setObject(7, task.getUpdatedAt() != null ? task.getUpdatedAt() : null);
+                pstmt.setString(8, "CLOUD");
+                pstmt.setObject(9, java.time.LocalDateTime.now());
+                pstmt.setInt(10, task.getFolderId());
+                pstmt.setInt(11, userId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        }catch(SQLException e){
+            System.out.println("Error uploading local tasks to the cloud");
             e.printStackTrace();
         }
     }
@@ -350,45 +476,8 @@ public class TaskDAO {
     }
 
     public static void syncDatabases(int userId) {
-        String tempTable = """
-            CREATE TEMPORARY TABLE temp_tasks (
-                id INT PRIMARY KEY,
-                user_id INT,
-                task_title VARCHAR(50),
-                description TEXT,
-                is_done BOOLEAN,
-                target_date TIMESTAMP,
-                deleted_at TIMESTAMP,
-                updated_at TIMESTAMP,
-                sync_status VARCHAR(20),
-                last_sync TIMESTAMP,
-                folder_id INT
-            );
-            """;
-    
-        String insertTempTasks = """
-            INSERT INTO temp_tasks (id, user_id, task_title, description, is_done, target_date, deleted_at, 
-                                    updated_at, sync_status, last_sync, folder_id)
-            SELECT id, user_id, task_title, description, is_done, target_date, deleted_at, updated_at, 
-                    sync_status, last_sync,
-                    COALESCE(folder_id, (SELECT id FROM folders WHERE user_id = ? AND folder_name = 'Default Folder'))
-            FROM tasks
-            WHERE user_id = ?;
-            """;
-
-            //SELECT all the tasks with the sync_status = 'LOCAL'  from the tasks table and insert them into the same cloud table
-        String fetchFromLocal = """
-                SELECT * FROM tasks WHERE sync_status = 'LOCAL' AND user_id = ?;
-            """;
-    
-        try (Connection localConn = PSQLtdldbh.getLocalConnection();
-             Connection cloudConn = PSQLtdldbh.getCloudConnection()) {
-    
-            
-        } catch (SQLException e) {
-            System.out.println("Error syncing databases");
-            e.printStackTrace();
-        }
+        loadFoldersFromCloud(userId);
+        updateLocalTasksToCloud(userId);
     }    
     
 

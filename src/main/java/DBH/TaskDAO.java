@@ -187,32 +187,45 @@ public class TaskDAO {
     public static void loadFoldersFromCloud(int userId){
         List<String> folders = new ArrayList<>();
         List<Integer> folderIds = new ArrayList<>();
-        String sql = "SELECT folder_name, id FROM folders WHERE user_id = ?";
+    
+        // First get cloud folders
+        String cloudSql = "SELECT folder_name, id FROM folders WHERE user_id = ?";
         try (Connection conn = PSQLtdldbh.getCloudConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sql)){
+                PreparedStatement pstmt = conn.prepareStatement(cloudSql)) {
             pstmt.setInt(1, userId);
             ResultSet rs = pstmt.executeQuery();
-            while (rs.next()){
-            folders.add(rs.getString("folder_name"));
-            folderIds.add(rs.getInt("id"));
+            while (rs.next()) {
+                folders.add(rs.getString("folder_name"));
+                folderIds.add(rs.getInt("id"));
             }
-        }catch (SQLException e){
-            System.out.println("Error loading folders from the cloud");
-            e.printStackTrace();
+        } catch (SQLException e) {
+            System.out.println("Error loading folders from cloud");
+            return;
         }
-        String sqlSaveFolders = "INSERT INTO folders (user_id, folder_name, id) VALUES (?, ?, ?)";
-        try (Connection conn = PSQLtdldbh.getConnection();
-            PreparedStatement pstmt = conn.prepareStatement(sqlSaveFolders)){
-            for(int i = 0; i < folders.size(); i++){
-            pstmt.setInt(1, userId);
-            pstmt.setString(2, folders.get(i));
-            pstmt.setInt(3, folderIds.get(i));
-            pstmt.addBatch();
+    
+        // Then insert only new folders
+        String checkSql = "SELECT id FROM folders WHERE id = ?";
+        String insertSql = "INSERT INTO folders (user_id, folder_name, id) VALUES (?, ?, ?)";
+        
+        try (Connection conn = PSQLtdldbh.getLocalConnection();
+                PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+                PreparedStatement insertStmt = conn.prepareStatement(insertSql)) {
+            
+            for (int i = 0; i < folders.size(); i++) {
+                checkStmt.setInt(1, folderIds.get(i));
+                ResultSet rs = checkStmt.executeQuery();
+                
+                if (!rs.next()) {  // Only insert if folder doesn't exist
+                    insertStmt.setInt(1, userId);
+                    insertStmt.setString(2, folders.get(i));
+                    insertStmt.setInt(3, folderIds.get(i));
+                    insertStmt.addBatch();
+                }
             }
-            pstmt.executeBatch();
-        }catch (SQLException e){
-            System.out.println("Error inserting folders to the local database");
-            e.printStackTrace();
+            insertStmt.executeBatch();
+            System.out.println("Folders synced successfully");
+        } catch (SQLException e) {
+            System.out.println("Error syncing some folders");
         }
     }
 
@@ -246,13 +259,17 @@ public class TaskDAO {
    }
 
     public static void updateTaskInDatabase(Task task){
-        String sql = "UPDATE tasks SET task_title = ?, description = ?, is_done = ? WHERE id = ?";
+        String sql = "UPDATE tasks SET task_title = ?, description = ?, is_done = ?, updated_at = ?, sync_status = 'MOD', target_date = ?, folder_id = ?, deleted_at = ? WHERE id = ?";
         try (Connection conn = PSQLtdldbh.getConnection();
                 PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setString(1, task.getTaskTitle());
             pstmt.setString(2, task.getDescription());
             pstmt.setBoolean(3, task.getIsDone());
             pstmt.setInt(4, task.getId());
+            pstmt.setObject(5, task.getUpdatedAt());
+            pstmt.setObject(6, task.getTargetDate() != null ? task.getTargetDate() : null);
+            pstmt.setInt(7, task.getFolderId());
+            pstmt.setObject(8, task.getDeletedAt() != null ? task.getDeletedAt() : null);
             pstmt.executeUpdate();
         }catch (SQLException e){
             System.out.println("Error updating task in the database");
@@ -312,6 +329,64 @@ public class TaskDAO {
                 pstmt.setObject(9, java.time.LocalDateTime.now());
                 pstmt.setInt(10, task.getFolderId());
                 pstmt.setInt(11, userId);
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        }catch(SQLException e){
+            System.out.println("Error uploading local tasks to the cloud");
+            e.printStackTrace();
+        }
+        tasks.clear();
+        String sqlUpdateMod = "SELECT * FROM tasks WHERE sync_status = 'MOD' AND user_id = ?";
+
+        //fetch local modified tasks
+        try (Connection localConn = PSQLtdldbh.getLocalConnection(); 
+             PreparedStatement pstmt = localConn.prepareStatement(sqlUpdateMod)){
+            pstmt.setInt(1, userId);
+            ResultSet rs = pstmt.executeQuery();
+            while (rs.next()) {
+                Task task = new Task.Builder(userId)
+                    .id(rs.getInt("id"))
+                    .taskTitle(rs.getString("task_title"))
+                    .description(rs.getString("description"))
+                    .dateAdded(rs.getTimestamp("date_added").toLocalDateTime())
+                    .targetDate(rs.getTimestamp("target_date") != null ? rs.getTimestamp("target_date").toLocalDateTime() : null)
+                    .deletedAt(rs.getTimestamp("deleted_at") != null ? rs.getTimestamp("deleted_at").toLocalDateTime() : null)
+                    .updatedAt(rs.getTimestamp("updated_at") != null ? rs.getTimestamp("updated_at").toLocalDateTime() : null)
+                    .folderId(rs.getInt("folder_id"))
+                    .build();
+                task.setIsDone(rs.getBoolean("is_done"));
+                tasks.add(task);
+            }
+            //update the sync status to CLOUD
+            String sqlUpdateSyncStatus = "UPDATE tasks SET sync_status = 'CLOUD' WHERE sync_status = 'MOD' AND user_id = ?";
+            try (PreparedStatement updatePstmt = localConn.prepareStatement(sqlUpdateSyncStatus)){
+                updatePstmt.setInt(1, userId);
+                updatePstmt.executeUpdate();
+            }catch(SQLException e){
+                System.out.println("Error updating sync status to CLOUD");
+                e.printStackTrace();
+            }
+        } catch(SQLException e){
+            System.out.println("Error fetching local tasks for upload");
+            e.printStackTrace();
+        }
+        //send them to cloud
+        sqlUpdateMod = "UPDATE tasks SET task_title = ?, description = ?, is_done = ?, target_date = ?, deleted_at = ?, updated_at = ?, sync_status = ?, last_sync = ?, folder_id = ? WHERE id = ?";
+
+        try (Connection cloudConn = PSQLtdldbh.getCloudConnection();
+             PreparedStatement pstmt = cloudConn.prepareStatement(sqlUpdateMod)){
+            for(Task task : tasks){
+                pstmt.setString(1, task.getTaskTitle());
+                pstmt.setString(2, task.getDescription());
+                pstmt.setBoolean(3, task.getIsDone());
+                pstmt.setObject(4, task.getTargetDate() != null ? task.getTargetDate() : null);
+                pstmt.setObject(5, task.getDeletedAt() != null ? task.getDeletedAt() : null);
+                pstmt.setObject(6, task.getUpdatedAt() != null ? task.getUpdatedAt() : null);
+                pstmt.setString(7, "CLOUD");
+                pstmt.setObject(8, java.time.LocalDateTime.now());
+                pstmt.setInt(9, task.getFolderId());
+                pstmt.setInt(10, task.getId());
                 pstmt.addBatch();
             }
             pstmt.executeBatch();
@@ -386,9 +461,45 @@ public class TaskDAO {
             e.printStackTrace();
         }
     }
-
+    
     public static boolean validateUserFromDatabase(String username, String password){
-        String sql = "SELECT username, password FROM users WHERE username = ?";
+        String sql = "SELECT username, password, id FROM users WHERE username = ?";
+        try (Connection conn = PSQLtdldbh.getCloudConnection();
+            PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, username);
+            ResultSet rs = pstmt.executeQuery();
+            if(rs.next()){
+                String hashedPassword = rs.getString("password");
+                if(PasswordUtil.checkPassword(password, hashedPassword)){
+                    System.out.println("User validated from cloud");
+
+                    // Try to insert user into local database if not already present
+                    int userId = getUserId(username);
+                    if (userId == -1) {
+                        String insertSql = "INSERT INTO users (username, password, id) VALUES (?, ?, ?)";
+                        try (Connection localConn = PSQLtdldbh.getConnection();
+                                PreparedStatement insertPstmt = localConn.prepareStatement(insertSql)) {
+                            insertPstmt.setString(1, username);
+                            insertPstmt.setString(2, hashedPassword);
+                            insertPstmt.setInt(3, rs.getInt("id"));
+                            insertPstmt.executeUpdate();
+                            System.out.println("User inserted into local database");
+                        } catch (SQLException e) {
+                            System.out.println("Error inserting user into local database");
+                            e.printStackTrace();
+                        }
+                    }
+                    return true;
+                } else {
+                    System.out.println("Invalid password");
+                }
+            }
+        } catch (SQLException e) {
+            System.out.println("Error validating user from the cloud database, trying local database");
+            e.printStackTrace();
+        }
+
+        // Try to validate from local database if cloud validation fails
         try (Connection conn = PSQLtdldbh.getConnection();
             PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
@@ -396,26 +507,22 @@ public class TaskDAO {
             if(rs.next()){
                 String hashedPassword = rs.getString("password");
                 if(PasswordUtil.checkPassword(password, hashedPassword)){
-                    System.out.println("User validated");
+                    System.out.println("User validated from local database");
                     return true;
-                }else{
+                } else {
                     System.out.println("Invalid password");
                 }
             }
-        }catch (SQLException e){
-            System.out.println("Error validating user from the database");
+        } catch (SQLException e) {
+            System.out.println("Error validating user from the local database");
             e.printStackTrace();
-            if(e.getMessage().contains("this database is empty")){
-                System.out.println("Database is empty");
-                H2Manager.createTablesIfNotExist();
-            }
         }
         return false;
     }
 
     public static int getUserId(String username){
         String sql = "SELECT id FROM users WHERE username = ?";
-        try (Connection conn = PSQLtdldbh.getConnection();
+        try (Connection conn = PSQLtdldbh.getLocalConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             ResultSet rs = pstmt.executeQuery();
@@ -459,23 +566,38 @@ public class TaskDAO {
             e.printStackTrace();
         }
         return false;
-    }
+        }
 
     public static void registerUser(String username, String email, String password){
         String sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)";
-        try (Connection conn = PSQLtdldbh.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (Connection conn = PSQLtdldbh.getCloudConnection(); //register only on cloud
+             PreparedStatement pstmt = conn.prepareStatement(sql)){
             pstmt.setString(1, username);
             pstmt.setString(2, email);
             pstmt.setString(3, PasswordUtil.hashPassword(password));
             pstmt.executeUpdate();
-        } catch (SQLException e) {
-            System.out.println("Error registering user to the database");
+        } catch (SQLException e){
+            System.out.println("Error registering user to the cloud database");
+            e.printStackTrace();
+            return;
+        }
+
+        // Add user to local database
+        try (Connection conn = PSQLtdldbh.getLocalConnection(); //local database
+             PreparedStatement pstmt = conn.prepareStatement(sql)){
+            pstmt.setString(1, username);
+            pstmt.setString(2, email);
+            pstmt.setString(3, PasswordUtil.hashPassword(password));
+            pstmt.executeUpdate();
+        } catch (SQLException e){
+            System.out.println("Error registering user to the local database");
             e.printStackTrace();
         }
     }
 
     public static void syncDatabases(int userId) {
+        //since register works only on cloud, we need to sync the user data to the local database
+        
         loadFoldersFromCloud(userId);
         updateLocalTasksToCloud(userId);
     }    

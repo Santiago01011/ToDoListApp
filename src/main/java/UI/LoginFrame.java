@@ -141,6 +141,7 @@ public class LoginFrame extends Frame {
             dispose();
             String usernameLogged = usernameField.getText();
             int userId = TaskDAO.getUserId(usernameLogged);
+            System.out.println("Logged in as " + usernameLogged + " with id " + userId);
             TaskDAO.syncDatabases(userId);
             SwingUtilities.invokeLater(() -> {    
                 new MainFrame(userId).setVisible(true);

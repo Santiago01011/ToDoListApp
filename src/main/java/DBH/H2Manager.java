@@ -11,7 +11,7 @@ public class H2Manager {
         String CREATE_TABLES_H2 = """       
             CREATE TABLE IF NOT EXISTS users (
                 -- id UUID PRIMARY KEY,
-                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                id INT PRIMARY KEY,
                 username VARCHAR(50) UNIQUE NOT NULL,
                 password TEXT NOT NULL,
                 email TEXT

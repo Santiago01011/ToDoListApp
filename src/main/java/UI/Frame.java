@@ -56,8 +56,9 @@ public class Frame extends JFrame{
 
         UIManager.put("Panel.background", common.getPanelColor());
 
-
-
+        UIManager.put("OptionPane.messageForeground", common.getTextColor());
+        UIManager.put("OptionPane.background", common.getPrimaryColor());
+        UIManager.put("Panel.background", common.getPrimaryColor());
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         
         ImageIcon appIcon = common.getAppIcon();

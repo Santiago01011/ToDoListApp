@@ -1,6 +1,26 @@
 package UI;
 
-import javax.swing.*;
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.FlowLayout;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.time.LocalDateTime;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JFormattedTextField;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.border.TitledBorder;
 
 import COMMON.UserProperties;
@@ -9,17 +29,19 @@ import DBH.PSQLtdldbh;
 import DBH.TaskDAO;
 import model.Task;
 import net.miginfocom.swing.MigLayout;
-import java.awt.*;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
-import java.time.LocalDateTime;
-import java.util.List;
 
 public class MainFrame extends Frame{
     private int userId;
     private JPanel taskListPanel;
     JButton updateButton;
     private List<String> folders;
+    
+    /**
+     * MainFrame is the main window for the To-Do App. It initializes the user interface components
+     * and handles user interactions for adding tasks, displaying tasks, and managing folders.
+     *
+     * @param userId the ID of the user to get tasks for
+     */
     public MainFrame(int userId){
 
         super("To-Do App");
@@ -91,6 +113,28 @@ public class MainFrame extends Frame{
             }
         });
 
+        titleField.addActionListener(e -> addTaskButton.doClick());
+        descriptionArea.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyPressed(java.awt.event.KeyEvent evt) {
+            if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER) {
+                addTaskButton.doClick();
+            }
+            }
+        });
+
+        addFolderButton.addActionListener(e -> {
+            String folderName = javax.swing.JOptionPane.showInputDialog("Enter folder name:");
+            if (folderName != null && !folderName.isEmpty()) {
+                TaskDAO.saveFolderToDatabase(folderName, userId);
+                folders = TaskDAO.loadFoldersFromDatabase(userId);
+                folderCombo.removeAllItems();
+                folderCombo.addItem("All");
+                for (String folder : folders) {
+                    folderCombo.addItem(folder);
+                }
+                updateButton.doClick();
+            }
+        });
         add(inputPanel, BorderLayout.NORTH);
 
         taskListPanel = new JPanel(new MigLayout("fillx", "[]", "[]"));
@@ -118,7 +162,12 @@ public class MainFrame extends Frame{
             }
         });
     }
-
+    
+    /**
+     * Creates and adds a task panel to the task list panel to be displayed in the UI.
+     *
+     * @param task The task to be added to the panel.
+     */
     private void addTaskToPanel(Task task){
         JPanel taskPanel = new JPanel(new MigLayout("fill", "[][grow][]", "[]")); 
             
@@ -178,6 +227,20 @@ public class MainFrame extends Frame{
         });
     }
 
+    /**
+     * Adds UI components to the south region of the main frame.
+     * This method creates a panel with buttons for different actions.
+     * The panel is then added to the south region of the frame.
+     * 
+     * Components created:
+     * - Log out button
+     * - Update button
+     * - Toggle color mode button
+     * - History button
+     * - User configuration button
+     * 
+     * @see #addSouthActionListeners(logOutButton, updateButton, toggleColorButton, historyButton, userConfigButton)
+     */
     private void addUIComponentsSouth(){
         //Panel to add the buttons to update and view history
         JPanel southPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
@@ -223,7 +286,9 @@ public class MainFrame extends Frame{
         });
         
         updateButton.addActionListener(e -> {
-            TaskDAO.syncDatabases(userId);
+            if(PSQLtdldbh.isCloudAvailable()){
+                TaskDAO.syncDatabases(userId);
+            }
             refreshTaskList(null);
         });
 
@@ -233,7 +298,7 @@ public class MainFrame extends Frame{
             });
         });
 
-        toggleColorButton.addActionListener(e -> {  //it dosent update the tasks in the database, solve later
+        toggleColorButton.addActionListener(e -> {
             common.toggleColorMode();
             //dispose frame and recall
             dispose();
@@ -248,6 +313,14 @@ public class MainFrame extends Frame{
         });
     }
 
+    /**
+     * Toggles the visibility of the edit panel for a given task within the task panel.
+     * If the edit panel already exists, it will be removed. Otherwise, a new edit panel
+     * will be created and added to the task panel.
+     *
+     * @param taskPanel the JPanel containing the task components
+     * @param task the Task object to be edited
+     */
     private void toggleEditPanel(JPanel taskPanel, Task task) {
         // Check if the edit panel already exists
         Component existingEditPanel = null;
@@ -258,7 +331,7 @@ public class MainFrame extends Frame{
             }
         }
     
-        if (existingEditPanel != null) {
+        if (existingEditPanel != null){
             // If the edit panel exists, remove it
             taskPanel.remove(existingEditPanel);
         } else {
@@ -313,6 +386,14 @@ public class MainFrame extends Frame{
         taskPanel.repaint();
     }
 
+    /**
+     * Toggles the visibility of the view panel for a given task within the task panel.
+     * If the view panel already exists, it will be removed. Otherwise, a new view panel
+     * will be created and added to the task panel.
+     *
+     * @param taskPanel the JPanel containing the task components
+     * @param task the Task object to view details for
+     */
     private void toggleViewPanel(JPanel taskPanel, Task task){
         Component existingViewPanel = null;
         for (Component comp : taskPanel.getComponents()){
@@ -356,6 +437,13 @@ public class MainFrame extends Frame{
         taskPanel.repaint();
         }
 
+    /**
+     * Refreshes the task list panel by removing all existing components and adding a new JComboBox
+     * for folder selection. It then loads tasks from the database based on the selected folder and
+     * adds them to the task list panel.
+     *
+     * @param folderName the name of the folder to filter tasks by; if null, all tasks are loaded
+     */
     private void refreshTaskList(String folderName){
         taskListPanel.removeAll();
 
@@ -387,6 +475,5 @@ public class MainFrame extends Frame{
         taskListPanel.revalidate();
         taskListPanel.repaint();
         }
-
 
 }

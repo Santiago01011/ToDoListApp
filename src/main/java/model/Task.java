@@ -71,6 +71,11 @@ public class Task {
             return this;
         }
 
+        public Builder isDone(boolean isDone){
+            this.isDone = isDone;
+            return this;
+        }
+
         public Builder targetDate(LocalDateTime targetDate){
             this.targetDate = targetDate;
             return this;

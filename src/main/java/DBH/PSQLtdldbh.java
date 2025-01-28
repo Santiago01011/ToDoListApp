@@ -3,7 +3,6 @@ package DBH;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
-
 import java.io.File;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -15,7 +14,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 public class PSQLtdldbh {
     private static HikariDataSource localDataSource;
     private static HikariDataSource cloudDataSource;
-    private static final boolean USE_CLOUD = false;
+
     // Create a connection pool that reuses the same connection 
     // rather than creating a new one every time a connection is requested
     
@@ -26,7 +25,6 @@ public class PSQLtdldbh {
 
     public static void init(){        
         try{
-           
             // H2 embedded database - init the local connection
             HikariConfig localConfig = new HikariConfig();
             String userHome = System.getProperty("user.home");
@@ -37,6 +35,10 @@ public class PSQLtdldbh {
             configurePoolSettings(localConfig);
             localDataSource = new HikariDataSource(localConfig);
             
+        }catch (Exception e){
+            throw new RuntimeException("Failed to initialize local database connection", e);
+        }
+        try{
             HikariConfig cloudConfig = new HikariConfig();
             if (new File(".env").exists()){
                 System.out.println("Using .env file for database connection details");
@@ -57,10 +59,11 @@ public class PSQLtdldbh {
             else{
                 JOptionPane.showMessageDialog(null, "Cloud database connection details not found. Please set the .env" +
                     "with the variables DB_URL, DB_USERNAME, and DB_PASSWORD.");
-            }     
+            }    
         }catch (Exception e){
-            throw new RuntimeException("Failed to initialize database connection", e);
+            System.out.println("Failed to initialize cloud database connection, using local database only.");
         }
+        
     }
 
     // Method to configure the connection pool settings
@@ -82,22 +85,27 @@ public class PSQLtdldbh {
     public static Connection getLocalConnection() throws SQLException{
         return localDataSource.getConnection();
     }
-
-    public static Connection getConnection() throws SQLException{
-        return USE_CLOUD ? getCloudConnection() : getLocalConnection();        
-    }
     
     // Method to close the connection pool
     public static void closePool(){
         if (cloudDataSource != null){
             cloudDataSource.close();
         }
+        if (localDataSource != null){
+            localDataSource.close();
+        }
     }
 
-     // Method to check if cloud sync is available
-     public static boolean isCloudAvailable() {
-        return cloudDataSource != null;
+    // Method to check if cloud sync is available
+    public static boolean isCloudAvailable(){
+        if (cloudDataSource == null){
+            return false;
+        }
+        
+        try (Connection conn = cloudDataSource.getConnection()){
+            return conn.isValid(3);
+        } catch (SQLException e){
+            return false;
+        }
     }
-
-    
 }

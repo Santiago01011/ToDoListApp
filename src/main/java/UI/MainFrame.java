@@ -356,7 +356,7 @@ public class MainFrame extends Frame{
         taskPanel.repaint();
         }
 
-        private void refreshTaskList(String folderName){
+    private void refreshTaskList(String folderName){
         taskListPanel.removeAll();
 
         JComboBox<String> folderCombo2 = new JComboBox<>(folders.toArray(new String[0]));
@@ -388,7 +388,5 @@ public class MainFrame extends Frame{
         taskListPanel.repaint();
         }
 
-        public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new MainFrame(1));
-    }
+
 }

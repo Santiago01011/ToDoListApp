@@ -8,7 +8,10 @@ public class H2Manager {
 
      // SQL for creating tables in H2 database
     public static void createTablesIfNotExist() {
-        String CREATE_TABLES_H2 = """       
+        String CREATE_TABLES_H2 = """    
+        
+            SET TIME ZONE 'GMT-3';
+
             CREATE TABLE IF NOT EXISTS users (
                 -- id UUID PRIMARY KEY,
                 id INT PRIMARY KEY,
@@ -31,7 +34,7 @@ public class H2Manager {
 
             CREATE TABLE IF NOT EXISTS tasks (
                 -- id UUID PRIMARY KEY,
-                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                id INT PRIMARY KEY,
                 user_id INT NOT NULL,  -- Change this to UUID
                 task_title VARCHAR(50) NOT NULL,
                 description TEXT,
@@ -46,7 +49,10 @@ public class H2Manager {
                 FOREIGN KEY (user_id) REFERENCES users(id), -- Change this to UUID
                 FOREIGN KEY (folder_id) REFERENCES folders(id) -- Change this to UUID
             );
-        
+
+            // Add sequence for temporary IDs for tasks and folders
+            CREATE SEQUENCE IF NOT EXISTS temp_id_seq START WITH -1 INCREMENT BY -1;
+            CREATE SEQUENCE IF NOT EXISTS temp_folder_id_seq START WITH -1 INCREMENT BY -1;
             """;
         try (Connection conn = PSQLtdldbh.getLocalConnection();
             PreparedStatement pstmt = conn.prepareStatement(CREATE_TABLES_H2)){

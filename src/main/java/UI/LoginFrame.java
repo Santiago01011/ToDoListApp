@@ -4,6 +4,7 @@ import net.miginfocom.swing.*;
 import javax.swing.*;
 import java.awt.*;
 import COMMON.common;
+import DBH.PSQLtdldbh;
 import DBH.TaskDAO;
 import COMMON.UserProperties;
 import java.text.SimpleDateFormat;
@@ -142,7 +143,9 @@ public class LoginFrame extends Frame {
             String usernameLogged = usernameField.getText();
             int userId = TaskDAO.getUserId(usernameLogged);
             System.out.println("Logged in as " + usernameLogged + " with id " + userId);
-            TaskDAO.syncDatabases(userId);
+            if(PSQLtdldbh.isCloudAvailable()){
+                TaskDAO.syncDatabases(userId);
+            }
             SwingUtilities.invokeLater(() -> {    
                 new MainFrame(userId).setVisible(true);
             });

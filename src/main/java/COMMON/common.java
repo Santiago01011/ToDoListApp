@@ -13,17 +13,19 @@ public class common {
 
     // Variable to store the current mode based on the time
     //private static boolean useNightMode = (java.time.LocalTime.now().getHour() >= 22 || java.time.LocalTime.now().getHour() < 7) ? true : false;
-    //private static boolean useNightMode = false;
+    //public static boolean useNightMode = false;
     public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
 
     // Day mode colors
     public static final Color PRIMARY_COLOR_DAY = Color.decode("#f6d76f");  //hex #f6d76f
+    public static final Color PANEL_COLOR_DAY = Color.decode("#eed06d");  //hex #eed06d
     public static final Color SECONDARY_COLOR_DAY = Color.decode("#ffea00");  //hex #ffea00
     public static final Color TERTIARY_COLOR_DAY = Color.decode("#fff989");  //hex #fff989
     public static final Color TEXT_COLOR_DAY = Color.decode("#473b00");  //hex #473b00
 
     // Night mode colors
     public static final Color PRIMARY_COLOR_NIGHT = Color.decode("#1a144b");  //hex #1a144b
+    public static final Color PANEL_COLOR_NIGHT = Color.decode("#0c005b");  //hex #0c005b
     public static final Color SECONDARY_COLOR_NIGHT = Color.decode("#221f1f");  //hex #221f1f
     public static final Color TERTIARY_COLOR_NIGHT = Color.decode("#130814");  //hex #130814
     public static final Color TEXT_COLOR_NIGHT = Color.decode("#fab500");  //hex #fab500
@@ -33,8 +35,12 @@ public class common {
         return useNightMode ? PRIMARY_COLOR_NIGHT : PRIMARY_COLOR_DAY;
     }
 
+    public static Color getPanelColor() {
+        return useNightMode ? PANEL_COLOR_NIGHT : PANEL_COLOR_DAY;
+    }
+
     public static Color getSecondaryColor() {
-        return useNightMode ? SECONDARY_COLOR_NIGHT : PRIMARY_COLOR_DAY;
+        return useNightMode ? SECONDARY_COLOR_NIGHT : SECONDARY_COLOR_DAY;
     }
 
     public static Color getTertiaryColor() {

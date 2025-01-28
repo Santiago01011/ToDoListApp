@@ -12,53 +12,100 @@ import javax.swing.JOptionPane;
 import io.github.cdimascio.dotenv.Dotenv;
 
 public class PSQLtdldbh {
-    private static final HikariDataSource dataSource;
+    private static HikariDataSource localDataSource;
+    private static HikariDataSource cloudDataSource;
 
     // Create a connection pool that reuses the same connection 
     // rather than creating a new one every time a connection is requested
+    
     static{
-        HikariConfig config = new HikariConfig();
-        
+        init();
+        H2Manager.H2dbchanges();
+    }
+
+    public static void init(){        
         try{
-            // First try .env file
+            // H2 embedded database - init the local connection
+            HikariConfig localConfig = new HikariConfig();
+            String userHome = System.getProperty("user.home");
+            String dbPath = userHome + "/.todoapp/taskdb";
+            localConfig.setJdbcUrl("jdbc:h2:file:" + dbPath);
+            localConfig.setUsername("sa");
+            localConfig.setPassword("sa");
+            configurePoolSettings(localConfig);
+            localDataSource = new HikariDataSource(localConfig);
+            
+        }catch (Exception e){
+            throw new RuntimeException("Failed to initialize local database connection", e);
+        }
+        try{
+            HikariConfig cloudConfig = new HikariConfig();
             if (new File(".env").exists()){
                 System.out.println("Using .env file for database connection details");
                 Dotenv dotenv = Dotenv.load();
-                config.setJdbcUrl(dotenv.get("DB_URL"));
-                config.setUsername(dotenv.get("DB_USERNAME"));
-                config.setPassword(dotenv.get("DB_PASSWORD"));
-            } 
-            // Only if .env not found, try environment variables
+                cloudConfig.setJdbcUrl(dotenv.get("DB_URL"));
+                cloudConfig.setUsername(dotenv.get("DB_USERNAME"));
+                cloudConfig.setPassword(dotenv.get("DB_PASSWORD"));
+                configurePoolSettings(cloudConfig);
+                cloudDataSource = new HikariDataSource(cloudConfig);
+            }
             else if (System.getenv("DB_URL") != null){
-                config.setJdbcUrl(System.getenv("DB_URL"));
-                config.setUsername(System.getenv("DB_USERNAME")); 
-                config.setPassword(System.getenv("DB_PASSWORD"));
+                cloudConfig.setJdbcUrl(System.getenv("DB_URL"));
+                cloudConfig.setUsername(System.getenv("DB_USERNAME")); 
+                cloudConfig.setPassword(System.getenv("DB_PASSWORD"));
+                configurePoolSettings(cloudConfig);
+                cloudDataSource = new HikariDataSource(cloudConfig);
             }
             else{
-                JOptionPane.showMessageDialog(null, "Database connection details not found. Please set the .env" +
-                "with the variables DB_URL, DB_USERNAME, and DB_PASSWORD.");
-                System.exit(1);
-            }
-            
-            config.setMaximumPoolSize(10);
-            config.setMinimumIdle(5);
-            config.setIdleTimeout(300000);
-            config.setConnectionTimeout(20000);
-            config.setMaxLifetime(600000);
-            
-            dataSource = new HikariDataSource(config);
-            
+                JOptionPane.showMessageDialog(null, "Cloud database connection details not found. Please set the .env" +
+                    "with the variables DB_URL, DB_USERNAME, and DB_PASSWORD.");
+            }    
         }catch (Exception e){
-            throw new RuntimeException("Failed to initialize database connection", e);
+            System.out.println("Failed to initialize cloud database connection, using local database only.");
+        }
+        
+    }
+
+    // Method to configure the connection pool settings
+    private static void configurePoolSettings(HikariConfig config){
+        config.setMaximumPoolSize(10);
+        config.setMinimumIdle(5);
+        config.setIdleTimeout(300000);
+        config.setConnectionTimeout(20000);
+        config.setMaxLifetime(600000);
+    }
+
+    public static Connection getCloudConnection() throws SQLException{
+        if (cloudDataSource == null) {
+            throw new SQLException("Cloud database connection not configured");
+        }
+        return cloudDataSource.getConnection();
+    }
+
+    public static Connection getLocalConnection() throws SQLException{
+        return localDataSource.getConnection();
+    }
+    
+    // Method to close the connection pool
+    public static void closePool(){
+        if (cloudDataSource != null){
+            cloudDataSource.close();
+        }
+        if (localDataSource != null){
+            localDataSource.close();
         }
     }
 
-    public static Connection getConnection() throws SQLException{
-        return dataSource.getConnection(); // Get a connection from the pool
+    // Method to check if cloud sync is available
+    public static boolean isCloudAvailable(){
+        if (cloudDataSource == null){
+            return false;
+        }
+        
+        try (Connection conn = cloudDataSource.getConnection()){
+            return conn.isValid(3);
+        } catch (SQLException e){
+            return false;
+        }
     }
-    
-    public static void closePool(){
-            dataSource.close(); // Close the pool when the app shuts down
-    }
-
 }

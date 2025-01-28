@@ -14,16 +14,15 @@ import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowAdapter;
 
-public class TasksFrame extends Frame{ 
+public class TasksFrame extends Frame{
     private int userId;
     public List<Task> tasks;
-    public List<Task> tasksToAdd;
     public List<Task> tasksToDelete;
-    public List<Task> tasksToUpdate;
     public List<Task> tasksToEdit;
     
     private JTextArea taskDetailsArea;
     private JPanel centerPanel;
+    public JPanel taskPanel;
     private JLabel todoLabel;
     public JButton updateButton;
     public TasksFrame(String title, int userId){
@@ -32,22 +31,18 @@ public class TasksFrame extends Frame{
         setTitle(title);
 
         //Initialize the lists
-        tasksToAdd = new ArrayList<>();
         tasksToDelete = new ArrayList<>();
-        tasksToUpdate = new ArrayList<>();
         tasksToEdit = new ArrayList<>();
 
         addUIComponentsNorth();
         addUIComponentsCenter();
         addUIComponentsSouth();
-        tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false, false);
+
         updateTaskList();
         addWindowListener(new WindowAdapter(){
             @Override
             public void windowClosing(WindowEvent e){
                 System.out.println("Shutting down application...");
-                saveChangesToDatabase();
-                TaskDAO.hardDeleteTaskFromDatabase();
                 PSQLtdldbh.closePool();
                 UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
             }
@@ -185,22 +180,20 @@ public class TasksFrame extends Frame{
         });
         
         updateButton.addActionListener(e -> {
-            saveChangesToDatabase();
             tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false, false);
             updateTaskList();
         });
 
         historyButton.addActionListener(e -> {
-                SwingUtilities.invokeLater(() -> {
-                    new HistoryFrame("History", TasksFrame.this, getUserId()).setVisible(true);
-                });
+            SwingUtilities.invokeLater(() -> {
+                new HistoryFrame("History", TasksFrame.this, getUserId()).setVisible(true);
+            });
         });
 
         toggleColorButton.addActionListener(e -> {  //it dosent update the tasks in the database, solve later
             common.toggleColorMode();
             //dispose frame and recall
             dispose();
-            saveChangesToDatabase();
             SwingUtilities.invokeLater(() -> {
                 new TasksFrame("ToDoList", getUserId()).setVisible(true);
             });
@@ -208,8 +201,7 @@ public class TasksFrame extends Frame{
 
 
         userConfigButton.addActionListener(e -> {
-            // Menu m = new Menu("User Menu");
-            // centerPanel.add(m);
+
         });
     }
 
@@ -244,7 +236,7 @@ public class TasksFrame extends Frame{
     //this panels manages the task components and buttons
     //Method to create the task panel
     public JPanel createTaskPanel(Task task){
-        JPanel taskPanel = new JPanel(new BorderLayout());
+        taskPanel = new JPanel(new BorderLayout());
         taskPanel.setOpaque(false);
         taskPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createEmptyBorder(5, 5, 2, 5),
@@ -271,9 +263,7 @@ public class TasksFrame extends Frame{
 
         updateCheckBox.addActionListener(e -> {
             task.setIsDone(!task.getIsDone());
-            if (!tasksToUpdate.contains(task)){
-                tasksToUpdate.add(task);
-            }
+            TaskDAO.updateDoneTaskInDatabase(task);
         });
 
         checkboxPanel.add(updateCheckBox);
@@ -304,7 +294,7 @@ public class TasksFrame extends Frame{
         viewButton.setToolTipText("View Task Details");
         
         viewButton.addActionListener(e -> {
-                viewTaskDetails(task);
+            viewTaskDetails(task);
         });
         
         JButton deleteButton = new JButton(deleteIcon);
@@ -315,14 +305,8 @@ public class TasksFrame extends Frame{
         deleteButton.setToolTipText("Delete Task");
         
         deleteButton.addActionListener(e -> {
-                if (tasksToAdd.contains(task)) {
-                    tasksToAdd.remove(task);
-                } else {
-                    tasksToDelete.add(task);
-                }
-                tasks.remove(task);
-                TaskDAO.deleteTaskFromDatabase(task);
-                updateTaskList();
+            TaskDAO.deleteTaskFromDatabase(task.getId());
+            updateTaskList();
         });
 
         JButton editButton = new JButton(editIcon);
@@ -333,9 +317,18 @@ public class TasksFrame extends Frame{
         editButton.setToolTipText("Edit Task");
 
         editButton.addActionListener(e -> {
-            tasksToEdit.add(task);
+            centerPanel.remove(taskPanel);
+            centerPanel.revalidate();
+            centerPanel.repaint();
             SwingUtilities.invokeLater(() -> {
-                new EditTaskFrame("Edit Task", task, TasksFrame.this).setVisible(true);
+                EditTaskFrame editTaskFrame = new EditTaskFrame("Edit Task", task);
+                editTaskFrame.setVisible(true);
+                editTaskFrame.addWindowListener(new WindowAdapter() {
+                    @Override
+                    public void windowClosed(WindowEvent e) {
+                        refreshTaskList(task);
+                    }
+                });
             });
         });
 
@@ -348,10 +341,10 @@ public class TasksFrame extends Frame{
     //Method to show the changes in the center Panel
     public void updateTaskList(){
         centerPanel.removeAll();
-        //display the tasks in the centerPanel
-        for(Task task : tasks){
-            JPanel taskPanel = createTaskPanel(task);
-            centerPanel.add(taskPanel);
+        //add the tasks from the database
+        tasks = TaskDAO.loadTasksFromDatabase(getUserId(), false, false);
+        for (Task task : tasks){
+            centerPanel.add(createTaskPanel(task));
         }
         centerPanel.revalidate();
         centerPanel.repaint();
@@ -359,6 +352,12 @@ public class TasksFrame extends Frame{
         SwingUtilities.invokeLater(() -> {
             todoLabel.requestFocusInWindow();
         });
+    }
+
+    public void refreshTaskList(Task task){
+        centerPanel.add(createTaskPanel(task));
+        centerPanel.revalidate();
+        centerPanel.repaint();
     }
     
     // Method to get the user ID
@@ -370,28 +369,16 @@ public class TasksFrame extends Frame{
     private void viewTaskDetails(Task task){
         taskDetailsArea.setText(task.viewTaskDesc());
     }
-    
-    // Method to save changes to the database
-    private void saveChangesToDatabase(){
-        if(!tasksToAdd.isEmpty()){
-            TaskDAO.saveTasksToDatabase(tasksToAdd);
-            tasksToAdd.clear();
-        }
-        if(!tasksToUpdate.isEmpty()){
-            TaskDAO.updateDoneTasksInDatabase(tasksToUpdate);
-            tasksToUpdate.clear();
-        }
-        if(!tasksToEdit.isEmpty()){
-            TaskDAO.editTasksInDatabase(tasksToEdit);
-            tasksToEdit.clear();
-        }
-    }
 
     // Method to add a new task
     public void addTask(String taskTitle, String description){
-        Task task = new Task(tasks.size() + 1, taskTitle, description, getUserId());
+        Task task = new Task.Builder(getUserId())
+            .taskTitle(taskTitle)
+            .description(description)
+            .folderId(1)
+            .build();
         tasks.add(task);
-        tasksToAdd.add(task);
+        TaskDAO.saveTaskToDatabase(task);
         updateTaskList();
     }
 }

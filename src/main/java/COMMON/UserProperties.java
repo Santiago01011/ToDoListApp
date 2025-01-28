@@ -7,8 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserProperties {
-    //private static final String USER_PROPS_FILE = System.getProperty("user.home") + File.separator + ".todolist" + File.separator + "user.yml";
-    private static final String USER_PROPS_FILE = "./user.yml";
+    private static final String USER_PROPS_FILE = System.getProperty("user.home") + File.separator + ".todoapp" + File.separator + "user.yml";
+    //private static final String USER_PROPS_FILE = "./user.yml";
     private static Map<String, Object> properties;
     
     static {
@@ -16,21 +16,21 @@ public class UserProperties {
     }
 
     private static void initialize(){
-        // createDirectory();
+        createDirectory();
         properties = loadProperties();
         if(properties == null){
             createDefaultProperties();
         }
     }
             
-        // private static void createDirectory(){  //future, for deployment
-        //     try {
-        //         Files.createDirectories(Paths.get(System.getProperty("user.home"), ".todolist"));
-        //     } catch (IOException e) {
-        //         e.printStackTrace();
-        //     }
-        // }
-            
+    private static void createDirectory(){  //future, for deployment
+        try {
+            Files.createDirectories(Paths.get(System.getProperty("user.home"), ".todoapp"));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+        
     private static void createDefaultProperties() {
         properties.put("darkTheme", "false");
         properties.put("rememberMe", "false");

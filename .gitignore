@@ -6,5 +6,6 @@ user.yml
 # Ignore all the target directorie and its content
 target/
 
-
-src/main/java/model/TaskManager.java
+# Ignore files to doccument the project
+IMPROVEMENTS.md
+doc.md

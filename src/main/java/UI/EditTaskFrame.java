@@ -1,150 +1,119 @@
 package UI;
 
-import java.awt.BorderLayout;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.GridLayout;
-import java.awt.Image;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.util.concurrent.Flow;
-
-import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-import javax.swing.plaf.BorderUIResource;
+import net.miginfocom.swing.*;
+import javax.swing.*;
+import java.awt.*;
+import java.time.format.DateTimeFormatter;
 
 import COMMON.common;
+import DBH.TaskDAO;
 import model.Task;
 
-
 public class EditTaskFrame extends Frame {
-    
-    public EditTaskFrame(String title, Task task, TasksFrame tasksFrame){
+    public EditTaskFrame(String title, Task task) {
         super(title);
-        setTitle(title);
         setSize(350, 650);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
         setResizable(false);
+        setLayout(new MigLayout("fill, insets 0", "[grow]", "[][grow][]"));
 
-        JPanel centerPanel = new JPanel(new BorderLayout());
-        centerPanel.setOpaque(false);
-        centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 5, 20, 5));
-        
-        JLabel titleLabel = new JLabel("Edit Task");
+        setupComponents(task);
+    }
+    
+    private void setupComponents(Task task) {
+        // Title
+        JLabel titleLabel = new JLabel("Edit Task", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Dialog", Font.BOLD, 25));
-        titleLabel.setHorizontalAlignment(JLabel.CENTER);
+        add(titleLabel, "cell 0 0, growx, gaptop 10");
 
-        
+        // Center panel
+        JPanel centerPanel = new JPanel(new MigLayout("fillx, insets 20 5", "[grow]", "[]10[]"));
+        centerPanel.setBackground(common.getPrimaryColor());
+
+        // Edit controls
         String[] options = {"Title", "Description", "Target date", "Folder"};
         JComboBox<String> optionList = new JComboBox<>(options);
-        optionList.setSelectedIndex(0);
-        optionList.setPrototypeDisplayValue("Select an option");
         optionList.setPreferredSize(new Dimension(120, 25));
-        optionList.setForeground(common.getTextColor());
-        optionList.setBackground(common.getTertiaryColor());
-        optionList.setBorder(BorderUIResource.getBlackLineBorderUIResource());
         
-        JTextArea editField = new JTextArea("Edit " + optionList.getSelectedItem(), 10, 20);
-        editField.setEditable(true);
+        JButton saveButton = new JButton(common.getSaveIcon());
+        saveButton.setPreferredSize(new Dimension(30, 25));
+        saveButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        JPanel editPanel = new JPanel(new MigLayout("insets 0", "[]10[]", "[]"));
+        editPanel.setBackground(common.getPrimaryColor());
+        editPanel.add(optionList);
+        editPanel.add(saveButton);
+        
+        // Text areas
+        JTextArea editField = new JTextArea("Edit " + optionList.getSelectedItem());
+        editField.setRows(10);
         editField.setLineWrap(true);
         editField.setWrapStyleWord(true);
         editField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(common.getTextColor(), 2),
             BorderFactory.createEmptyBorder(10, 10, 5, 5)
         ));
-        editField.setCaretColor(common.getTextColor());
-
-        ImageIcon saveIcon = common.getSaveIcon();
-        JButton saveButton = new JButton(saveIcon);
-        saveButton.setPreferredSize(new Dimension(30, 25));
-        saveButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        saveButton.setBorder(BorderUIResource.getBlackLineBorderUIResource());
-
-        JPanel editPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
-        editPanel.setOpaque(false);
-        editPanel.add(optionList);
-        editPanel.add(saveButton);
-
-        JPanel inputPanel = new JPanel(new BorderLayout());
-        inputPanel.setOpaque(false);
-        inputPanel.add(editPanel, BorderLayout.NORTH);
-        inputPanel.add(editField, BorderLayout.CENTER);
-
-        JTextArea taskDetailsArea = new JTextArea(10, 20);        
+        
+        JTextArea taskDetailsArea = new JTextArea();
+        taskDetailsArea.setRows(10);
         taskDetailsArea.setEditable(false);
         taskDetailsArea.setLineWrap(true);
         taskDetailsArea.setWrapStyleWord(true);
         taskDetailsArea.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 5));
-         
-        add(titleLabel, BorderLayout.NORTH);
-        centerPanel.add(inputPanel, BorderLayout.CENTER);
-        add(centerPanel, BorderLayout.CENTER);
-        add(taskDetailsArea, BorderLayout.SOUTH);
-        
-
         taskDetailsArea.setText(task.viewTaskDesc());
 
-        optionList.addActionListener(e -> {
-            editField.setText("Edit " + optionList.getSelectedItem());
-        });
+        // Add components
+        centerPanel.add(editPanel, "growx, wrap");
+        centerPanel.add(new JScrollPane(editField), "grow, wrap");
+        add(centerPanel, "cell 0 1, grow");
+        add(new JScrollPane(taskDetailsArea), "cell 0 2, grow, gapbottom 10");
+
+        // Event handlers
+        optionList.addActionListener(e -> editField.setText("Edit " + optionList.getSelectedItem()));
 
         editField.addFocusListener(new java.awt.event.FocusAdapter() {
             @Override
             public void focusGained(java.awt.event.FocusEvent e) {
                 if (editField.getText().equals("Edit " + optionList.getSelectedItem())) {
-                    editField.setText(
-                        switch(optionList.getSelectedIndex()){
-                            case 0 -> task.getTaskTitle().toString();
-                            case 1 -> task.getDescription().toString();
-                            //case 2 -> task.getTargetDate();
-                            //case 3 -> task.getFolder();
-                            default -> "";
+                    editField.setText(switch(optionList.getSelectedIndex()) {
+                        case 0 -> task.getTaskTitle().toString();
+                        case 1 -> task.getDescription().toString();
+                        case 2 -> {
+                            if(task.getTargetDate() != null) {
+                                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                                yield task.getTargetDate().format(formatter);
+                            } else {
+                                yield "";
+                            }
                         }
-                    );
+                        case 3 -> String.valueOf(task.getFolderId());
+                        default -> "";
+                    });
                 }
             }
         });
 
-        
-        saveButton.addActionListener(new ActionListener(){
-            @Override
-            public void actionPerformed(ActionEvent e){
-                if (!editField.getText().equals("") && !editField.getText().equals("Edit " + optionList.getSelectedItem())) {
-                    switch(optionList.getSelectedIndex()){
-                        case 0:
-                            task.setTaskTitle(editField.getText());
-                            break;
-                        case 1:
-                            task.setDescription(editField.getText());
-                            break;
-                        case 2:
-                            //task.setTargetDate(editField.getText());
-                            break;
-                        case 3:
-                            //task.setFolder(editField.getText());
-                            break;
-                    }
-                    taskDetailsArea.setText(task.viewTaskDesc());
-                    editField.setText("Edit " + optionList.getSelectedItem());
+        saveButton.addActionListener(e -> {
+            if (!editField.getText().isEmpty() && !editField.getText().equals("Edit " + optionList.getSelectedItem())) {
+                switch(optionList.getSelectedIndex()) {
+                    case 0 -> task.setTaskTitle(editField.getText());
+                    case 1 -> task.setDescription(editField.getText());
+                    // case 2 -> {
+                    //     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                    //     task.setTargetDate(LocalDateTime.parse(editField.getText(), formatter));
+                    // }
+                    case 3 -> task.setFolderId(Integer.parseInt(editField.getText()));
+                    default -> {}
                 }
+                taskDetailsArea.setText(task.viewTaskDesc());
+                editField.setText("Edit " + optionList.getSelectedItem());
             }
         });
-
 
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                tasksFrame.updateTaskList();
+                TaskDAO.updateTaskInDatabase(task);
             }
         });
     }

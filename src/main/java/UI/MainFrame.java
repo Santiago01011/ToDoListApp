@@ -159,6 +159,8 @@ public class MainFrame extends Frame{
                 System.out.println("Shutting down application...");
                 PSQLtdldbh.closePool();
                 UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
+                
+                System.exit(0);
             }
         });
     }

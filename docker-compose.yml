@@ -11,6 +11,11 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     restart: always
+    networks:
+      - todo_network
+
+networks:
+  todo_network:
 
 volumes:
   pg_data:

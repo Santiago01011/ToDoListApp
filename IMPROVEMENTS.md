@@ -13,68 +13,77 @@ This file tracks the expected improvements and steps for each day.
 - Add functionality to add tasks with optional descriptions. ✔
 - Display tasks in the center panel. ✔
 - Add functionality to the "View" and "Update" buttons. ✔
-- Add a Panel to display the task details. ✔
+- Add a panel to display the task details. ✔
 
 ### Day 2
 
 - Add the button and functionality to delete tasks. ✔
 - Change the 'Update' button to look like a checkbox. ✔
-- Change the 'Title' button to a Label. ✔
+- Change the 'Title' button to a label. ✔
 - Improve the UI with additional styling and layout adjustments. ✔
-- Implement task persistance using a database. ✔
-- Implement functionality to update the database after close window operation. ✔
-- Implement users profiles with private tasks. ✔
+- Implement task persistence using a database. ✔
+- Implement functionality to update the database after closing the window. ✔
+- Implement user profiles with private tasks. ✔
 - Implement a history of completed tasks by user. ✔
 - Implement functionality to restore tasks from history. ✔
 
 ### Day 3
 
-- Re-code all the project using the MVC pattern. ✔
-- Now the project is divided into three packages: model, UI, and DBHandler. ✔
+- Re-code the entire project using the MVC pattern. ✔
+- Divide the project into three packages: model, UI, and DBHandler. ✔
 - Implement a toggle button to switch between day and night mode. ✔
 - Improve the UI with additional styling and layout adjustments. ✔
-- Now the application has a Day and Night mode switch. ✔
-- Improve the aplicattion performance. ✔
-- Now the history updates the TaskFrame when a task is restored. ✔
-- Now the update function is more efficient. ✔
-- Now the database handler works with the MVC pattern. ✔
+- Add a day and night mode switch to the application. ✔
+- Improve application performance. ✔
+- Update the TaskFrame when a task is restored from history. ✔
+- Make the update function more efficient. ✔
+- Ensure the database handler works with the MVC pattern. ✔
 - Implement a login and register screen. ✔
 
 ### Day 4
 
-- Implement a file handler to save the user's data whitout a database. 
+- Implement a file handler to save user data without a database.
 - Implement a way to use the app without a database.
 
 ### Day 5
 
-- Host the database in a server. ✔
+- Host the database on a server. ✔
 - Implement the app to work with the server database. ✔
-- Make a JAR file to run the app in any computer. ✔
+- Create a JAR file to run the app on any computer. ✔
 - Improve the structure and security of the database. ✔
 - Decrease the number of connections to the database. ✔
 
-
 ### Day 6
 
-- Resolve all the problems in the functions with modify statment. ✔
-- Now the app connects to the database only when it closes or the update button is pressed. ✔
+- Resolve all issues with the modify statement functions. ✔
+- Connect to the database only when the app closes or the update button is pressed. ✔
 - Finish day 4 and 5 improvements.
-- Implement the edit task Frame with all functionalities. ✔
-- Add delete trigger to the database. ✔
-- Add dump.sql to the project. ✔
+- Implement the edit task frame with all functionalities. ✔
+- Add a delete trigger to the database. ✔
+- Add `dump.sql` to the project. ✔
 - Improve UI settings. ✔
-
 
 ### Days 7, 8, 9, 10
 
-- Change the app structure to work with a local embeded database. ✔
-- Refactor lot of the code for working with the embeded database. ✔
-- Refactor the EditTaskFrame and the button that invokes it. ✔
-- Implement folders, each task could be assigned to a folder, tasks without folder will be auto assigned to the default users folder. ✔
-- Implement a way to create, delete and rename folders.
-- Refactor all the UI code for HistoryFrame to show the completed tasks and also the deleted tasks. ✔
+- Change the app structure to work with a local embedded database. ✔
+- Refactor a lot of the code to work with the embedded database. ✔
+- Refactor the `EditTaskFrame` and the button that invokes it. ✔
+- Implement folders; each task can be assigned to a folder, and tasks without a folder will be auto-assigned to the default user's folder. ✔
+- Implement a way to create, delete, and rename folders.
+- Refactor all the UI code for `HistoryFrame` to show completed and deleted tasks. ✔
 - Implement a way to restore deleted tasks. ✔
 - Implement a way to delete tasks permanently. ✔
-- Implement a way to edit completed tasks in HistoryFrame. ✔
+- Implement a way to edit completed tasks in `HistoryFrame`. ✔
 
+### Additional Improvements
 
+- Migration to auto-generated UUID keys, which will help in:
+    - **Synchronization:**
+        - **Consistency:** Time-ordered UUIDs can help maintain consistent order and timestamps across different databases, useful for synchronization.
+        - **Conflict Resolution:** Helps in identifying and resolving conflicts more efficiently.
+    - **Performance:**
+        - **Indexing:** Time-ordered UUIDs can lead to more efficient indexing, improving performance when querying and sorting records.
+        - **Insertions:** Reduces fragmentation in the database, leading to more efficient insertions and updates.
+    - **Scalability:**
+        - **Distributed Systems:** Well-suited for distributed systems where multiple clients or servers generate UUIDs independently, ensuring a high level of uniqueness and consistency.
+```

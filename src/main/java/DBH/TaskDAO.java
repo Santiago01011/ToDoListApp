@@ -302,15 +302,16 @@ public class TaskDAO {
                     // Try to insert user into local database if not already present
                     int userId = getUserId(username);
                     if (userId == -1) {
-                        String insertSql = "INSERT INTO users (username, password, id) VALUES (?, ?, ?)";
+                        String insertSql = "INSERT INTO users (username, password, id, email) VALUES (?, ?, ?, ?)";
                         try (Connection localConn = PSQLtdldbh.getLocalConnection();
-                                PreparedStatement insertPstmt = localConn.prepareStatement(insertSql)) {
+                             PreparedStatement insertPstmt = localConn.prepareStatement(insertSql)){
                             insertPstmt.setString(1, username);
                             insertPstmt.setString(2, hashedPassword);
                             insertPstmt.setInt(3, rs.getInt("id"));
+                            insertPstmt.setString(4, rs.getString("email"));
                             insertPstmt.executeUpdate();
                             System.out.println("User inserted into local database");
-                        } catch (SQLException e) {
+                        } catch (SQLException e){
                             System.out.println("Error inserting user into local database");
                             e.printStackTrace();
                         }
@@ -729,9 +730,7 @@ public class TaskDAO {
         } catch (SQLException e) {
             System.out.println("Error fetching tasks to delete");
             e.printStackTrace();
-        }
-
-        
+        }        
     }
 
     public static void updateLocalFolderstoCloud(int userId){
@@ -753,16 +752,7 @@ public class TaskDAO {
             System.out.println("Error loading folders from local");
             return;
         }
-        //delete from local
-        String sqlUpdateSyncStatus = "DELETE FROM folders WHERE (sync_status = 'LOCAL' OR id < 0) AND sync_status != 'DEL' AND user_id = ?";
-        try (Connection localConn = PSQLtdldbh.getLocalConnection();
-             PreparedStatement updatePstmt = localConn.prepareStatement(sqlUpdateSyncStatus)){
-            updatePstmt.setInt(1, userId);
-            updatePstmt.executeUpdate();
-        }catch(SQLException e){
-            System.out.println("Error updating sync status to CLOUD");
-            e.printStackTrace();
-        }
+        
         // Then insert them in cloud
         String cloudSql = "INSERT INTO folders (user_id, folder_name) VALUES (?, ?)";
         try (Connection conn = PSQLtdldbh.getCloudConnection();
@@ -776,6 +766,17 @@ public class TaskDAO {
             System.out.println("Folders uploaded successfully");
         } catch (SQLException e) {
             System.out.println("Error syncing some folders");
+        }
+
+        //delete from local
+        String sqlUpdateSyncStatus = "DELETE FROM folders WHERE (sync_status = 'LOCAL' OR id < 0) AND sync_status != 'DEL' AND user_id = ?";
+        try (Connection localConn = PSQLtdldbh.getLocalConnection();
+             PreparedStatement updatePstmt = localConn.prepareStatement(sqlUpdateSyncStatus)){
+            updatePstmt.setInt(1, userId);
+            updatePstmt.executeUpdate();
+        }catch(SQLException e){
+            System.out.println("Error updating sync status to CLOUD");
+            e.printStackTrace();
         }
 
     }

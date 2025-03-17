@@ -20,12 +20,12 @@ public class AuthService {
                 .build();
     }
     
-    public JSONObject initiateRegistration(String email, String password, String fullName) throws IOException, InterruptedException, org.json.JSONException{
+    public JSONObject initiateRegistration(String email, String password, String userName) throws IOException, InterruptedException, org.json.JSONException{
         JSONObject requestBody = new JSONObject();
         requestBody.put("email", email);
         requestBody.put("password", password);
-        requestBody.put("fullName", fullName);
-        requestBody.put("redirectUrl", "todoapp://registration-complete"); // Custom protocol for your app
+        requestBody.put("userName", userName);
+        requestBody.put("redirectUrl", "todoapp://registration-complete");
         
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(apiBaseUrl + "/api/register"))
@@ -37,9 +37,9 @@ public class AuthService {
         return new JSONObject(response.body());
     }
     
-    public JSONObject initiateLogin(String email, String password) throws IOException, InterruptedException, org.json.JSONException{
+    public JSONObject initiateLogin(String username, String password) throws IOException, InterruptedException, org.json.JSONException{
         JSONObject requestBody = new JSONObject();
-        requestBody.put("email", email);
+        requestBody.put("username", username);
         requestBody.put("password", password);
         
         HttpRequest request = HttpRequest.newBuilder()
@@ -58,20 +58,6 @@ public class AuthService {
         
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(apiBaseUrl + "/api/validate-session"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
-                .build();
-        
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        return new JSONObject(response.body());
-    }
-    
-    public JSONObject logout(String sessionToken) throws IOException, InterruptedException, org.json.JSONException {
-        JSONObject requestBody = new JSONObject();
-        requestBody.put("sessionToken", sessionToken);
-        
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(apiBaseUrl + "/api/logout"))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(requestBody.toString()))
                 .build();

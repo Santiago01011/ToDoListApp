@@ -1,0 +1,13 @@
+{
+    "name": "Java with Maven",
+    "dockerFile": "Dockerfile",
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "extensions": [
+        "vscjava.vscode-java-pack",
+        "ms-azuretools.vscode-docker"
+    ],
+    "postCreateCommand": "mvn clean install",
+    "remoteUser": "vscode"
+}

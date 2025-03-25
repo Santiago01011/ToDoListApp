@@ -1,10 +1,10 @@
 package model;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.stream.Stream;
 
 public class TaskJsonBuilder {
@@ -14,9 +14,10 @@ public class TaskJsonBuilder {
     public static File buildJsonFile(Stream<Task> taskStream, String fileName) {
         File jsonFile = new File(BASE_DIRECTORY + File.separator + fileName);
         try {
-            jsonFile.getParentFile().mkdirs();
+            jsonFile.getParentFile().mkdirs(); // Ensure the directory exists
             ObjectMapper mapper = new ObjectMapper();
-            mapper.writeValue(jsonFile, taskStream.toList()); // Convert the stream to a list here
+            mapper.registerModule(new JavaTimeModule()); // Register JavaTimeModule for LocalDateTime support
+            mapper.writeValue(jsonFile, taskStream.toList()); // Convert the stream to a list and write to the file
         } catch (IOException e) {
             System.err.println("Error creating JSON file: " + e.getMessage());
         }
@@ -29,7 +30,8 @@ public class TaskJsonBuilder {
             file.getParentFile().mkdirs(); // Ensure the directory exists
             file.createNewFile();
             ObjectMapper mapper = new ObjectMapper();
-            mapper.writeValue(file, new ArrayList<>()); // Initialize with an empty list
+            mapper.registerModule(new JavaTimeModule()); // Register JavaTimeModule for LocalDateTime support
+            mapper.writeValue(file, Stream.<Task>empty().toList()); // Initialize with an empty list
         } catch (IOException e) {
             System.err.println("Error creating empty JSON file: " + e.getMessage());
         }

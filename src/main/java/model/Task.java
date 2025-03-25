@@ -1,6 +1,7 @@
 package model;
 
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.format.DateTimeFormatter;
 
 public class Task {
@@ -17,6 +18,38 @@ public class Task {
     private String folderName;
     private String status; // Represents if the task is "local", "cloud", or "new"
 
+    public Task() {
+        // Default constructor
+    }
+
+    public Task(
+        @JsonProperty("taskUUID") String taskUUID,
+        @JsonProperty("taskTitle") String taskTitle,
+        @JsonProperty("description") String description,
+        @JsonProperty("userUUID") String userUUID,
+        @JsonProperty("updatedAt") LocalDateTime updatedAt,
+        @JsonProperty("dateAdded") LocalDateTime dateAdded,
+        @JsonProperty("targetDate") LocalDateTime targetDate,
+        @JsonProperty("deletedAt") LocalDateTime deletedAt,
+        @JsonProperty("isDone") boolean isDone,
+        @JsonProperty("folderUUID") String folderUUID,
+        @JsonProperty("folderName") String folderName,
+        @JsonProperty("status") String status
+    ) {
+        this.taskUUID = taskUUID;
+        this.taskTitle = taskTitle;
+        this.description = description;
+        this.userUUID = userUUID;
+        this.updatedAt = updatedAt;
+        this.dateAdded = dateAdded;
+        this.targetDate = targetDate;
+        this.deletedAt = deletedAt;
+        this.isDone = isDone;
+        this.folderUUID = folderUUID;
+        this.folderName = folderName;
+        this.status = status;
+    }
+    
     private Task(Builder builder){
         this.taskUUID = builder.taskUUID;
         this.taskTitle = builder.taskTitle;
@@ -204,7 +237,7 @@ public class Task {
         return "Task UUID: " + taskUUID + "\n" 
         + "Task Title: " + taskTitle + "\n" 
         + "Description: " + description + "\n" 
-        + "Date Added: " + dateAdded.format(formatter) + "\n" 
+        //+ "Date Added: " + dateAdded.format(formatter) + "\n" 
         + "Status: " + status + "\n"
         + "Completion: " + (isDone ? "Done" : "Pending") + "\nLast Update: " + updatedAt.format(formatter) + "\n"
         + "Folder UUID: " + folderUUID;

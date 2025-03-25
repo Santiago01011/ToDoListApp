@@ -17,12 +17,13 @@ public class TaskHandler {
         this.userTasksList = loadTasksFromJson();
     }
 
-    public void addTask(String title, String description, String targetDate, String folder, String userUUID) {
+    public void addTask(String title, String description, String targetDate, String folder, String userUUID, String status) {
         Task task = new Task.Builder(userUUID)
             .taskTitle(title)
             .description(description)
             .targetDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate))
             .folderName(folder)
+            .status(status)
             .build();
         userTasksList.add(task);
     }
@@ -36,6 +37,7 @@ public class TaskHandler {
 
     private List<Task> loadTasksFromJson() {
         ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule()); // Register JavaTimeModule
         File file = new File(TASKS_JSON_FILE);
         if (!file.exists()) {
           TaskJsonBuilder.createEmptyJsonFile(TASKS_JSON_FILE);
@@ -45,7 +47,7 @@ public class TaskHandler {
         try {
             return mapper.readValue(file, new TypeReference<List<Task>>() {});
         } catch (IOException e) {
-            System.err.println("Error loading tasjs from JSON: " + e.getMessage());
+            System.err.println("Error loading tasks from JSON: " + e.getMessage());
             return new ArrayList<>();
         }
     }

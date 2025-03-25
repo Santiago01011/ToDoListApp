@@ -4,56 +4,59 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 public class Task {
-    private int id;
+    private String taskUUID;
     private String taskTitle;
     private String description;
-    private int userId;
+    private String userUUID;
     private LocalDateTime updatedAt;
     private LocalDateTime dateAdded;
     private LocalDateTime targetDate;
     private LocalDateTime deletedAt;
     private boolean isDone;
-    private int folderId;
+    private String folderUUID;
     private String folderName;
+    private String status; // Represents if the task is "local", "cloud", or "new"
 
     private Task(Builder builder){
-        this.id = builder.id;
+        this.taskUUID = builder.taskUUID;
         this.taskTitle = builder.taskTitle;
         this.description = builder.description;
-        this.userId = builder.userId;
+        this.userUUID = builder.userUUID;
         this.dateAdded = builder.dateAdded;
         this.updatedAt = builder.updatedAt != null ? builder.updatedAt : LocalDateTime.now();
         this.deletedAt = builder.deletedAt;
         this.targetDate = builder.targetDate;
         this.isDone = builder.isDone;
-        this.folderId = builder.folderId;
+        this.status = builder.status != null ? builder.status : "new"; // Default to "new" if not set
+        this.folderUUID = builder.folderUUID;
         this.folderName = builder.folderName;
     }
 
     // Usage example:
     /*
-    Task task = new Task.Builder(userId)
+    Task task = new Task.Builder(userUUID)
         .taskTitle("Buy groceries")
         .description("Get milk and bread")
-        .folderId(1)
+        .folderUUID("1")
         .targetDate(LocalDateTime.now().plusDays(1))
         .build();
     */
     public static class Builder{
-        private int id;
+        private String taskUUID;
         private String taskTitle;
         private String description;
-        private int userId;
+        private String userUUID;
         private LocalDateTime dateAdded;
         private LocalDateTime updatedAt;
         private LocalDateTime targetDate;
         private LocalDateTime deletedAt;
         private boolean isDone = false;
-        private int folderId;
+        private String folderUUID;
         private String folderName;
+        private String status; // Represents if the task is "local", "cloud", or "new"
 
-        public Builder(int userId){
-            this.userId = userId;
+        public Builder(String userUUID){
+            this.userUUID = userUUID;
         }
 
         public Builder taskTitle(String taskTitle){
@@ -61,8 +64,8 @@ public class Task {
             return this;
         }
 
-        public Builder id(int id){
-            this.id = id;
+        public Builder taskUUID(String taskUUID){
+            this.taskUUID = taskUUID;
             return this;
         }
 
@@ -96,8 +99,8 @@ public class Task {
             return this;
         }
 
-        public Builder folderId(int folderId){
-            this.folderId = folderId;
+        public Builder folderUUID(String folderUUID){
+            this.folderUUID = folderUUID;
             return this;
         }
 
@@ -106,13 +109,18 @@ public class Task {
             return this;
         }
 
+        public Builder status (String status){
+            this.status = status;
+            return this;
+        }
+
         public Task build(){
             return new Task(this);
         }
     }
 
-    public int getId(){
-        return this.id;
+    public String getTaskUUID(){
+        return this.taskUUID;
     }
 
     public String getTaskTitle(){
@@ -127,8 +135,8 @@ public class Task {
         return this.isDone;
     }
 
-    public int getUserId(){
-        return this.userId;
+    public String getUserUUID(){
+        return this.userUUID;
     }
 
     public LocalDateTime getDateAdded(){
@@ -147,16 +155,20 @@ public class Task {
         return this.deletedAt;
     }
 
-    public int getFolderId(){
-        return this.folderId;
+    public String getFolderUUID(){
+        return this.folderUUID;
     }
 
     public String getFolderName(){
         return this.folderName;
     }
 
-    public void setId(int id){
-        this.id = id;
+    public String getStatus(){
+        return this.status;
+    }
+
+    public void setTaskUUID(String taskUUID){
+        this.taskUUID = taskUUID;
     }
 
     public void setTaskTitle(String taskTitle){
@@ -171,12 +183,16 @@ public class Task {
         this.isDone = isDone;
     }
 
+    public void setStatus(String status){
+        this.status = status;
+    }
+
     public void setTargetDate(LocalDateTime targetDate){
         this.targetDate = targetDate;
     }
 
-    public void setFolderId(int folderId){
-        this.folderId = folderId;
+    public void setFolderUUID(String folderUUID){
+        this.folderUUID = folderUUID;
     }
 
     public void setFolderName(String folderName){
@@ -185,11 +201,12 @@ public class Task {
 
     public String viewTaskDesc(){
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-        return "Task ID: " + id + "\n" 
+        return "Task UUID: " + taskUUID + "\n" 
         + "Task Title: " + taskTitle + "\n" 
         + "Description: " + description + "\n" 
         + "Date Added: " + dateAdded.format(formatter) + "\n" 
-        + "Status: " + (isDone ? "Done" : "Pending") + "\nLast Update: " + updatedAt.format(formatter) +"\n"
-        + "Folder ID: " + folderId;
+        + "Status: " + status + "\n"
+        + "Completion: " + (isDone ? "Done" : "Pending") + "\nLast Update: " + updatedAt.format(formatter) + "\n"
+        + "Folder UUID: " + folderUUID;
     }
 }

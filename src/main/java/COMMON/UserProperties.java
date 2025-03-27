@@ -37,6 +37,7 @@ public class UserProperties {
         properties.put("username", "");
         properties.put("password", "");
         properties.put("lastSession", "");
+        properties.put("dbUrl", "");
 
         try{
             Yaml yaml = new Yaml();

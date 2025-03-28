@@ -115,10 +115,8 @@ public class common {
         try {
             InputStream is = common.class.getClassLoader().getResourceAsStream(resourcePath);
 
-            if (is == null){
-                // Development fallback: Direct path for local file access
+            if (is == null)
                 is = new FileInputStream("src/main/resources/" + resourcePath);
-            }
 
             Image image = ImageIO.read(is);
             image = image.getScaledInstance(20, 20, Image.SCALE_SMOOTH);

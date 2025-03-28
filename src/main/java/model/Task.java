@@ -2,244 +2,232 @@ package model;
 
 import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.format.DateTimeFormatter;
 
 public class Task {
-    private String taskUUID;
-    private String taskTitle;
+    private String task_id;
+    private String task_title;
     private String description;
-    private String userUUID;
-    private LocalDateTime updatedAt;
-    private LocalDateTime dateAdded;
-    private LocalDateTime targetDate;
-    private LocalDateTime deletedAt;
-    private boolean isDone;
-    private String folderUUID;
-    private String folderName;
-    private String status; // Represents if the task is "local", "cloud", or "new"
+    private String status;
+    private String sync_status;
+    private LocalDateTime due_date;
+    private LocalDateTime created_at;
+    private LocalDateTime updated_at;
+    private LocalDateTime deleted_at;
+    private LocalDateTime last_sync;
+    private String folder_id;
+    private String folder_name;
 
     public Task() {
         // Default constructor
     }
 
     public Task(
-        @JsonProperty("taskUUID") String taskUUID,
-        @JsonProperty("taskTitle") String taskTitle,
+        @JsonProperty("task_id") String task_id,
+        @JsonProperty("task_title") String task_title,
         @JsonProperty("description") String description,
-        @JsonProperty("userUUID") String userUUID,
-        @JsonProperty("updatedAt") LocalDateTime updatedAt,
-        @JsonProperty("dateAdded") LocalDateTime dateAdded,
-        @JsonProperty("targetDate") LocalDateTime targetDate,
-        @JsonProperty("deletedAt") LocalDateTime deletedAt,
-        @JsonProperty("isDone") boolean isDone,
-        @JsonProperty("folderUUID") String folderUUID,
-        @JsonProperty("folderName") String folderName,
-        @JsonProperty("status") String status
+        @JsonProperty("status") String status,
+        @JsonProperty("sync_status") String sync_status,
+        @JsonProperty("due_date") LocalDateTime due_date,
+        @JsonProperty("created_at") LocalDateTime created_at,
+        @JsonProperty("updated_at") LocalDateTime updated_at,
+        @JsonProperty("deleted_at") LocalDateTime deleted_at,
+        @JsonProperty("last_sync") LocalDateTime last_sync,
+        @JsonProperty("folder_id") String folder_id,
+        @JsonProperty("folder_name") String folder_name
     ) {
-        this.taskUUID = taskUUID;
-        this.taskTitle = taskTitle;
+        this.task_id = task_id;
+        this.task_title = task_title;
         this.description = description;
-        this.userUUID = userUUID;
-        this.updatedAt = updatedAt;
-        this.dateAdded = dateAdded;
-        this.targetDate = targetDate;
-        this.deletedAt = deletedAt;
-        this.isDone = isDone;
-        this.folderUUID = folderUUID;
-        this.folderName = folderName;
         this.status = status;
-    }
-    
-    private Task(Builder builder){
-        this.taskUUID = builder.taskUUID;
-        this.taskTitle = builder.taskTitle;
-        this.description = builder.description;
-        this.userUUID = builder.userUUID;
-        this.dateAdded = builder.dateAdded;
-        this.updatedAt = builder.updatedAt != null ? builder.updatedAt : LocalDateTime.now();
-        this.deletedAt = builder.deletedAt;
-        this.targetDate = builder.targetDate;
-        this.isDone = builder.isDone;
-        this.status = builder.status != null ? builder.status : "new"; // Default to "new" if not set
-        this.folderUUID = builder.folderUUID;
-        this.folderName = builder.folderName;
-    }
+        this.sync_status = sync_status;
+        this.due_date = due_date;
+        this.created_at = created_at;
+        this.updated_at = updated_at;
+        this.deleted_at = deleted_at;
+        this.last_sync = last_sync;
+        this.folder_id = folder_id;
+        this.folder_name = folder_name;
+        }
 
-    // Usage example:
-    /*
-    Task task = new Task.Builder(userUUID)
-        .taskTitle("Buy groceries")
-        .description("Get milk and bread")
-        .folderUUID("1")
-        .targetDate(LocalDateTime.now().plusDays(1))
-        .build();
-    */
-    public static class Builder{
-        private String taskUUID;
-        private String taskTitle;
+        public static class Builder {
+        private String task_id;
+        private String task_title;
         private String description;
-        private String userUUID;
-        private LocalDateTime dateAdded;
-        private LocalDateTime updatedAt;
-        private LocalDateTime targetDate;
-        private LocalDateTime deletedAt;
-        private boolean isDone = false;
-        private String folderUUID;
-        private String folderName;
-        private String status; // Represents if the task is "local", "cloud", or "new"
+        private String status;
+        private String sync_status;
+        private LocalDateTime due_date;
+        private LocalDateTime created_at;
+        private LocalDateTime updated_at;
+        private LocalDateTime deleted_at;
+        private LocalDateTime last_sync;
+        private String folder_id;
+        private String folder_name;
 
-        public Builder(String userUUID){
-            this.userUUID = userUUID;
+        public Builder(String task_title) {
+            this.task_title = task_title;
         }
 
-        public Builder taskTitle(String taskTitle){
-            this.taskTitle = taskTitle;
+        public Builder taskId(String task_id) {
+            this.task_id = task_id;
             return this;
         }
 
-        public Builder taskUUID(String taskUUID){
-            this.taskUUID = taskUUID;
-            return this;
-        }
-
-        public Builder description(String description){
+        public Builder description(String description) {
             this.description = description;
             return this;
         }
 
-        public Builder isDone(boolean isDone){
-            this.isDone = isDone;
-            return this;
-        }
-
-        public Builder targetDate(LocalDateTime targetDate){
-            this.targetDate = targetDate;
-            return this;
-        }
-
-        public Builder dateAdded(LocalDateTime dateAdded){
-            this.dateAdded = dateAdded;
-            return this;
-        }
-
-        public Builder deletedAt(LocalDateTime deletedAt){
-            this.deletedAt = deletedAt;
-            return this;
-        }
-
-        public Builder updatedAt(LocalDateTime updatedAt){
-            this.updatedAt = updatedAt;
-            return this;
-        }
-
-        public Builder folderUUID(String folderUUID){
-            this.folderUUID = folderUUID;
-            return this;
-        }
-
-        public Builder folderName(String folderName){
-            this.folderName = folderName;
-            return this;
-        }
-
-        public Builder status (String status){
+        public Builder status(String status) {
             this.status = status;
             return this;
         }
 
-        public Task build(){
-            return new Task(this);
+        public Builder sync_status(String sync_status) {
+            this.sync_status = sync_status;
+            return this;
+        }
+
+        public Builder dueDate(LocalDateTime due_date) {
+            this.due_date = due_date;
+            return this;
+        }
+
+        public Builder createdAt(LocalDateTime created_at) {
+            this.created_at = created_at;
+            return this;
+        }
+
+        public Builder updatedAt(LocalDateTime updated_at) {
+            this.updated_at = updated_at;
+            return this;
+        }
+
+        public Builder deletedAt(LocalDateTime deleted_at) {
+            this.deleted_at = deleted_at;
+            return this;
+        }
+
+        public Builder lastSync(LocalDateTime last_sync) {
+            this.last_sync = last_sync;
+            return this;
+        }
+
+        public Builder folderId(String folder_id) {
+            this.folder_id = folder_id;
+            return this;
+        }
+
+        public Builder folderName(String folder_name) {
+            this.folder_name = folder_name;
+            return this;
+        }
+
+        public Task build() {
+            return new Task(task_id, task_title, description, status, sync_status, due_date, created_at, updated_at, deleted_at, last_sync, folder_id, folder_name);
         }
     }
 
-    public String getTaskUUID(){
-        return this.taskUUID;
+    public String getTask_id() {
+        return task_id;
     }
 
-    public String getTaskTitle(){
-        return this.taskTitle;
+    public void setTask_id(String task_id) {
+        this.task_id = task_id;
     }
 
-    public String getDescription(){
-        return this.description;
+    public String getTask_title() {
+        return task_title;
     }
 
-    public boolean getIsDone(){
-        return this.isDone;
+    public void setTask_title(String task_title) {
+        this.task_title = task_title;
     }
 
-    public String getUserUUID(){
-        return this.userUUID;
+    public String getDescription() {
+        return description;
     }
 
-    public LocalDateTime getDateAdded(){
-        return this.dateAdded;
-    }
-    
-    public LocalDateTime getTargetDate(){
-        return this.targetDate;
-    }
-
-    public LocalDateTime getUpdatedAt(){
-        return this.updatedAt;
-    }
-
-    public LocalDateTime getDeletedAt(){
-        return this.deletedAt;
-    }
-
-    public String getFolderUUID(){
-        return this.folderUUID;
-    }
-
-    public String getFolderName(){
-        return this.folderName;
-    }
-
-    public String getStatus(){
-        return this.status;
-    }
-
-    public void setTaskUUID(String taskUUID){
-        this.taskUUID = taskUUID;
-    }
-
-    public void setTaskTitle(String taskTitle){
-        this.taskTitle = taskTitle;
-    }
-
-    public void setDescription(String description){
+    public void setDescription(String description) {
         this.description = description;
     }
 
-    public void setIsDone(boolean isDone){
-        this.isDone = isDone;
+    public String getStatus() {
+        return status;
     }
 
-    public void setStatus(String status){
+    public void setStatus(String status) {
         this.status = status;
     }
 
-    public void setTargetDate(LocalDateTime targetDate){
-        this.targetDate = targetDate;
+    public String getSync_status() {
+        return sync_status;
     }
 
-    public void setFolderUUID(String folderUUID){
-        this.folderUUID = folderUUID;
+    public void setSync_status(String sync_status) {
+        this.sync_status = sync_status;
     }
 
-    public void setFolderName(String folderName){
-        this.folderName = folderName;
+    public LocalDateTime getDue_date() {
+        return due_date;
     }
 
-    public String viewTaskDesc(){
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
-        return "Task UUID: " + taskUUID + "\n" 
-        + "Task Title: " + taskTitle + "\n" 
-        + "Description: " + description + "\n" 
-        //+ "Date Added: " + dateAdded.format(formatter) + "\n" 
-        + "Status: " + status + "\n"
-        + "Completion: " + (isDone ? "Done" : "Pending") + "\nLast Update: " + updatedAt.format(formatter) + "\n"
-        + "Folder UUID: " + folderUUID;
+    public void setDue_date(LocalDateTime due_date) {
+        this.due_date = due_date;
+    }
+
+    public LocalDateTime getCreated_at() {
+        return created_at;
+    }
+
+    public void setCreated_at(LocalDateTime created_at) {
+        this.created_at = created_at;
+    }
+
+    public LocalDateTime getUpdated_at() {
+        return updated_at;
+    }
+
+    public void setUpdated_at(LocalDateTime updated_at) {
+        this.updated_at = updated_at;
+    }
+
+    public LocalDateTime getDeleted_at() {
+        return deleted_at;
+    }
+
+    public void setDeleted_at(LocalDateTime deleted_at) {
+        this.deleted_at = deleted_at;
+    }
+
+    public LocalDateTime getLast_sync() {
+        return last_sync;
+    }
+
+    public void setLast_sync(LocalDateTime last_sync) {
+        this.last_sync = last_sync;
+    }
+
+    public String getFolder_id() {
+        return folder_id;
+    }
+
+    public void setFolder_id(String folder_id) {
+        this.folder_id = folder_id;
+    }
+
+    public String getFolder_name() {
+        return folder_name;
+    }
+
+    public void setFolder_name(String folder_name) {
+        this.folder_name = folder_name;
+    }
+
+    public String viewTaskDesc() {
+        return "Task ID: " + task_id + ", Title: " + task_title + ", Description: " + description +
+                ", Status: " + status +
+                ", sync_status: " + sync_status + ", Due Date: " + due_date + ", Created At: " + created_at +
+                ", Updated At: " + updated_at + ", Deleted At: " + deleted_at + ", Last Sync: " + last_sync +
+                ", Folder ID: " + folder_id;
     }
 }

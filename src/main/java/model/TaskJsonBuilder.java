@@ -5,6 +5,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,25 +23,28 @@ public class TaskJsonBuilder {
             ObjectMapper mapper = new ObjectMapper();
             mapper.registerModule(new JavaTimeModule());
 
-            List<Map<String, Object>> tasks = taskStream.map(task -> {
-                Map<String, Object> taskMap = new LinkedHashMap<>();
-                taskMap.put("task_id", task.getTask_id());
-                taskMap.put("task_title", task.getTask_title());
-                taskMap.put("description", task.getDescription());
-                taskMap.put("status", task.getStatus());
-                taskMap.put("sync_status", task.getSync_status());
-                taskMap.put("due_date", task.getDue_date() != null ? task.getDue_date().toString() : null);
-                taskMap.put("created_at", task.getCreated_at() != null ? task.getCreated_at().toString() : null);
-                taskMap.put("updated_at", task.getUpdated_at() != null ? task.getUpdated_at().toString() : null);
-                taskMap.put("folder_id", task.getFolder_id());
-                taskMap.put("folder_name", task.getFolder_name());
-                taskMap.put("deleted_at", task.getDeleted_at() != null ? task.getDeleted_at().toString() : null);
-                return taskMap;
+            Map<String, Object> jsonbStructure = new LinkedHashMap<>();
+            jsonbStructure.put("columns", List.of("folder_id", "folder_name", "task_id", "task_title", "description", "sync_status", "status", "due_date", "created_at"));
+
+            List<List<Object>> data = taskStream.map(task -> {
+                List<Object> taskData = new ArrayList<>();
+                taskData.add(task.getFolder_id());
+                taskData.add(task.getFolder_name());
+                taskData.add(task.getTask_id());
+                taskData.add(task.getTask_title());
+                taskData.add(task.getDescription());
+                taskData.add(task.getSync_status());
+                taskData.add(task.getStatus());
+                taskData.add(task.getDue_date() != null ? task.getDue_date().toString() : null);
+                taskData.add(task.getCreated_at() != null ? task.getCreated_at().toString() : null);
+                return taskData;
             }).collect(Collectors.toList());
 
-            mapper.writeValue(jsonFile, Map.of("tasks", tasks));
+            jsonbStructure.put("data", data);
+
+            mapper.writeValue(jsonFile, jsonbStructure);
         } catch (IOException e) {
-            System.err.println("Error creating JSON file: " + e.getMessage());
+            System.err.println("Error creating JSONB file: " + e.getMessage());
         }
         return jsonFile;
     }

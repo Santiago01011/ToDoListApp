@@ -1,0 +1,41 @@
+{
+    "failed": [
+        {
+            "task": [
+                null,
+                "Pay utility bills",
+                "Electricity and water",
+                "fail",
+                "2023-11-28T23:59:59-03:00",
+                "2025-03-28T20:06:15.879301-03:00"
+            ],
+            "error": "Invalid status value: fail"
+        }
+    ],
+    "success": [
+        {
+            "task": [
+                "38d29f93-5d87-4c7b-9ebc-e57cd9b6a3b2",
+                "0195dfa6-580d-73fa-8875-1d5e89c307c1"
+            ]
+        },
+        {
+            "task": [
+                "b950d9ef-2635-40b7-a01c-2098f84a4c0a",
+                "0195dfa6-5908-7e4f-a037-81c3fbc7e176"
+            ]
+        },
+        {
+            "task": [
+                "1b8f6833-6308-4171-9266-3032e23389e6",
+                "0195dfa6-58ca-7dd5-9479-00113eb38d41"
+            ]
+        },
+        {
+            "task": [
+                "948b805d-3351-4241-8205-ec1bd4566866",
+                "0195dfa6-588e-7ea2-bb01-16e8347d1f4c"
+            ]
+        }
+    ]
+}

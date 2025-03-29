@@ -7,8 +7,10 @@ import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class TaskHandler {
     private static final String TASKS_JSON_FILE = System.getProperty("user.home") + File.separator + ".todoapp" + File.separator + "tasks.json";
@@ -18,15 +20,16 @@ public class TaskHandler {
         this.userTasksList = loadTasksFromJson();
     }
 
-    public void addTask(String title, String description, String status, String targetDate, String folderName, String sync_status) {
+    public void addTask(String title, String description, String status, String targetDate, String folderName) {
         Task task = new Task.Builder(title)
             .description(description)
             .dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate))
             .folderName(folderName)
             .status(status)
-            .sync_status(sync_status)
+            .sync_status("new")
             .createdAt(LocalDateTime.now())
             .updatedAt(LocalDateTime.now())
+            .taskId(UUID.randomUUID().toString())
             .build();
         userTasksList.add(task);
     }
@@ -42,6 +45,22 @@ public class TaskHandler {
         return TaskJsonBuilder.buildJsonFile(
             userTasksList.stream(),
             "tasks.json"
+        );
+    }
+
+    public String prepareSyncJsonContent(String sync_status) {
+        var filteredTasks = userTasksList.stream()
+        .filter(task -> sync_status.equals(task.getSync_status()))
+        .toList();
+    
+        if (filteredTasks.isEmpty()) return null;
+
+        return TaskJsonBuilder.buildJsonContent(filteredTasks.stream());
+    }
+
+    public String prepareLocalTasksJsonContent() {
+        return TaskJsonBuilder.buildJsonContent(
+            userTasksList.stream()
         );
     }
 
@@ -70,9 +89,9 @@ public class TaskHandler {
         if (file.length() == 0) return true;
         
         try {
-            Map<String, List<Map<String, Object>>> wrapper = mapper.readValue(file, 
-                    new TypeReference<Map<String, List<Map<String, Object>>>>() {});
-            return wrapper == null || !wrapper.containsKey("tasks");
+            Map<String, Object> wrapper = mapper.readValue(file, 
+                    new TypeReference<Map<String, Object>>() {});
+            return wrapper == null || !wrapper.containsKey("columns") || !wrapper.containsKey("data");
         } catch (IOException e) {
             System.err.println("Error reading JSON file, will reset: " + e.getMessage());
             return true;
@@ -93,39 +112,45 @@ public class TaskHandler {
 
     private void resetJsonFile(File file, ObjectMapper mapper) {
         try {
-            mapper.writeValue(file, Map.of("tasks", new ArrayList<Task>()));
+            mapper.writeValue(file, Map.of("columns", new ArrayList<String>(), "data", new ArrayList<List<Object>>()));
         } catch (IOException e) {
             System.err.println("Error resetting JSON file: " + e.getMessage());
         }
     }
 
+    @SuppressWarnings("unchecked")
     private List<Task> parseTasksFromJson(File file, ObjectMapper mapper) throws IOException {
-        Map<String, List<Map<String, Object>>> wrapper = mapper.readValue(file, 
-                new TypeReference<Map<String, List<Map<String, Object>>>>() {});
-        List<Map<String, Object>> taskMaps = wrapper.get("tasks");
+        Map<String, Object> wrapper = mapper.readValue(file, new TypeReference<Map<String, Object>>() {});
+
+        List<String> columns = (List<String>) wrapper.get("columns");
+        List<List<Object>> data = (List<List<Object>>) wrapper.get("data");
         List<Task> tasks = new ArrayList<>();
 
-        if (taskMaps != null) {
-            for (Map<String, Object> taskMap : taskMaps) {
-                tasks.add(createTaskFromMap(taskMap));
+        if (data != null) {
+            for (List<Object> row : data) {
+                tasks.add(createTaskFromRow(columns, row));
             }
         }
-        
+
         return tasks;
     }
 
-    private Task createTaskFromMap(Map<String, Object> taskMap) {
-        return new Task.Builder((String) taskMap.get("task_title"))
+    private Task createTaskFromRow(List<String> columns, List<Object> row) {
+        Map<String, Object> taskMap = new LinkedHashMap<>();
+        for (int i = 0; i < columns.size(); i++) {
+            taskMap.put(columns.get(i), row.get(i));
+        }
+
+        return new 
+        Task.Builder((String) taskMap.get("task_title"))
             .folderId((String) taskMap.get("folder_id"))
             .folderName((String) taskMap.get("folder_name"))
-            .taskId(taskMap.get("task_id") != null ? (String) taskMap.get("task_id") : null)
+            .taskId((String) taskMap.get("task_id"))
             .description((String) taskMap.get("description"))
-            .status((String) taskMap.get("status"))
             .sync_status((String) taskMap.get("sync_status"))
+            .status((String) taskMap.get("status"))
             .dueDate(taskMap.get("due_date") != null ? LocalDateTime.parse((String) taskMap.get("due_date")) : null)
             .createdAt(taskMap.get("created_at") != null ? LocalDateTime.parse((String) taskMap.get("created_at")) : null)
-            .updatedAt(taskMap.get("updated_at") != null ? LocalDateTime.parse((String) taskMap.get("updated_at")) : null)
-            .deletedAt(taskMap.get("deleted_at") != null ? LocalDateTime.parse((String) taskMap.get("deleted_at")) : null)
             .build();
     }
 }

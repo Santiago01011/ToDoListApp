@@ -1,7 +1,5 @@
 import model.TaskHandler;
 import DBH.DBHandler;
-import COMMON.UserProperties;
-import java.io.File;
 
 
 
@@ -10,24 +8,28 @@ public class AppLauncher {
 
         TaskHandler taskHandler = new TaskHandler();
         DBHandler dbHandler = new DBHandler();
-        // get user properties
-        String dbUrl = (String) UserProperties.getProperty("dbUrl");
-        System.out.println("Database URL: " + dbUrl);
 
-        // Add tasks
-        // taskHandler.addTask("Buy groceries", "Milk, bread, eggs", "pending" ,"2025-01-10T10:00", "Personal", "new");
-        // taskHandler.addTask("Finish project", "Complete the final report", "completed", "2025-01-15T15:00", "Work",  "update");
-        // taskHandler.addTask("Call mom", "Check in and say hi", "completed", "2025-01-12T18:00", "Default",  "new");
+        /* Test the task creation and JSON preparation */
+        //testTasks(taskHandler);
+        /* Test sync process */
+        dbHandler.startSyncProcess(taskHandler);
+    }
 
-        // Prepare JSON files for sync
-       File insertJsonFile = taskHandler.prepareSyncJson("new");
-       File updateJsonFile = taskHandler.prepareSyncJson("update");
-        // save the userTasksList to json file
-        taskHandler.prepareLocalTasksJson();
-        // print userTasksList for verification
-        System.out.println("\nTasks in memory:");
-        taskHandler.userTasksList.forEach(task -> System.out.println(task.viewTaskDesc()));
-        // Sync tasks with the database
-        dbHandler.syncTasks("user-uuid-1234", insertJsonFile.getAbsolutePath(), updateJsonFile.getAbsolutePath());
+    public static void testTasks(TaskHandler taskHandler) {
+                // create some tasks with delay between each to get different creation timestamps
+                taskHandler.addTask("Complete project documentation", "Write final docs for Java project", "pending", "2023-12-15T17:00:00", "Work");
+                try { Thread.sleep(50); } catch (InterruptedException e) { e.printStackTrace(); }
+                
+                taskHandler.addTask("Buy groceries", "Milk, bread, eggs", "pending", "2023-11-30T10:00:00", "Personal");
+                try { Thread.sleep(50); } catch (InterruptedException e) { e.printStackTrace(); }
+                
+                taskHandler.addTask("Schedule dentist appointment", "Call Dr. Smith's office", "pending", "", "Health");
+                try { Thread.sleep(50); } catch (InterruptedException e) { e.printStackTrace(); }
+                
+                taskHandler.addTask("Prepare presentation", "Create slides for team meeting", "in_progress", "2023-12-05T09:00:00", "Work");
+                try { Thread.sleep(50); } catch (InterruptedException e) { e.printStackTrace(); }
+                
+                taskHandler.addTask("Pay utility bills", "Electricity and water", "fail", "2023-11-28T23:59:59", "Finance");
+        
     }
 }

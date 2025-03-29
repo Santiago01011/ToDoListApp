@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class TaskHandler {
     private static final String TASKS_JSON_FILE = System.getProperty("user.home") + File.separator + ".todoapp" + File.separator + "tasks.json";
@@ -19,15 +20,16 @@ public class TaskHandler {
         this.userTasksList = loadTasksFromJson();
     }
 
-    public void addTask(String title, String description, String status, String targetDate, String folderName, String sync_status) {
+    public void addTask(String title, String description, String status, String targetDate, String folderName) {
         Task task = new Task.Builder(title)
             .description(description)
             .dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate))
             .folderName(folderName)
             .status(status)
-            .sync_status(sync_status)
+            .sync_status("new")
             .createdAt(LocalDateTime.now())
             .updatedAt(LocalDateTime.now())
+            .taskId(UUID.randomUUID().toString())
             .build();
         userTasksList.add(task);
     }
@@ -43,6 +45,22 @@ public class TaskHandler {
         return TaskJsonBuilder.buildJsonFile(
             userTasksList.stream(),
             "tasks.json"
+        );
+    }
+
+    public String prepareSyncJsonContent(String sync_status) {
+        var filteredTasks = userTasksList.stream()
+        .filter(task -> sync_status.equals(task.getSync_status()))
+        .toList();
+    
+        if (filteredTasks.isEmpty()) return null;
+
+        return TaskJsonBuilder.buildJsonContent(filteredTasks.stream());
+    }
+
+    public String prepareLocalTasksJsonContent() {
+        return TaskJsonBuilder.buildJsonContent(
+            userTasksList.stream()
         );
     }
 

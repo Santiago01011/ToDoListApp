@@ -63,12 +63,12 @@ public class Task {
         private String folder_id;
         private String folder_name;
 
-        public Builder(String task_title) {
-            this.task_title = task_title;
+        public Builder(String task_id) {
+            this.task_id = task_id;
         }
 
-        public Builder taskId(String task_id) {
-            this.task_id = task_id;
+        public Builder taskTitle(String task_title) {
+            this.task_title = task_title;
             return this;
         }
 

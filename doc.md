@@ -1,7 +1,7 @@
 # Documentation for Task Management System
 
 ## Overview
-This documentation provides an overview of the key components of the Task Management System, including the `Task`, `TaskHandler`, and `TaskJsonBuilder` classes. These classes are responsible for managing tasks, handling JSON serialization/deserialization, and providing utility methods for task operations.
+This documentation provides an overview of the key components of the Task Management System, including the `Task`, `TaskHandler`, `TaskJsonBuilder`, and `DBHandler` classes. These classes are responsible for managing tasks, handling JSON serialization/deserialization, database synchronization, and providing utility methods for task operations.
 
 ---
 
@@ -86,6 +86,69 @@ Used by `TaskHandler` to save tasks locally or prepare them for synchronization.
 
 ---
 
+## `DBHandler.java`
+The `DBHandler` class manages the interaction between the application and the database, providing methods for task synchronization and data persistence.
+
+### Key Methods
+
+#### Synchronization Methods
+- **`syncTasks(String userUuid, String insertJsonContent, String updateJsonContent, List<Task> taskList)`**:
+  Coordinates the synchronization of tasks between the local application and the database. It processes new tasks for insertion, updates existing tasks, and refreshes the local task list with the latest data from the database.
+  
+  This method is critical for maintaining consistency between the local and cloud versions of tasks. It ensures that:
+  1. New tasks are inserted into the database
+  2. Updated tasks are reflected in the database
+  3. Local tasks are refreshed with the latest database state
+  4. Task sync statuses are properly maintained
+
+- **`startSyncProcess(TaskHandler taskHandler, String user_id)`**:
+  Initiates and manages the entire synchronization process. It handles both first-time syncs (when the local task list is empty) and regular syncs. The method:
+  1. Checks if this is a first-time sync
+  2. Retrieves tasks from the database
+  3. Merges local and cloud tasks intelligently
+  4. Prepares JSON content for synchronization
+  5. Updates the local task list after sync
+  
+  This method serves as the main entry point for synchronization operations, orchestrating the entire process.
+
+#### Database Interaction Methods
+- **`insertTasksFromJSON(UUID userUUID, String jsonContent, List<Task> taskList)`**:
+  Inserts new tasks into the database from a JSON string and updates the local task list with the new database IDs.
+
+- **`updateTasksFromJSON(UUID userUUID, String jsonContent, List<Task> taskList)`**:
+  Updates existing tasks in the database with changes from a JSON string.
+
+- **`retrieveTasksFromDB(UUID userUUID)`**:
+  Retrieves all tasks for a user from the database. This method handles the parsing of JSON results from the database query into Task objects.
+
+#### Helper Methods
+- **`updateTaskListFromJson(JsonNode successItem, List<Task> taskList)`**:
+  Updates the local task list based on JSON data from database operations.
+
+- **`setTaskField(Task task, String fieldName, JsonNode dataRow, Map<String, Integer> columnMap)`**:
+  Safely sets string field values on a Task object from database results.
+
+- **`setDateField(Task task, String fieldName, JsonNode dataRow, Map<String, Integer> columnMap)`**:
+  Safely sets date field values on a Task object from database results.
+
+- **`mergeTasks(List<Task> localTasks, List<Task> cloudTasks)`**:
+  Intelligently merges local and cloud task lists, resolving conflicts based on sync status and timestamps.
+  
+  This method implements a sophisticated conflict resolution strategy that:
+  1. Prioritizes tasks marked as "updated"
+  2. Handles tasks with different sync statuses appropriately
+  3. Uses timestamps to determine which version is newer
+  4. Maintains task identity across local and cloud versions
+
+### Importance
+The `DBHandler` class is essential for:
+1. **Data Persistence**: Ensuring tasks are stored reliably in the database
+2. **Synchronization**: Keeping local and cloud data consistent
+3. **Conflict Resolution**: Intelligently resolving conflicts between local and cloud versions
+4. **Offline Support**: Enabling the application to work offline and sync when connectivity is restored
+
+---
+
 ## Example Usage
 The following example demonstrates how to use the `TaskHandler` and its methods:
 
@@ -107,4 +170,22 @@ taskHandler.prepareLocalTasksJson();
 // Print tasks in memory for verification
 System.out.println("\nTasks in memory:");
 taskHandler.userTasksList.forEach(task -> System.out.println(task.viewTaskDesc()));
+```
+
+### Synchronization Example
+The following example demonstrates how to use the `DBHandler` with `TaskHandler` for synchronization:
+
+```java
+// Initialize task handler and load local tasks
+TaskHandler taskHandler = new TaskHandler();
+taskHandler.loadTasksFromJson();
+
+// Initialize database handler
+DBHandler dbHandler = new DBHandler();
+
+// Perform synchronization
+dbHandler.startSyncProcess(taskHandler, userUUID.toString());
+
+// After sync, all changes are reflected in taskHandler.userTasksList
+// and also saved to the local JSON file
 ```

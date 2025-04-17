@@ -1,7 +1,7 @@
 # Documentation for Task Management System
 
 ## Overview
-This documentation provides an overview of the key components of the Task Management System, including the `Task`, `TaskHandler`, `TaskJsonBuilder`, and `DBHandler` classes. These classes are responsible for managing tasks, handling JSON serialization/deserialization, database synchronization, and providing utility methods for task operations.
+This documentation provides an overview of the key components of the Task Management System, including the `Task`, `TaskHandler`, `JSONUtils`, and `DBHandler` classes. These classes are responsible for managing tasks, handling JSON serialization/deserialization, database synchronization, and providing utility methods for task operations.
 
 ---
 
@@ -45,44 +45,91 @@ The `TaskHandler` class manages the list of tasks and provides methods for addin
 
 ### Attributes
 - **`userTasksList`**: A list of `Task` objects representing the user's tasks in memory.
+- **`last_sync`**: A timestamp of the last synchronization with the database.
 
 ### Methods
-- **`addTask(String title, String description, String status, String targetDate, String folderName, String sync_status)`**:
+- **`addTask(String title, String description, String status, String targetDate, String folderName)`**:
   Adds a new task to the `userTasksList` using the `Task.Builder`.
 
-- **`prepareSyncJson(String sync_status)`**:
-  Filters tasks by their `sync_status` and creates a JSON file for synchronization.
+- **`updateTask(Task task, String title, String description, String status, String targetDate, String folderName)`**:
+  Updates a task's fields and manages its sync status. The behavior varies based on the task's current sync status:
+  - For "new" tasks: Simply updates the fields.
+  - For "cloud" tasks: Creates an updated version for syncing and changes original to "local".
+  - For "local" tasks: Updates both the local task and its update twin.
 
-- **`prepareLocalTasksJson()`**:
-  Saves all tasks in `userTasksList` to a local JSON file, to enable a offline mode in the next iteration.
+- **`prepareSyncJson(String sync_status)`**:
+  Filters tasks by their `sync_status` and creates a JSON file for synchronization using `JSONUtils`.
+
+- **`prepareSyncJsonContent(String sync_status)`**:
+  Generates a JSON string representation of tasks filtered by sync status.
+
+- **`saveTasksToJson()`**:
+  Saves all tasks in `userTasksList` to the local JSON file, to enable offline mode.
 
 - **`loadTasksFromJson()`**:
-  Loads tasks from a JSON file. Ensures the file exists and resets it if the structure is invalid.
+  Loads tasks from a JSON file. Validates the structure and creates an empty file if needed.
 
 ### Helper Methods
-- **`isInvalidJsonStructure(File file, ObjectMapper mapper)`**: Checks if the JSON file has a valid structure.
-- **`ensureJsonFileExists(File file, ObjectMapper mapper)`**: Ensures the JSON file exists and creates it if necessary.
-- **`resetJsonFile(File file, ObjectMapper mapper)`**: Resets the JSON file to an empty structure.
-- **`parseTasksFromJson(File file, ObjectMapper mapper)`**: Parses tasks from the JSON file.
-- **`createTaskFromMap(Map<String, Object> taskMap)`**: Creates a `Task` object from a map of attributes.
+- **`updateTaskFields(Task task, String title, String description, String status, String targetDate, String folderName)`**: Updates task fields if the new values are not null.
+- **`createTaskFromRow(List<String> columns, List<Object> row)`**: Creates a `Task` object from column names and a row of values.
 
 ---
 
-## `TaskJsonBuilder.java`
-The `TaskJsonBuilder` class handles the creation and management of JSON files for tasks.
+## `JSONUtils.java`
+The `JSONUtils` class provides utility methods for JSON file operations, replacing the previous `TaskJsonBuilder` class with a more comprehensive solution.
 
 ### Attributes
 - **`BASE_DIRECTORY`**: The base directory for storing JSON files.
+- **`MAPPER`**: A preconfigured Jackson ObjectMapper for JSON serialization/deserialization.
 
 ### Methods
-- **`buildJsonFile(Stream<Task> taskStream, String fileName)`**:
-  Creates a JSON file from a stream of tasks. Each task is serialized into a map of attributes.
+- **`createBaseDirectory()`**:
+  Creates the application's base directory and initializes an empty tasks file if needed.
 
 - **`createEmptyJsonFile(String filePath)`**:
-  Creates an empty JSON file with a "tasks" wrapper.
+  Creates an empty JSON file with the standard structure for tasks.
+
+- **`readJsonFile(File file)`**:
+  Reads a JSON file into a Map representation.
+
+- **`readJsonFile(String filePath)`**:
+  Reads a JSON file by path into a Map representation.
+
+- **`writeJsonFile(Map<String, Object> data, String filePath)`** and **`writeJsonFile(Map<String, Object> data, File file)`**:
+  Writes a data Map to a JSON file.
+
+- **`toJsonString(Object object)`**:
+  Converts an object to a JSON string.
+
+- **`fromJsonString(String json)`** and **`fromJsonString(String json, Class<T> valueType)`**:
+  Converts a JSON string to a Map or specific object type.
+
+- **`convertValue(Object fromValue, Class<T> toValueType)`**:
+  Converts an object to another type using JSON serialization.
+
+- **`updateJsonFile(String filePath, Map<String, Object> newData)`**:
+  Updates a JSON file with new data.
+
+- **`readTasksJson()`** and **`writeTasksJson(Map<String, Object> data)`**:
+  Convenience methods for reading and writing the standard tasks JSON file.
+
+- **`isValidJsonStructure(File file, String... requiredFields)`**:
+  Validates if a file contains valid JSON with required fields.
+
+- **`getTasksData(Map<String, Object> tasksJson)`**:
+  Retrieves the data array from a task JSON structure.
+
+- **`updateLastSync(String timestamp)`**:
+  Updates the last sync timestamp in the tasks JSON file.
+
+- **`buildJsonStructure(Stream<Task> taskStream)`**:
+  Builds a JSON structure from a stream of tasks.
+
+- **`getMapper()`**:
+  Returns the Jackson ObjectMapper instance.
 
 ### Usage
-Used by `TaskHandler` to save tasks locally or prepare them for synchronization.
+Used by `TaskHandler` to save tasks locally and prepare them for synchronization, providing a consistent and robust approach to JSON handling throughout the application.
 
 ---
 
@@ -119,17 +166,17 @@ The `DBHandler` class manages the interaction between the application and the da
   Updates existing tasks in the database with changes from a JSON string.
 
 - **`retrieveTasksFromDB(UUID userUUID)`**:
-  Retrieves all tasks for a user from the database. This method handles the parsing of JSON results from the database query into Task objects.
+  Retrieves all tasks for a user from the database. This method uses the `Task.Builder` pattern to convert JSON results from the database query into Task objects, ensuring consistency with the rest of the application.
 
 #### Helper Methods
+- **`getFieldValueAsString(JsonNode dataRow, String fieldName, Map<String, Integer> columnMap)`**:
+  Safely extracts string values from JSON data rows with proper null handling and error checking.
+
+- **`parseDateTime(String dateStr)`**:
+  Parses date strings from the database into LocalDateTime objects with robust error handling.
+
 - **`updateTaskListFromJson(JsonNode successItem, List<Task> taskList)`**:
   Updates the local task list based on JSON data from database operations.
-
-- **`setTaskField(Task task, String fieldName, JsonNode dataRow, Map<String, Integer> columnMap)`**:
-  Safely sets string field values on a Task object from database results.
-
-- **`setDateField(Task task, String fieldName, JsonNode dataRow, Map<String, Integer> columnMap)`**:
-  Safely sets date field values on a Task object from database results.
 
 - **`mergeTasks(List<Task> localTasks, List<Task> cloudTasks)`**:
   Intelligently merges local and cloud task lists, resolving conflicts based on sync status and timestamps.
@@ -139,6 +186,13 @@ The `DBHandler` class manages the interaction between the application and the da
   2. Handles tasks with different sync statuses appropriately
   3. Uses timestamps to determine which version is newer
   4. Maintains task identity across local and cloud versions
+
+### Data Flow
+The `DBHandler` class maintains a consistent data flow pattern:
+1. Database data in JSONB format → Parsed into JsonNode objects
+2. JsonNode objects → Converted to Task objects using Task.Builder
+3. Task operations performed in memory
+4. Task objects → Converted to JSON for database operations using JSONUtils
 
 ### Importance
 The `DBHandler` class is essential for:
@@ -156,16 +210,16 @@ The following example demonstrates how to use the `TaskHandler` and its methods:
 TaskHandler taskHandler = new TaskHandler();
 
 // Add tasks
-taskHandler.addTask("Buy groceries", "Milk, bread, eggs", "pending", "2025-01-10T10:00", "Personal", "new");
-taskHandler.addTask("Finish project", "Complete the final report", "completed", "2025-01-15T15:00", "Work", "update");
-taskHandler.addTask("Call mom", "Check in and say hi", "completed", "2025-01-12T18:00", "Default", "new");
+taskHandler.addTask("Buy groceries", "Milk, bread, eggs", "pending", "2025-01-10T10:00", "Personal");
+taskHandler.addTask("Finish project", "Complete the final report", "completed", "2025-01-15T15:00", "Work");
+taskHandler.addTask("Call mom", "Check in and say hi", "completed", "2025-01-12T18:00", "Default");
 
 // Prepare JSON files for sync
 taskHandler.prepareSyncJson("new");
 taskHandler.prepareSyncJson("update");
 
 // Save all tasks to a local JSON file
-taskHandler.prepareLocalTasksJson();
+taskHandler.saveTasksToJson();
 
 // Print tasks in memory for verification
 System.out.println("\nTasks in memory:");
@@ -189,3 +243,4 @@ dbHandler.startSyncProcess(taskHandler, userUUID.toString());
 // After sync, all changes are reflected in taskHandler.userTasksList
 // and also saved to the local JSON file
 ```
+````

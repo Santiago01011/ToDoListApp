@@ -1,5 +1,6 @@
 package DBH;
 
+import java.io.IOException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -12,113 +13,116 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
+import COMMON.JSONUtils;
 import model.Task;
 import model.TaskHandler;
 
 public class DBHandler {
-
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private TaskHandler taskHandler;
 
     /**
-     * Inserts tasks into the database from a JSON string and updates the provided task list.
+     * Constructor that initializes the DBHandler with a TaskHandler
+     * to manage tasks synchronization between local and cloud storage.
+     *
+     * @param taskHandler The TaskHandler instance to be used for task management
+     */
+    public DBHandler(TaskHandler taskHandler) {
+        this.taskHandler = taskHandler;
+    }
+
+    /**
+     * Inserts tasks into the database from a JSON string and updates the user's task list.
+     *
+     * This method executes a database function that validates and inserts a list of tasks created by the
+     * user with the new status, and returns a JSON String with success and failed key-value pairs. For each
+     * successful task, updates the local task list with the new task IDs, sets the sync status to "cloud", and 
+     * updates the last sync timestamp.
      *
      * @param userUUID   The UUID of the user logged in.
-     * @param jsonContent A JSON string containing data of new tasks to insert in the DataBase.
-     * @param taskList   The user task list to be updated after insertion.
-     * @return The updated list of tasks.
+     * @param jsonContent A JSON string containing data of new tasks to insert in the database.
      */
-    private List<Task> insertTasksFromJSON(UUID userUUID, String jsonContent, List<Task> taskList) {
+    private void insertTasksFromJSON(UUID userUUID, String jsonContent) {
         String query = "SELECT * FROM todo.insert_tasks_from_jsonb(?, ?::jsonb)";
-
-        try (Connection conn = NeonPool.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(query)) {
-
-            pstmt.setObject(1, userUUID);
-            pstmt.setString(2, jsonContent);
-
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    String jsonResult = rs.getString("log_tasks");
-                    JsonNode rootNode = MAPPER.readTree(jsonResult);
-                    JsonNode successArray = rootNode.get("success");
-
-                    if (successArray != null && successArray.isArray()) {
-                        successArray.forEach(successItem -> updateTaskListFromJson(successItem, taskList));
-                    }
-                }
-                return taskList;
-            } catch (Exception e) {
-                System.err.println("Error processing insert results: " + e.getMessage());
-                return taskList;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Error inserting tasks from JSON: " + e.getMessage());
-            return taskList;
-        }
-    }
-
-    /**
-     * Updates the task list based on a JSON node representing a successful task operation.
-     * This method processes the response from database operations and updates the local task list.
-     *
-     * @param successItem The JSON node containing task data
-     * @param taskList The list of tasks to be updated
-     */
-    private void updateTaskListFromJson(JsonNode successItem, List<Task> taskList) {
-        JsonNode taskArray = successItem.get("task");
-
-        if (taskArray != null && taskArray.isArray() && taskArray.size() >= 2) {
-            String tempId = taskArray.get(0).asText();
-            String dbId = taskArray.get(1).asText();
-
-            taskList.stream()
-                    .filter(task -> tempId.equals(task.getTask_id()))
-                    .findFirst()
-                    .ifPresent(task -> {
-                        task.setTask_id(dbId);
-                        task.setSync_status("cloud");
-                    });
-        }
-    }
-
-    /**
-     * Updates existing tasks in the database from a JSON string and updates the provided task list.
-     *
-     * @param userUUID The UUID of the user logged in
-     * @param jsonContent A JSON string containing data of updated tasks to reflect in the DataBase
-     * @param taskList The user task list to be updated
-     * @return The updated list of tasks
-     */
-    public List<Task> updateTasksFromJSON(UUID userUUID, String jsonContent, List<Task> taskList) {
-        String query = "SELECT * FROM todo.update_tasks_from_jsonb(?, ?::jsonb)";
-
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setObject(1, userUUID);
             pstmt.setString(2, jsonContent);
 
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    String jsonResult = rs.getString("log_tasks");
-                    JsonNode rootNode = MAPPER.readTree(jsonResult);
-                    JsonNode successArray = rootNode.get("success");
+                if ( rs.next() ) {
+                    Map<String, Object> resultMap = JSONUtils.fromJsonString(rs.getString(1));
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
+                    LocalDateTime lastSync = LocalDateTime.parse((String) resultMap.get("last_sync"));
 
-                    if (successArray != null && successArray.isArray()) {
-                        successArray.forEach(successItem -> updateTaskListFromJson(successItem, taskList));
+                    for (Map<String, Object> successItem : successList) {
+                        String oldUUID = (String) successItem.get("old");
+                        String newUUID = (String) successItem.get("new");
+
+                        taskHandler.userTasksList.stream()
+                            .filter(task -> task.getTask_id().equals(oldUUID))
+                            .findFirst()
+                            .ifPresent(task -> {
+                                task.setTask_id(newUUID);
+                                task.setLast_sync(lastSync);
+                                task.setUpdated_at(lastSync);
+                                task.setSync_status("cloud");
+                            });
                     }
                 }
-                return taskList;
-            } catch (Exception e) {
-                System.err.println("Error processing update results: " + e.getMessage());
-                return taskList;
             }
         } catch (SQLException e) {
             System.err.println("Error updating tasks from JSON: " + e.getMessage());
-            return taskList;
+        } catch (IOException e) {
+            System.err.println("Error reading JSON content: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Updates tasks in the database from a JSON string and updates the user's task list.
+     * 
+     * This method executes a database function that validates and updates a list of tasks with the updated status,
+     * and returns a JSON String with success and failed key-value pairs. For each successful task, updates the local
+     * task list setting the sync status from "local" to "cloud", delete the "updated" copy of the task 
+     * and sets the last sync timestamp.
+     * @param userUUID
+     * @param jsonContent
+     */
+    private void updateTasksFromJSON(UUID userUUID, String jsonContent) {
+        String query = "SELECT * FROM todo.update_tasks_from_jsonb(?, ?::jsonb)";   
+        try (Connection conn = NeonPool.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setObject(1, userUUID);
+            pstmt.setString(2, jsonContent);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if ( rs.next() ){
+                    Map<String, Object> resultMap = JSONUtils.fromJsonString(rs.getString(1));
+                    @SuppressWarnings("unchecked")
+                    List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
+                    LocalDateTime lastSync = LocalDateTime.parse((String) resultMap.get("last_sync"));
+                    for (Map<String, Object> successItem : successList) {
+                        taskHandler.userTasksList.stream()
+                        .filter(task -> task.getTask_id().equals(successItem.get("task_id")))
+                        .forEach(task -> {
+                            if ( task.getSync_status().equals("local") ){
+                                task.setLast_sync(lastSync);
+                                task.setUpdated_at(lastSync);
+                                task.setSync_status("cloud");
+                            }
+                            if ( task.getSync_status().equals("updated") ){
+                                taskHandler.userTasksList.remove(task);
+                            }
+                            /*else throws taskError */
+                        });
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("Error updating tasks from JSON: " + e.getMessage());
+        } catch (IOException e) {
+            System.err.println("Error reading JSON content: " + e.getMessage());
         }
     }
 
@@ -136,6 +140,7 @@ public class DBHandler {
     public List<Task> syncTasks(String userUuid, String insertJsonContent, String updateJsonContent, List<Task> taskList) {
         try {
             UUID uuid = UUID.fromString(userUuid);
+            @SuppressWarnings("unused")
             List<Task> updatedTaskList = new ArrayList<>();
 
             Map<String, Task> taskMap = new HashMap<>();
@@ -146,7 +151,7 @@ public class DBHandler {
             }
 
             if (insertJsonContent != null) {
-                updatedTaskList = insertTasksFromJSON(uuid, insertJsonContent, taskList);
+                insertTasksFromJSON(uuid, insertJsonContent);
             }
 
             Map<String, Task> tasksToUpdate = new HashMap<>();
@@ -161,7 +166,7 @@ public class DBHandler {
             }
 
             if (updateJsonContent != null) {
-                updatedTaskList = updateTasksFromJSON(uuid, updateJsonContent, taskList);
+                updateTasksFromJSON(uuid, updateJsonContent);
             }
 
             List<Task> refreshedTasks = retrieveTasksFromDB(uuid);
@@ -194,14 +199,14 @@ public class DBHandler {
      * This method handles both first-time synchronization (when the local task list is empty)
      * and regular synchronization, ensuring data consistency across platforms.
      *
-     * @param taskHandler The TaskHandler containing the user's task list
      * @param user_id The UUID of the user as a string
      */
-    public void startSyncProcess(TaskHandler taskHandler, String user_id) {
+    public void startSyncProcess(String user_id) {
         try {
             UUID userUUID = UUID.fromString(user_id);
+            LocalDateTime syncTime = LocalDateTime.now();
 
-            if (taskHandler.userTasksList == null || taskHandler.userTasksList.isEmpty()) {
+            if (isFirstTimeSync()) {
                 System.out.println("First-time sync or empty local list detected.");
                 
                 List<Task> cloudTasks = retrieveTasksFromDB(userUUID);
@@ -209,7 +214,14 @@ public class DBHandler {
                 if (!cloudTasks.isEmpty()) {
                     taskHandler.userTasksList = new ArrayList<>(cloudTasks);
                     
-                    taskHandler.prepareLocalTasksJson();
+                    // Save tasks and update the last sync timestamp
+                    taskHandler.saveTasksToJson();
+                    try {
+                        JSONUtils.updateLastSync(syncTime.toString());
+                        taskHandler.setLastSync(syncTime);
+                    } catch (IOException e) {
+                        System.err.println("Error updating last sync timestamp: " + e.getMessage());
+                    }
                     
                     System.out.println("Initial sync complete - retrieved " + cloudTasks.size() + " tasks from cloud.");
                     return;
@@ -223,18 +235,33 @@ public class DBHandler {
             String insertJsonContent = taskHandler.prepareSyncJsonContent("new");
             String updateJsonContent = taskHandler.prepareSyncJsonContent("updated");
             
-            System.out.println("Update JSON Content: " + updateJsonContent);
-
             if (insertJsonContent == null && updateJsonContent == null) {
                 System.out.println("No tasks to sync.");
                 taskHandler.userTasksList = mergedTasks;
-                taskHandler.prepareLocalTasksJson();
+                taskHandler.saveTasksToJson();
                 return;
+            }
+
+            // Log the number of tasks being synced instead of the entire content
+            if (insertJsonContent != null) {
+                System.out.println("Syncing new tasks...");
+            }
+            if (updateJsonContent != null) {
+                System.out.println("Syncing updated tasks...");
             }
 
             taskHandler.userTasksList = syncTasks(user_id, insertJsonContent, updateJsonContent, mergedTasks);
 
-            taskHandler.prepareLocalTasksJson();
+            // Save tasks and update the last sync timestamp
+            taskHandler.saveTasksToJson();
+            try {
+                JSONUtils.updateLastSync(syncTime.toString());
+                taskHandler.setLastSync(syncTime);
+                System.out.println("Sync completed successfully at " + syncTime);
+            } catch (IOException e) {
+                System.err.println("Error updating last sync timestamp: " + e.getMessage());
+            }
+            
         } catch (IllegalArgumentException e) {
             System.err.println("Error: " + e.getMessage());
         }
@@ -245,141 +272,125 @@ public class DBHandler {
      * This method queries the database and transforms the JSON result into Task objects.
      *
      * @param userUUID The UUID of the user whose tasks are to be retrieved
-     * @return A list of Task objects retrieved from the database
+     * @return A list of Task objects retrieved from the database with sync_status set to "cloud"
+     *         or an empty list if no tasks are found or an error occurs
      */
-    public List<Task> retrieveTasksFromDB(UUID userUUID) {
+    private List<Task> retrieveTasksFromDB(UUID userUUID) {
         String query = "SELECT * FROM todo.retrieve_tasks_in_jsonb(?)";
         List<Task> cloudTasks = new ArrayList<>();
+        
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
             pstmt.setObject(1, userUUID);
+            
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     String jsonResult = rs.getString("log_tasks");
-                    System.out.println("Retrieved JSON: " + jsonResult);
-                    ObjectMapper mapper = new ObjectMapper();
-                    JsonNode rootNode = mapper.readTree(jsonResult);
-                    JsonNode dataArray = rootNode.get("data");
-                    JsonNode columnsNode = rootNode.get("columns");
                     
-                    if (dataArray == null || !dataArray.isArray() || columnsNode == null || !columnsNode.isArray()) {
-                        System.err.println("Invalid JSON structure: missing data or columns array");
-                        continue;
-                    }
-                    
-                    Map<String, Integer> columnMap = new HashMap<>();
-                    for (int i = 0; i < columnsNode.size(); i++) {
-                        columnMap.put(columnsNode.get(i).asText(), i);
-                    }
-                    
-                    for (JsonNode dataRow : dataArray) {
-                        if (!dataRow.isArray()) continue;
+                    try {
+                        Map<String, Object> resultMap = JSONUtils.fromJsonString(jsonResult);
                         
-                        Task task = new Task();
+                        @SuppressWarnings("unchecked")
+                        List<String> columns = (List<String>) resultMap.get("columns");
                         
-                        setTaskField(task, "folder_id", dataRow, columnMap);
-                        setTaskField(task, "folder_name", dataRow, columnMap);
-                        setTaskField(task, "task_id", dataRow, columnMap);
-                        setTaskField(task, "task_title", dataRow, columnMap);
-                        setTaskField(task, "description", dataRow, columnMap);
-                        setTaskField(task, "sync_status", dataRow, columnMap);
-                        setTaskField(task, "status", dataRow, columnMap);
-                        setDateField(task, "due_date", dataRow, columnMap);
-                        setDateField(task, "created_at", dataRow, columnMap);
-                        setDateField(task, "last_sync", dataRow, columnMap);
+                        @SuppressWarnings("unchecked")
+                        List<List<Object>> data = (List<List<Object>>) resultMap.get("data");
                         
-                        cloudTasks.add(task);
+                        if (columns != null && data != null) {
+                            for (List<Object> row : data) {
+                                Map<String, Object> taskMap = new HashMap<>();
+                                
+                                for (int i = 0; i < columns.size() && i < row.size(); i++) {
+                                    taskMap.put(columns.get(i), row.get(i));
+                                }
+                                
+                                Task task = createTaskFromMap(taskMap);
+                                if (task != null) {
+                                    task.setSync_status("cloud");
+                                    cloudTasks.add(task);
+                                }
+                            }
+                        }
+                    } catch (IOException e) {
+                        System.err.println("Error parsing task data: " + e.getMessage());
                     }
                 }
-                return cloudTasks;
-            } catch (Exception e) {
-                System.err.println("Error processing retrieve results: " + e.getMessage());
-                e.printStackTrace();
-                return cloudTasks;
             }
+            
+            return cloudTasks;
+            
         } catch (SQLException e) {
             System.err.println("Error retrieving tasks from database: " + e.getMessage());
             return cloudTasks;
         }
     }
-
+    
     /**
-     * Helper method to set string field values on a Task object from database results.
-     * This method safely handles null values and ensures proper field assignment.
-     *
-     * @param task The Task object to update
-     * @param fieldName The name of the field to set
-     * @param dataRow The JSON node containing the data
-     * @param columnMap A map of column names to indices
+     * Creates a Task object from a map of task properties.
+     * 
+     * @param taskMap Map containing task properties
+     * @return A new Task object, or null if the task_id is missing
      */
-    private void setTaskField(Task task, String fieldName, JsonNode dataRow, Map<String, Integer> columnMap) {
-        if (!columnMap.containsKey(fieldName)) return;
-        
-        int index = columnMap.get(fieldName);
-        if (index >= dataRow.size() || dataRow.get(index) == null || dataRow.get(index).isNull()) return;
-        
-        String value = dataRow.get(index).asText();
-        if ("null".equals(value)) return;
-        
-        switch (fieldName) {
-            case "folder_id":
-                task.setFolder_id(value);
-                break;
-            case "folder_name":
-                task.setFolder_name(value);
-                break;
-            case "task_id":
-                task.setTask_id(value);
-                break;
-            case "task_title":
-                task.setTask_title(value);
-                break;
-            case "description":
-                task.setDescription(value);
-                break;
-            case "sync_status":
-                task.setSync_status(value);
-                break;
-            case "status":
-                task.setStatus(value);
-                break;
+    private Task createTaskFromMap(Map<String, Object> taskMap) {
+        String taskId = (String) taskMap.get("task_id");
+        if (taskId == null) {
+            taskId = UUID.randomUUID().toString();
         }
+        
+        try {
+            return new Task.Builder(taskId)
+                .folderId((String) taskMap.get("folder_id"))
+                .folderName((String) taskMap.get("folder_name"))
+                .taskTitle((String) taskMap.get("task_title"))
+                .description((String) taskMap.get("description"))
+                .sync_status((String) taskMap.get("sync_status"))
+                .status((String) taskMap.get("status"))
+                .dueDate(parseTimeValue(taskMap.get("due_date")))
+                .createdAt(parseTimeValue(taskMap.get("created_at")))
+                .updatedAt(parseTimeValue(taskMap.get("updated_at")))
+                .deletedAt(parseTimeValue(taskMap.get("deleted_at")))
+                .lastSync(parseTimeValue(taskMap.get("last_sync")))
+                .build();
+        } catch (Exception e) {
+            System.err.println("Error creating task from map: " + e.getMessage() + " for task ID: " + taskId);
+            return null;
+        }
+    }
+    
+    /**
+     * Parse a time value from a database result object to LocalDateTime.
+     * Handles String or already parsed LocalDateTime values.
+     * 
+     * @param value The time value to parse
+     * @return LocalDateTime object or null if parsing fails
+     */
+    private LocalDateTime parseTimeValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+        
+        if (value instanceof LocalDateTime) {
+            return (LocalDateTime) value;
+        }
+        
+        try {
+            if (value instanceof String) {
+                String dateStr = (String) value;
+                return OffsetDateTime.parse(dateStr).toLocalDateTime();
+            }
+        } catch (Exception e) {
+            // Silently return null if parsing fails
+        }
+        
+        return null;
     }
 
     /**
-     * Helper method to set date field values on a Task object from database results.
-     * This method safely parses date strings and handles null values.
-     *
-     * @param task The Task object to update
-     * @param fieldName The name of the field to set
-     * @param dataRow The JSON node containing the data
-     * @param columnMap A map of column names to indices
+     * Helper method to check if the task list is empty or null.
      */
-    private void setDateField(Task task, String fieldName, JsonNode dataRow, Map<String, Integer> columnMap) {
-        if (!columnMap.containsKey(fieldName)) return;
-        
-        int index = columnMap.get(fieldName);
-        if (index >= dataRow.size() || dataRow.get(index) == null || dataRow.get(index).isNull()) return;
-        
-        String value = dataRow.get(index).asText();
-        if ("null".equals(value)) return;
-        
-        try {
-            LocalDateTime dateTime = OffsetDateTime.parse(value).toLocalDateTime();
-            switch (fieldName) {
-                case "due_date":
-                    task.setDue_date(dateTime);
-                    break;
-                case "created_at":
-                    task.setCreated_at(dateTime);
-                    break;
-                case "last_sync":
-                    task.setLast_sync(dateTime);
-                    break;
-            }
-        } catch (Exception e) {
-            System.err.println("Error parsing date for " + fieldName + ": " + value + " - " + e.getMessage());
-        }
+    private boolean isFirstTimeSync() {
+        return taskHandler.userTasksList == null || taskHandler.userTasksList.isEmpty();
     }
 
     /**

@@ -23,7 +23,4 @@ public class NeonPool {
         return DriverManager.getConnection(dbUrl);
     }
 
-    public static void closePool() {
-        // No pooling mechanism to close
-    }
 }

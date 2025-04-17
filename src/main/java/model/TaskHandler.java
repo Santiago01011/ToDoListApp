@@ -1,11 +1,11 @@
 package model;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.core.type.TypeReference;
+import COMMON.JSONUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,13 +13,22 @@ import java.util.Map;
 import java.util.UUID;
 
 public class TaskHandler {
-    private static final String TASKS_JSON_FILE = System.getProperty("user.home") + File.separator + ".todoapp" + File.separator + "tasks.json";
+    private static final String TASKS_JSON_FILE = JSONUtils.BASE_DIRECTORY + File.separator + "tasks.json";
     public List<Task> userTasksList;
+    private LocalDateTime last_sync = null;
+
+    public LocalDateTime getLastSync() {
+        return last_sync;
+    }
+
+    public void setLastSync(LocalDateTime last_sync) {
+        this.last_sync = last_sync;
+    }
 
     public TaskHandler() {
         this.userTasksList = loadTasksFromJson();
     }
-
+    
     public void addTask(String title, String description, String status, String targetDate, String folderName) {
         String id = UUID.randomUUID().toString();
         Task task = new Task.Builder(id)
@@ -95,7 +104,7 @@ public class TaskHandler {
     // Helper method to update task fields
     private void updateTaskFields(Task task, String title, String description, String status, String targetDate, String folderName) {
         if (title != null && !title.isEmpty()) {
-            task.setTask_title(title);
+            task.setTitle(title);
         }
         if (description != null) {
             task.setDescription(description);
@@ -111,113 +120,59 @@ public class TaskHandler {
         }
     }
 
-    public File prepareSyncJson(String sync_status) {
-        return TaskJsonBuilder.buildJsonFile(
-            userTasksList.stream().filter(task -> sync_status.equals(task.getSync_status())),
-            sync_status + "_tasks.json"
-        );
-    }
-
-    public File prepareLocalTasksJson(){
-        return TaskJsonBuilder.buildJsonFile(
-            userTasksList.stream(),
-            "tasks.json"
-        );
-    }
-
     public String prepareSyncJsonContent(String sync_status) {
         var filteredTasks = userTasksList.stream()
-        .filter(task -> sync_status.equals(task.getSync_status()))
-        .toList();
+            .filter(task -> sync_status.equals(task.getSync_status()))
+            .toList();
     
         if (filteredTasks.isEmpty()) return null;
 
-        return TaskJsonBuilder.buildJsonContent(filteredTasks.stream());
-    }
-
-    public String prepareLocalTasksJsonContent() {
-        return TaskJsonBuilder.buildJsonContent(
-            userTasksList.stream()
-        );
-    }
-
-    private List<Task> loadTasksFromJson() {
-        ObjectMapper mapper = new ObjectMapper();
-        mapper.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
-        File file = new File(TASKS_JSON_FILE);
-        
-        ensureJsonFileExists(file, mapper);
-        
         try {
-            if (isInvalidJsonStructure(file, mapper)) {
-                resetJsonFile(file, mapper);
-                return new ArrayList<>();
-            }
-            
-            return parseTasksFromJson(file, mapper);
+            Map<String, Object> jsonbStructure = JSONUtils.buildJsonStructure(filteredTasks.stream());  
+            jsonbStructure.put("last_sync", getLastSync());        
+            return JSONUtils.toJsonString(jsonbStructure);
         } catch (IOException e) {
-            System.err.println("Error loading tasks from JSON: " + e.getMessage());
-            resetJsonFile(file, mapper);
-            return new ArrayList<>();
-        }
-    }
-
-    private boolean isInvalidJsonStructure(File file, ObjectMapper mapper) throws IOException {
-        if (file.length() == 0) return true;
-        
-        try {
-            Map<String, Object> wrapper = mapper.readValue(file, 
-                    new TypeReference<Map<String, Object>>() {});
-            return wrapper == null || !wrapper.containsKey("columns") || !wrapper.containsKey("data");
-        } catch (IOException e) {
-            System.err.println("Error reading JSON file, will reset: " + e.getMessage());
-            return true;
-        }
-    }
-
-    private void ensureJsonFileExists(File file, ObjectMapper mapper) {
-        if (!file.exists()) {
-            try {
-                file.getParentFile().mkdirs();
-                file.createNewFile();
-                resetJsonFile(file, mapper);
-            } catch (IOException e) {
-                System.err.println("Error creating JSON file: " + e.getMessage());
-            }
-        }
-    }
-
-    private void resetJsonFile(File file, ObjectMapper mapper) {
-        try {
-            mapper.writeValue(file, Map.of("columns", new ArrayList<String>(), "data", new ArrayList<List<Object>>()));
-        } catch (IOException e) {
-            System.err.println("Error resetting JSON file: " + e.getMessage());
+            System.err.println("Error creating sync JSON content: " + e.getMessage());
+            return null;
         }
     }
 
     @SuppressWarnings("unchecked")
-    private List<Task> parseTasksFromJson(File file, ObjectMapper mapper) throws IOException {
-        Map<String, Object> wrapper = mapper.readValue(file, new TypeReference<Map<String, Object>>() {});
+    private List<Task> loadTasksFromJson() {
+        
+        File file = new File(TASKS_JSON_FILE);
 
-        List<String> columns = (List<String>) wrapper.get("columns");
-        List<List<Object>> data = (List<List<Object>>) wrapper.get("data");
-        List<Task> tasks = new ArrayList<>();
-
-        if (data != null) {
-            for (List<Object> row : data) {
-                tasks.add(createTaskFromRow(columns, row));
+        try{
+            if( !JSONUtils.isValidJsonStructure(file, "columns", "data", "last_sync") ){
+                JSONUtils.createEmptyJsonFile(TASKS_JSON_FILE);
+                System.err.println("Invalid JSON structure in file: " + TASKS_JSON_FILE + ". Creating a new file and retrieving from cloud.");
+                return new ArrayList<>();
             }
-        }
+            Map<String, Object> wrapper = JSONUtils.readJsonFile(file);
+            List<Task> tasks = new ArrayList<>();
+            List<String> columns = (List<String>) wrapper.get("columns");
+            List<List<Object>> data = (List<List<Object>>) wrapper.get("data");
+            setLastSync(LocalDateTime.parse((String) wrapper.get("last_sync")));
+            
+            if (data != null) {
+                for (List<Object> row : data) {
+                    tasks.add(createTaskFromRow(columns, row));
+                }
+            }
 
-        return tasks;
+            return tasks;
+        } catch (IOException e) {
+            System.err.println("Error loading tasks from JSON: " + e.getMessage());
+            JSONUtils.createEmptyJsonFile(TASKS_JSON_FILE);
+            return new ArrayList<>();
+        }  
     }
 
-    private Task createTaskFromRow(List<String> columns, List<Object> row) {
+    public Task createTaskFromRow(List<String> columns, List<Object> row) {
         Map<String, Object> taskMap = new LinkedHashMap<>();
         for (int i = 0; i < columns.size(); i++) {
             taskMap.put(columns.get(i), row.get(i));
         }
-
         return new Task.Builder((String) taskMap.get("task_id"))
             .taskTitle((String) taskMap.get("task_title"))
             .folderId((String) taskMap.get("folder_id"))
@@ -227,6 +182,21 @@ public class TaskHandler {
             .status((String) taskMap.get("status"))
             .dueDate(taskMap.get("due_date") != null ? LocalDateTime.parse((String) taskMap.get("due_date")) : null)
             .createdAt(taskMap.get("created_at") != null ? LocalDateTime.parse((String) taskMap.get("created_at")) : null)
+            .updatedAt(getLastSync())
             .build();
     }
+
+    /**
+     * Saves the current tasks to the JSON file.
+     */
+    public void saveTasksToJson() {
+        try {
+            Map<String, Object> jsonbStructure = JSONUtils.buildJsonStructure(userTasksList.stream());
+            jsonbStructure.put("last_sync", getLastSync());
+            JSONUtils.writeJsonFile(jsonbStructure, TASKS_JSON_FILE);
+        } catch (IOException e) {
+            System.err.println("Error saving tasks to JSON: " + e.getMessage());
+        }
+    }
+
 }

@@ -135,11 +135,11 @@ public class Task {
         this.task_id = task_id;
     }
 
-    public String getTask_title() {
+    public String getTitle() {
         return task_title;
     }
 
-    public void setTask_title(String task_title) {
+    public void setTitle(String task_title) {
         this.task_title = task_title;
     }
 
@@ -224,10 +224,9 @@ public class Task {
     }
 
     public String viewTaskDesc() {
-        return "Task ID: " + task_id + ", Title: " + task_title + ", Description: " + description +
-                ", Status: " + status +
-                ", sync_status: " + sync_status + ", Due Date: " + due_date + ", Created At: " + created_at +
-                ", Updated At: " + updated_at + ", Deleted At: " + deleted_at + ", Last Sync: " + last_sync +
-                ", Folder ID: " + folder_id;
+        return "Task ID: " + task_id + ", Title: " + task_title + ", Description: " + description + "\n" +
+                "Status: " + status + ", sync_status: " + sync_status + ", Due Date: " + due_date + 
+                ", Created At: " + created_at + "\n" + "Updated At: " + updated_at + ", Deleted At: " + 
+                deleted_at + ", Last Sync: " + last_sync + ", Folder ID: " + folder_id;
     }
 }

@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 
 import javax.imageio.ImageIO;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import java.awt.Image;
 
@@ -98,6 +99,50 @@ public class common {
 
     public static ImageIcon getSaveIcon(){
         String path = useNightMode ? "assets/save_night.png" : "assets/save_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getSyncIcon(){
+        String path = useNightMode ? "assets/sync_night.png" : "assets/sync_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getNotificationIcon() {
+        // Assuming notification_day.png and notification_night.png exist
+        String path = useNightMode ? "assets/notification_night.png" : "assets/notification_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getSettingsIcon() {
+        // Assuming settings_day.png and settings_night.png exist
+        // Using userConfig icons as a placeholder if specific settings icons are missing
+        String path = useNightMode ? "assets/userConfig_night.png" : "assets/userConfig_day.png"; // Placeholder: use userConfig icons
+        // String path = useNightMode ? "assets/settings_night.png" : "assets/settings_day.png"; // Ideal path
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getFilterIcon() {
+        // Assuming filter_day.png and filter_night.png exist
+        String path = useNightMode ? "assets/filter_night.png" : "assets/filter_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getSortIcon() {
+        // Assuming sort_day.png and sort_night.png exist
+        String path = useNightMode ? "assets/sort_night.png" : "assets/sort_day.png";
+        return loadIcon(path);
+    }
+
+    // Add missing icons used in TaskDashboardFrame
+    public static ImageIcon getCommentIcon() {
+        // Assuming comment_day.png and comment_night.png exist
+        String path = useNightMode ? "assets/comment_night.png" : "assets/comment_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getAttachmentIcon() {
+        // Assuming attachment_day.png and attachment_night.png exist
+        String path = useNightMode ? "assets/attachment_night.png" : "assets/attachment_day.png";
         return loadIcon(path);
     }
 

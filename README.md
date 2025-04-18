@@ -1,31 +1,56 @@
-## ToDoList App
+# ToDoList App
 
-This is a simple ToDoList App that allows you to add, view, edit and delete a list of tasks.
-Each task has an id, title, description(optional), status, date and an associated user.
-Implements a login and register method to allow multiple users to use the app.
-Each user has a private list of tasks and a history of completed tasks.
+A cross-platform Java desktop application for managing personal tasks with both local (JSON file) and cloud (PostgreSQL) synchronization. Supports multiple users, offline mode, share folders between users, and synchronization mechanisms to ensure data consistency.
 
-This repository contains a SQL file with the database schema and a java project with the source code. To run the app you need to have a PostgreSQL 17 installed and modify the `.env` file with your database credentials.
+## Features
 
+- **Multi-user support**: Each user has a private, secure task list.
+- **Task management**: Add, view, edit, and delete tasks with title, description, status, due date, and folder.
+- **Folders**: Organize tasks into folders.
+- **Sync with PostgreSQL (cloud)**: Tasks are stored locally and can be synchronized with a remote PostgreSQL database in the cloud.
+- **Offline mode**: Work with your tasks offline, changes are synced when online.
+- **Modern Java**: Uses Java 21.
+- **User-friendly UI**: Includes day/night mode and modern icons.
+
+## Setup & Installation
+
+1. **Download the latest release**
+   - Go to the [Releases](https://github.com/Santiago01011/ToDoListApp/releases) section and download the latest JAR file.
+2. **Install Java 21**
+   - Make sure you have Java 21 or newer installed.
+3. **Run the app**
+
+## Usage
+
+- **Login/Register**: On first launch, register a new user or log in.
+- **Task operations**: Use the UI to add, edit, delete, and organize tasks.
+- **Sync**: The app automatically syncs tasks with the cloud when possible. Manual sync is also available.
+- **Offline**: If the database is unreachable, tasks are saved locally and synced later.
+
+## File Structure
+
+- `src/main/java/` - Java source code
+- `src/main/resources/assets/` - UI icons
+- `scripts/` - Utility scripts
+- `README.md` - This file
+- `pom.xml` - Maven build file
+
+## Technologies Used
+
+- Java OpenJDK 21
+- PostgreSQL (cloud)
+- Jackson (JSON)
+- SnakeYAML (user config)
 
 ## Icons Used
 
 Icons are from [Flaticon](https://www.flaticon.com/uicons).
 
-## Technologies Used
+## License
 
-- Java openjdk 21.0.5
-- PostgreSQL 17.2
-- HikariCP 5.0.1
-- Maven 4.0.0
+MIT License (see LICENSE file)
 
-
-## How to run the app
-
-1. Clone the repository
-2. Run the `todo_list_dump.sql` file to create the database and tables
-3. Create or change the `.env` file, add your database credentials
-4. Now you can test the app in a local instance
+---
 
 
 

@@ -275,7 +275,7 @@ public class JSONUtils {
      */
     public static Map<String, Object> buildJsonStructure(Stream<Task> taskStream) {
         Map<String, Object> jsonbStructure = new LinkedHashMap<>();
-        jsonbStructure.put("columns", List.of("folder_id", "folder_name", "task_id", "task_title", "description", "sync_status", "status", "due_date", "created_at"));
+        jsonbStructure.put("columns", List.of("folder_id", "folder_name", "task_id", "task_title", "description", "sync_status", "last_sync" ,"status", "due_date", "created_at"));
 
         List<List<Object>> data = taskStream.map(task -> {
             List<Object> taskData = new ArrayList<>();
@@ -285,6 +285,7 @@ public class JSONUtils {
             taskData.add(task.getTitle());
             taskData.add(task.getDescription());
             taskData.add(task.getSync_status());
+            taskData.add(task.getLast_sync() != null ? task.getLast_sync().toString() : null);
             taskData.add(task.getStatus());
             taskData.add(task.getDue_date() != null ? task.getDue_date().toString() : null);
             taskData.add(task.getCreated_at() != null ? task.getCreated_at().toString() : null);

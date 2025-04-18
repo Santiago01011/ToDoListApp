@@ -17,9 +17,7 @@ public class Task {
     private String folder_id;
     private String folder_name;
 
-    public Task() {
-        // Default constructor
-    }
+    public Task() {}
 
     public Task(
         @JsonProperty("task_id") String task_id,
@@ -140,6 +138,8 @@ public class Task {
     }
 
     public void setTitle(String task_title) {
+        if (task_title == null || task_title.isEmpty())
+            throw new IllegalArgumentException("Task title cannot be null or empty");
         this.task_title = task_title;
     }
 

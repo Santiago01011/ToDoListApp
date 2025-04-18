@@ -148,7 +148,6 @@ public class NewDBHandler {
                     List<String> columns = (List<String>) resultMap.get("columns");
                     @SuppressWarnings("unchecked")
                     List<List<Object>> data = (List<List<Object>>) resultMap.get("data");
-                    // this for loop is to create the tasks from the data retrieved from the cloud, each row must be converted to a Task object
                     for (List<Object> row : data) {
                         Task task = new Task();
                         for (int i = 0; i < columns.size(); i++) {
@@ -197,13 +196,11 @@ public class NewDBHandler {
         for (Task cloudTask : cloudTasks) {
             Task localTask = localTaskMap.get(cloudTask.getTask_id());
             if (localTask == null) {
-                System.out.println("Adding new task from cloud: " + cloudTask.getTitle());
                 taskHandler.userTasksList.add(cloudTask);
             } else {
-                LocalDateTime localUpdated = localTask.getUpdated_at();
+                LocalDateTime localUpdated = localTask.getLast_sync();
                 LocalDateTime cloudUpdated = cloudTask.getLast_sync();
                 if (cloudUpdated != null && (localUpdated == null || cloudUpdated.isAfter(localUpdated))) {
-                    System.out.println("Updating local task with cloud task: " + cloudTask.getTitle());
                     int idx = taskHandler.userTasksList.indexOf(localTask);
                     taskHandler.userTasksList.set(idx, cloudTask);
                 }

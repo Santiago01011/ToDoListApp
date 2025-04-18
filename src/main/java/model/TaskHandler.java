@@ -46,42 +46,32 @@ public class TaskHandler {
 
     public void updateTask(Task task, String title, String description, String status, String targetDate, String folderName) {
         if (task.getSync_status().equals("new")) {
-            // Only update the task in the user list - still hasn't been sent to the database
             updateTaskFields(task, title, description, status, targetDate, folderName);
             task.setUpdated_at(LocalDateTime.now());
             return;
         }
         
         if (task.getSync_status().equals("cloud")) {
-            // Task is from the cloud, create an updated version to send back
-            // First change the original to "local" status
             task.setSync_status("local");
             task.setUpdated_at(LocalDateTime.now());
             
-            // Then create a copy with only the necessary fields for update
             Task updatedTask = new Task.Builder(task.getTask_id())
                 .folderId(task.getFolder_id())
                 .folderName(task.getFolder_name())
                 .sync_status("updated")
                 .updatedAt(LocalDateTime.now())
                 .build();
-            
-            // Update both tasks with the new field values
             updateTaskFields(task, title, description, status, targetDate, folderName);
             updateTaskFields(updatedTask, title, description, status, targetDate, folderName);
             
             userTasksList.add(updatedTask);
             return;
-        }
-        
+        }        
         if (task.getSync_status().equals("local")) {
-            // Task is already modified locally, find its update twin if exists
             Task updatedTask = userTasksList.stream()
                 .filter(t -> t.getTask_id().equals(task.getTask_id()) && "updated".equals(t.getSync_status()))
                 .findFirst()
-                .orElse(null);
-            
-            // If no update twin exists, create one
+                .orElse(null);            
             if (updatedTask == null) {
                 updatedTask = new Task.Builder(task.getTask_id())
                     .folderId(task.getFolder_id())
@@ -91,8 +81,6 @@ public class TaskHandler {
                     .build();
                 userTasksList.add(updatedTask);
             }
-            
-            // Update both tasks with the new field values
             updateTaskFields(task, title, description, status, targetDate, folderName);
             updateTaskFields(updatedTask, title, description, status, targetDate, folderName);
             
@@ -183,6 +171,7 @@ public class TaskHandler {
             .dueDate(taskMap.get("due_date") != null ? LocalDateTime.parse((String) taskMap.get("due_date")) : null)
             .createdAt(taskMap.get("created_at") != null ? LocalDateTime.parse((String) taskMap.get("created_at")) : null)
             .updatedAt(getLastSync())
+            .lastSync(taskMap.get("last_sync") != null ? LocalDateTime.parse((String) taskMap.get("last_sync")) : null)
             .build();
     }
 
@@ -197,6 +186,19 @@ public class TaskHandler {
         } catch (IOException e) {
             System.err.println("Error saving tasks to JSON: " + e.getMessage());
         }
+    }
+    /**
+     * * Retrieves the list of folders from the userTasksList.
+     * @return A list of folder names.
+     */
+    public List<String> getFolderList() {
+        List<String> folderList = new ArrayList<>();
+        for (Task task : userTasksList) {
+            if (!folderList.contains(task.getFolder_name())) {
+                folderList.add(task.getFolder_name());
+            }
+        }
+        return folderList;
     }
 
 }

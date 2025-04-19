@@ -274,26 +274,31 @@ public class JSONUtils {
      * @throws IOException If there is an error building the structure
      */
     public static Map<String, Object> buildJsonStructure(Stream<Task> taskStream) {
-        Map<String, Object> jsonbStructure = new LinkedHashMap<>();
-        jsonbStructure.put("columns", List.of("folder_id", "folder_name", "task_id", "task_title", "description", "sync_status", "last_sync" ,"status", "due_date", "created_at"));
+        // Define all columns, including deleted_at
+        List<String> allColumns = List.of(
+            "folder_id", "folder_name", "task_id", "task_title", "description",
+            "sync_status", "last_sync", "status", "due_date", "created_at", "deleted_at"
+        );
 
         List<List<Object>> data = taskStream.map(task -> {
-            List<Object> taskData = new ArrayList<>();
-            taskData.add(task.getFolder_id());
-            taskData.add(task.getFolder_name());
-            taskData.add(task.getTask_id());
-            taskData.add(task.getTitle());
-            taskData.add(task.getDescription());
-            taskData.add(task.getSync_status());
-            taskData.add(task.getLast_sync() != null ? task.getLast_sync().toString() : null);
-            taskData.add(task.getStatus());
-            taskData.add(task.getDue_date() != null ? task.getDue_date().toString() : null);
-            taskData.add(task.getCreated_at() != null ? task.getCreated_at().toString() : null);
-            return taskData;
+            List<Object> row = new ArrayList<>(allColumns.size());
+            row.add(task.getFolder_id());
+            row.add(task.getFolder_name());
+            row.add(task.getTask_id());
+            row.add(task.getTitle());
+            row.add(task.getDescription());
+            row.add(task.getSync_status());
+            row.add(task.getLast_sync() != null ? task.getLast_sync().toString() : null);
+            row.add(task.getStatus());
+            row.add(task.getDue_date() != null ? task.getDue_date().toString() : null);
+            row.add(task.getCreated_at() != null ? task.getCreated_at().toString() : null);
+            row.add(task.getDeleted_at() != null ? task.getDeleted_at().toString() : null);
+            return row;
         }).collect(Collectors.toList());
 
-        jsonbStructure.put("data", data);
-        jsonbStructure.put("last_sync", null);
-        return jsonbStructure;
+        Map<String, Object> structure = new LinkedHashMap<>();
+        structure.put("columns", allColumns);
+        structure.put("data", data);
+        return structure;
     }
 }

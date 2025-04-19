@@ -29,6 +29,7 @@ public class Frame extends JFrame{
         UIManager.put("Button.font", new Font("Consolas", Font.BOLD, 14));
         UIManager.put("Button.background", common.getSecondaryColor());
         UIManager.put("Button.foreground", common.getTextColor());
+        
 
         UIManager.put("Label.font", new Font("Consolas", Font.PLAIN, 14));
         UIManager.put("Label.foreground", common.getTextColor());

@@ -16,6 +16,7 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -23,6 +24,7 @@ import java.util.HashMap;
 
 public class NewDBHandler {
     private TaskHandler taskHandler;
+    private UUID userUUID = null;
     
     /**
      * Constructor that initializes the NewDBHandler with a TaskHandler
@@ -55,7 +57,6 @@ public class NewDBHandler {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if ( rs.next() ) {
                     Map<String, Object> resultMap = JSONUtils.fromJsonString(rs.getString(2));
-                    System.out.println("Result Map: " + resultMap);
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
                     for (Map<String, Object> successItem : successList) {
@@ -98,25 +99,25 @@ public class NewDBHandler {
             pstmt.setObject(1, userUUID);
             pstmt.setString(2, jsonContent);
 
+            System.out.println("Updating tasks from JSON for user: " + userUUID);
+            System.out.println("JSON content: " + jsonContent);
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if ( rs.next() ){
                     Map<String, Object> resultMap = JSONUtils.fromJsonString(rs.getString(2));
+                    System.out.println("Result map: " + resultMap);
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
                     for (Map<String, Object> successItem : successList) {
+                        String taskId = (String) successItem.get("task_id");
+                        taskHandler.userTasksList.removeIf(task -> "to_update".equals(task.getSync_status()) && task.getTask_id().equals(taskId));
                         taskHandler.userTasksList.stream()
-                        .filter(task -> task.getTask_id().equals(successItem.get("task_id")))
-                        .forEach(task -> {
-                            if ( task.getSync_status().equals("local") ){
+                            .filter(task -> task.getTask_id().equals(taskId) && "local".equals(task.getSync_status()))
+                            .forEach(task -> {
                                 task.setLast_sync(taskHandler.getLastSync());
                                 task.setUpdated_at(taskHandler.getLastSync());
                                 task.setSync_status("cloud");
-                            }
-                            if ( task.getSync_status().equals("updated") ){
-                                taskHandler.userTasksList.remove(task);
-                            }
-                            /*else throws taskError */
-                        });
+                            });
                     }
                 }
             }
@@ -208,25 +209,49 @@ public class NewDBHandler {
         }
     }
 
-    public void startSyncProcess(UUID userUUID){
-        if ( taskHandler.userTasksList.isEmpty() ) {
+    public CompletableFuture<Boolean> startSyncProcess(){
+        return CompletableFuture.supplyAsync(() -> {
+            try {
+                syncTasks();
+                return true;
+            } catch (Exception e) {
+                System.err.println("Error during sync process: " + e.getMessage());
+                return false;
+            }
+        });
+    }
+
+    private void syncTasks() {
+        if ( userUUID == null ) {
+            System.err.println("User UUID is not set. Cannot start sync process.");
+            return;
+        }
+        if ( taskHandler.userTasksList.isEmpty()) {
             System.err.println("No tasks found in local storage. Retrieving from cloud.");
             taskHandler.userTasksList = retrieveTasksFromCloud(userUUID, null);
             if ( taskHandler.userTasksList.isEmpty() ) {
                 System.err.println("No tasks found in the cloud for user: " + userUUID);
                 return;
             }
+            taskHandler.setLastSync(LocalDateTime.now());
             return;
         }
         OffsetDateTime retrieveLastSync = taskHandler.getLastSync().atZone(ZoneId.systemDefault()).toOffsetDateTime();
         taskHandler.setLastSync(LocalDateTime.now());
         String insertJsonContent = taskHandler.prepareSyncJsonContent("new");
         if ( insertJsonContent != null ) insertTasksFromJSON(userUUID, insertJsonContent);
-        String updateJsonContent = taskHandler.prepareSyncJsonContent("updated");
+        String updateJsonContent = taskHandler.prepareSyncJsonContent("to_update");
         if ( updateJsonContent != null ) updateTasksFromJSON(userUUID, updateJsonContent);
-        String deleteJsonContent = taskHandler.prepareSyncJsonContent("deleted");
-        if ( deleteJsonContent != null ) updateTasksFromJSON(userUUID, deleteJsonContent);
         List<Task> cloudTasks = retrieveTasksFromCloud(userUUID, retrieveLastSync);
         if ( !cloudTasks.isEmpty() ) mergeTasks(cloudTasks);
     }
+
+    public void setUserUUID(String userUUID) {
+        this.userUUID = UUID.fromString(userUUID);
+    }
+    
+    public String getUserUUID() {
+        return userUUID.toString();
+    }
+
 }

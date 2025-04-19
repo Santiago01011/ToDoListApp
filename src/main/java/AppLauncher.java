@@ -2,27 +2,24 @@ import java.util.UUID;
 
 import DBH.NewDBHandler;
 import model.TaskHandler;
-// Import FlatDarkLaf
-import com.formdev.flatlaf.FlatDarkLaf;
 import javax.swing.SwingUtilities;
-import javax.swing.UIManager;
-import UI.TaskDashboardFrame; // Import the new frame
+import UI.TaskDashboardFrame;
+import controller.TaskController;
 
 public class AppLauncher {
     public static void main(String[] args) {
-        // Run the rest of the application on the EDT
         SwingUtilities.invokeLater(() -> {
             TaskHandler taskHandler = new TaskHandler();
+            //Tests.testTasks(taskHandler);
             NewDBHandler dbHandler = new NewDBHandler(taskHandler);
+            TaskDashboardFrame view = new TaskDashboardFrame("TaskFlow");
+            TaskController controller = new TaskController(taskHandler, view, dbHandler);
 
-            // Perform initial sync or load tasks before showing UI
-            // Consider doing DB operations in a background thread (SwingWorker)
-            // For now, doing it directly:
-            dbHandler.startSyncProcess(UUID.fromString("01959f92-0d81-78ab-9c17-c180be5d9a37")); // Example UUID
+            view.setController(controller);
+            dbHandler.setUserUUID("01959f92-0d81-78ab-9c17-c180be5d9a37");
 
-            // Launch the new Task Dashboard Frame, passing the TaskHandler
-            new TaskDashboardFrame("TaskFlow", taskHandler); // Title set to TaskFlow
-
+            view.initialize();
+            view.setVisible(true);
         });
     }
 }

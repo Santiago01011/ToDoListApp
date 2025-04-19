@@ -1,6 +1,8 @@
 package model;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class Task {
@@ -45,9 +47,9 @@ public class Task {
         this.last_sync = last_sync;
         this.folder_id = folder_id;
         this.folder_name = folder_name;
-        }
+    }
 
-        public static class Builder {
+    public static class Builder {
         private String task_id;
         private String task_title;
         private String description;
@@ -121,7 +123,20 @@ public class Task {
         }
 
         public Task build() {
-            return new Task(task_id, task_title, description, status, sync_status, due_date, created_at, updated_at, deleted_at, last_sync, folder_id, folder_name);
+            Task task = new Task();
+            task.task_id = this.task_id;
+            task.folder_id = this.folder_id;
+            task.folder_name = this.folder_name;
+            task.task_title = this.task_title;
+            task.description = this.description;
+            task.sync_status = this.sync_status;
+            task.last_sync = this.last_sync;
+            task.status = this.status;
+            task.due_date = this.due_date;
+            task.created_at = this.created_at;
+            task.updated_at = this.updated_at;
+            task.deleted_at = this.deleted_at;
+            return task;
         }
     }
 
@@ -138,8 +153,6 @@ public class Task {
     }
 
     public void setTitle(String task_title) {
-        if (task_title == null || task_title.isEmpty())
-            throw new IllegalArgumentException("Task title cannot be null or empty");
         this.task_title = task_title;
     }
 
@@ -222,6 +235,14 @@ public class Task {
     public void setFolder_name(String folder_name) {
         this.folder_name = folder_name;
     }
+
+    public Set<String> getModifiedFields() {
+        return java.util.Collections.emptySet();
+    }
+
+    public void clearModifiedFields() {}
+
+    public void addModifiedField(String fieldName) {}
 
     public String viewTaskDesc() {
         return "Task ID: " + task_id + ", Title: " + task_title + ", Description: " + description + "\n" +

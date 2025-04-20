@@ -139,15 +139,13 @@ public class TaskController {
         return taskHandler.getLastSync();
     }
 
-    public void handleTaskCompletionToggle(String task_id, boolean isSelected) {
-        System.out.println("Controller: Task completion toggle for ID " + task_id + " isSelected: " + isSelected);
-        Task task = taskHandler.getTaskById(task_id);
+    public void handleTaskCompletionToggle(Task task) {
         if (task != null) {
-            taskHandler.updateTask(task, null, null, isSelected ? "completed" : "pending", null, null, null);
+            taskHandler.updateTask(task, null, null, !task.getStatus().equals("completed") ? "completed" : "pending", null, null, null);
             printUserTasks();
             view.refreshTaskListDisplay(taskHandler.userTasksList);
         } else {
-             System.err.println("Controller: Could not find task with ID " + task_id + " to toggle completion.");
+             System.err.println("Controller: Could not find task with ID " + task.getTask_id() + " to toggle completion.");
         }
     }
 

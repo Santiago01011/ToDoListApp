@@ -233,7 +233,7 @@ public class TaskHandler {
         File file = new File(SHADOWS_JSON_FILE);
         if (!file.exists()) return;
         try {
-            if (!JSONUtils.isValidJsonStructure(file, "columns", "data", "last_sync")) {
+            if (!JSONUtils.isValidJsonStructure(file, "columns", "data")) {
                 System.err.println("Invalid JSON structure in shadows file: " + SHADOWS_JSON_FILE);
                 return;
             }

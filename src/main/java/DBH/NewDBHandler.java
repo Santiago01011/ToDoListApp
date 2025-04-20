@@ -99,13 +99,9 @@ public class NewDBHandler {
             pstmt.setObject(1, userUUID);
             pstmt.setString(2, jsonContent);
 
-            System.out.println("Updating tasks from JSON for user: " + userUUID);
-            System.out.println("JSON content: " + jsonContent);
-
             try (ResultSet rs = pstmt.executeQuery()) {
                 if ( rs.next() ){
                     Map<String, Object> resultMap = JSONUtils.fromJsonString(rs.getString(2));
-                    System.out.println("Result map: " + resultMap);
                     @SuppressWarnings("unchecked")
                     List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
                     for (Map<String, Object> successItem : successList) {
@@ -140,10 +136,7 @@ public class NewDBHandler {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     String jsonbResult = rs.getString(2);
-                    if( !JSONUtils.isValidJsonStructure(jsonbResult, "columns", "data", "last_sync") ){
-                        System.err.println("Invalid JSON structure in result: " + jsonbResult);
-                        return tasks;
-                    } 
+                    System.out.println("JSONB Result: " + jsonbResult);
                     Map<String, Object> resultMap = JSONUtils.fromJsonString(jsonbResult);
                     @SuppressWarnings("unchecked")
                     List<String> columns = (List<String>) resultMap.get("columns");
@@ -194,7 +187,15 @@ public class NewDBHandler {
         for (Task localTask : taskHandler.userTasksList) {
             localTaskMap.put(localTask.getTask_id(), localTask);
         }
+        List<String> tasksToRemove = new ArrayList<>();
         for (Task cloudTask : cloudTasks) {
+            if (cloudTask.getDeleted_at() != null) {
+                if (localTaskMap.containsKey(cloudTask.getTask_id())) {
+                    tasksToRemove.add(cloudTask.getTask_id());
+                    taskHandler.clearShadowUpdate(cloudTask.getTask_id());
+                }
+                continue;
+            }
             Task localTask = localTaskMap.get(cloudTask.getTask_id());
             if (localTask == null) {
                 taskHandler.userTasksList.add(cloudTask);
@@ -207,6 +208,11 @@ public class NewDBHandler {
                 }
             }
         }
+        if (!tasksToRemove.isEmpty()) {
+            taskHandler.userTasksList.removeIf(task -> tasksToRemove.contains(task.getTask_id()));
+        }
+        // Extra safeguard: remove any task with deleted_at != null
+        taskHandler.userTasksList.removeIf(task -> task.getDeleted_at() != null);
     }
 
     public CompletableFuture<Boolean> startSyncProcess(){

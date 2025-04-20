@@ -271,9 +271,7 @@ public class TaskDashboardFrame extends Frame {
         checkBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         checkBox.addActionListener(e -> {
             if (taskController != null) {
-                boolean isSelected = checkBox.isSelected();
-                System.out.println("Checkbox for task '" + task.getTitle() + "' changed to: " + isSelected);
-                taskController.handleTaskCompletionToggle(task.getTask_id(), isSelected);
+                taskController.handleTaskCompletionToggle(task);
             }
         });
         card.add(checkBox, "spany 3, aligny top, gapright 10");

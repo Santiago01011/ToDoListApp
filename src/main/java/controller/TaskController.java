@@ -3,6 +3,7 @@ package controller;
 import model.TaskHandler;
 import model.Task;
 import UI.TaskDashboardFrame;
+import COMMON.UserProperties;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -129,6 +130,7 @@ public class TaskController {
 
     public void handleWindowClosing() {
         taskHandler.saveTasksToJson();
+        if( !Boolean.valueOf((String) UserProperties.getProperty("rememberMe")) ) UserProperties.logOut();
     }
 
     public List<String> getFolderList() {
@@ -142,10 +144,9 @@ public class TaskController {
     public void handleTaskCompletionToggle(Task task) {
         if (task != null) {
             taskHandler.updateTask(task, null, null, !task.getStatus().equals("completed") ? "completed" : "pending", null, null, null);
-            printUserTasks();
             view.refreshTaskListDisplay(taskHandler.userTasksList);
         } else {
-             System.err.println("Controller: Could not find task with ID " + task.getTask_id() + " to toggle completion.");
+             System.err.println("Controller: Could not find task to toggle completion.");
         }
     }
 

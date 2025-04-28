@@ -68,8 +68,9 @@ public class TaskController {
         syncFuture.thenAcceptAsync(succes -> {
             if ( succes ){
                 System.out.println("Controller: Async sync completed successfully. Updating UI.");
-                view.refreshTaskListDisplay(taskHandler.userTasksList);
                 view.updateLastSyncLabel(taskHandler.getLastSync());
+                // Refresh the task list display AFTER sync completes
+                view.refreshTaskListDisplay(taskHandler.userTasksList);
             }
         }).exceptionally(ex -> {
             System.out.println("Controller: Exception during sync: " + ex.getMessage());
@@ -130,7 +131,10 @@ public class TaskController {
 
     public void handleWindowClosing() {
         taskHandler.saveTasksToJson();
-        if( !Boolean.valueOf((String) UserProperties.getProperty("rememberMe")) ) UserProperties.logOut();
+        if( !Boolean.valueOf((String) UserProperties.getProperty("rememberMe")) ){
+            System.out.println("Controller: Logging out user and clearing credentials.");
+            UserProperties.logOut();
+        }
     }
 
     public List<String> getFolderList() {

@@ -8,7 +8,7 @@ import java.util.Map;
 
 public class UserProperties {
     private static final String BASE_DIRECTORY = System.getProperty("user.home") + File.separator + ".todoapp";
-    private static final String USER_PROPS_FILE = BASE_DIRECTORY + File.separator + "user.properties";
+    private static final String USER_PROPS_FILE = BASE_DIRECTORY + File.separator + "user.yml";
     private static Map<String, Object> properties = new HashMap<>();
 
     static {
@@ -37,10 +37,10 @@ public class UserProperties {
         properties.put("username", "");
         properties.put("password", "");
         properties.put("lastSession", "");
-        properties.put("dbUrl", "");
-        properties.put("authApiUrl", "http://localhost:8080");
         properties.put("userUUID", "");
+        properties.put("authApiUrl", "http://localhost:8080");
         properties.put("dbUrl", "jdbc:postgresql://127.0.0.1:5431/todo_list?user=task_manager&password=task_manager_password");
+        properties.put("token", "");
         saveProperties();
     }
 
@@ -77,13 +77,8 @@ public class UserProperties {
     }
 
     public static void logOut() {
-        setProperty("rememberMe", "false");
-        setProperty("username", "");
-        setProperty("password", "");
-        setProperty("userUUID", "");
-        setProperty("token", "");
-        setProperty("lastSession", "");
-        JSONUtils.createEmptyJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
+        createDefaultProperties();
+        JSONUtils.createDefaultJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
     }
 
     private static void handleError(String message, Exception e) {

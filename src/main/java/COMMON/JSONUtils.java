@@ -32,7 +32,7 @@ public class JSONUtils {
             baseDir.mkdirs();
         }
         if(!new File(BASE_DIRECTORY + File.separator + "tasks.json").exists())
-            createEmptyJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
+            createDefaultJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
     }
 
     /**
@@ -47,7 +47,7 @@ public class JSONUtils {
      * 
      * @param filePath Path to the file to create
      */
-    public static void createEmptyJsonFile(String filePath) {
+    public static void createDefaultJsonFile(String filePath) {
         File file = new File(filePath);
         try {
             file.getParentFile().mkdirs();

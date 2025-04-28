@@ -157,20 +157,6 @@ public class TaskHandler {
     }
 
     public String prepareSyncJsonContent(String sync_status) {
-        // var filteredTasks = userTasksList.stream()
-        //     .filter(task -> sync_status.equals(task.getSync_status()))
-        //     .toList();
-    
-        // if (filteredTasks.isEmpty()) return null;
-
-        // try {
-        //     Map<String, Object> jsonbStructure = JSONUtils.buildJsonStructure(filteredTasks.stream());  
-        //     jsonbStructure.put("last_sync", getLastSync());        
-        //     return JSONUtils.toJsonString(jsonbStructure);
-        // } catch (IOException e) {
-        //     System.err.println("Error creating sync JSON content: " + e.getMessage());
-        //     return null;
-        // }
         List<Task> filteredTasks = new ArrayList<>();
         if ( sync_status.equals("to_update") ){
             filteredTasks = new ArrayList<>(shadowUpdates.values());
@@ -198,7 +184,7 @@ public class TaskHandler {
 
         try{
             if( !JSONUtils.isValidJsonStructure(file, "columns", "data", "last_sync") ){
-                JSONUtils.createEmptyJsonFile(TASKS_JSON_FILE);
+                JSONUtils.createDefaultJsonFile(TASKS_JSON_FILE);
                 System.err.println("Invalid JSON structure in file: " + TASKS_JSON_FILE);
                 return new ArrayList<>();
             }
@@ -223,7 +209,7 @@ public class TaskHandler {
             return tasks;
         } catch (IOException e) {
             System.err.println("Error loading tasks from JSON: " + e.getMessage());
-            JSONUtils.createEmptyJsonFile(TASKS_JSON_FILE);
+            JSONUtils.createDefaultJsonFile(TASKS_JSON_FILE);
             return new ArrayList<>();
         }  
     }

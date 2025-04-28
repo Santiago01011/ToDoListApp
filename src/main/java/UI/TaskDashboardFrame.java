@@ -304,14 +304,18 @@ public class TaskDashboardFrame extends Frame {
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
         boolean isCompleted = "completed".equalsIgnoreCase(task.getStatus());
 
-        if (isCompleted && task.getUpdated_at() != null) {
-            dateLabel.setText("Completed " + task.getUpdated_at().format(dateFormatter));
+        card.setBackground(common.getTertiaryColor());
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
+        titleLabel.setText(task.getTitle() != null ? task.getTitle() : "No Title");
+        dateLabel.setForeground(UIManager.getColor("Label.foreground"));
+
+        if (isCompleted) {
             card.setBackground(common.getSecondaryColor().darker());
-            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.ITALIC));
+            titleLabel.setFont(titleLabel.getFont().deriveFont(Font.ITALIC | Font.BOLD));
             titleLabel.setText("<html><s>" + (task.getTitle() != null ? task.getTitle() : "No Title") + "</s></html>");
         } else if (task.getDue_date() != null) {
             dateLabel.setText("Due " + task.getDue_date().format(dateFormatter));
-            if (task.getDue_date().isBefore(LocalDateTime.now()) && !isCompleted) {
+            if (task.getDue_date().isBefore(LocalDateTime.now())) {
                 dateLabel.setForeground(Color.RED);
             }
         } else {

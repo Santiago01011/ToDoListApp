@@ -104,11 +104,13 @@ public class UserController {
         TaskHandler taskHandler = new TaskHandler();
         NewDBHandler dbHandler = new NewDBHandler(taskHandler);
         dbHandler.setUserUUID(userUUID);
+        dbHandler.startSyncProcess();
         TaskDashboardFrame dashboard = new TaskDashboardFrame("TaskFlow");
         TaskController controller = new TaskController(taskHandler, dashboard, dbHandler);
         dashboard.setController(controller);
         dashboard.initialize();
         dashboard.setVisible(true);
+        dashboard.refreshTaskListDisplay(taskHandler.userTasksList);
         loginFrame.dispose();
     }
 }

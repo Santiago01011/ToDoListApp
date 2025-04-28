@@ -94,6 +94,8 @@ public class NewDBHandler {
      */
     private void updateTasksFromJSON(UUID userUUID, String jsonContent) {
         String query = "SELECT * FROM todo.update_tasks_from_jsonb(?, ?::jsonb)";   
+        System.out.println("Updating tasks from JSON for user: " + userUUID);
+        System.out.println("JSON Content: " + jsonContent);
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setObject(1, userUUID);
@@ -106,13 +108,17 @@ public class NewDBHandler {
                     List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
                     for (Map<String, Object> successItem : successList) {
                         String taskId = (String) successItem.get("task_id");
-                        taskHandler.userTasksList.removeIf(task -> "to_update".equals(task.getSync_status()) && task.getTask_id().equals(taskId));
+                        // Clear the shadow entry (handles deletions and updates alike)
+                        taskHandler.clearShadowUpdate(taskId);
+                        // Remove any stale to_update entries in the main list (if present)
+                        taskHandler.userTasksList.removeIf(t -> "to_update".equals(t.getSync_status()) && t.getTask_id().equals(taskId));
+                        // Promote any 'local' version to cloud
                         taskHandler.userTasksList.stream()
-                            .filter(task -> task.getTask_id().equals(taskId) && "local".equals(task.getSync_status()))
-                            .forEach(task -> {
-                                task.setLast_sync(taskHandler.getLastSync());
-                                task.setUpdated_at(taskHandler.getLastSync());
-                                task.setSync_status("cloud");
+                            .filter(t -> t.getTask_id().equals(taskId) && "local".equals(t.getSync_status()))
+                            .forEach(t -> {
+                                t.setLast_sync(taskHandler.getLastSync());
+                                t.setUpdated_at(taskHandler.getLastSync());
+                                t.setSync_status("cloud");
                             });
                     }
                 }
@@ -227,6 +233,7 @@ public class NewDBHandler {
         });
     }
 
+    // TODO: note the error in case that the local list is empty but the shadow is not
     private void syncTasks() {
         if ( userUUID == null ) {
             System.err.println("User UUID is not set. Cannot start sync process.");
@@ -234,13 +241,15 @@ public class NewDBHandler {
         }
         if ( taskHandler.userTasksList.isEmpty()) {
             System.err.println("No tasks found in local storage. Retrieving from cloud.");
-            taskHandler.userTasksList = retrieveTasksFromCloud(userUUID, null);
-            if ( taskHandler.userTasksList.isEmpty() ) {
+            // Initial load: merge cloud tasks (including any deletions) into empty local list
+            List<Task> retrievedTasks = retrieveTasksFromCloud(userUUID, null);
+            mergeTasks(retrievedTasks);
+            if (taskHandler.userTasksList.isEmpty()) {
                 System.err.println("No tasks found in the cloud for user: " + userUUID);
                 return;
             }
             taskHandler.setLastSync(LocalDateTime.now());
-            return;
+            return;  // skip pushes on first sync
         }
         OffsetDateTime retrieveLastSync = taskHandler.getLastSync().atZone(ZoneId.systemDefault()).toOffsetDateTime();
         taskHandler.setLastSync(LocalDateTime.now());
@@ -250,6 +259,8 @@ public class NewDBHandler {
         if ( updateJsonContent != null ) updateTasksFromJSON(userUUID, updateJsonContent);
         List<Task> cloudTasks = retrieveTasksFromCloud(userUUID, retrieveLastSync);
         if ( !cloudTasks.isEmpty() ) mergeTasks(cloudTasks);
+        // Persist all changes (tasks and shadows) locally after full sync
+        taskHandler.saveTasksToJson();
     }
 
     public void setUserUUID(String userUUID) {

@@ -5,6 +5,7 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 
 import javax.imageio.ImageIO;
+import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import java.awt.Image;
 
@@ -22,6 +23,7 @@ public class common {
     public static final Color SECONDARY_COLOR_DAY = Color.decode("#ffea00");  //hex #ffea00
     public static final Color TERTIARY_COLOR_DAY = Color.decode("#fff989");  //hex #fff989
     public static final Color TEXT_COLOR_DAY = Color.decode("#473b00");  //hex #473b00
+    public static final Color CONTRAST_COLOR_DAY = Color.decode("#3f89f7");  //hex #3f89f7
 
     // Night mode colors
     public static final Color PRIMARY_COLOR_NIGHT = Color.decode("#1a144b");  //hex #1a144b
@@ -29,6 +31,7 @@ public class common {
     public static final Color SECONDARY_COLOR_NIGHT = Color.decode("#221f1f");  //hex #221f1f
     public static final Color TERTIARY_COLOR_NIGHT = Color.decode("#130814");  //hex #130814
     public static final Color TEXT_COLOR_NIGHT = Color.decode("#fab500");  //hex #fab500
+    public static final Color CONTRAST_COLOR_NIGHT = Color.decode("#490a0a");  //hex #490a0a
 
     // Methods to get the current colors based on the mode
     public static Color getPrimaryColor() {
@@ -51,6 +54,10 @@ public class common {
         return useNightMode ? TEXT_COLOR_NIGHT : TEXT_COLOR_DAY;
     }
 
+    public static Color getContrastColor(){
+        return useNightMode ? CONTRAST_COLOR_NIGHT : CONTRAST_COLOR_DAY;
+    }
+
     /*
      * Methods to get the path of the icons based on the mode
      * The icons are stored in the assets folder in the resources directory
@@ -64,6 +71,11 @@ public class common {
 
     public static ImageIcon getAppIcon(){
         return loadIcon("assets/app_icon.png");
+    }
+
+    public static ImageIcon getAddIcon(){
+        String path = useNightMode ? "assets/add_night.png" : "assets/add_day.png";
+        return loadIcon(path);
     }
 
     public static ImageIcon getViewIcon(){
@@ -101,12 +113,26 @@ public class common {
         return loadIcon(path);
     }
 
+    public static ImageIcon getSyncIcon(){
+        String path = useNightMode ? "assets/sync_night.png" : "assets/sync_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getSettingsIcon() {
+        String path = useNightMode ? "assets/settings_night.png" : "assets/settings_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getFilterIcon() {
+        String path = useNightMode ? "assets/filter_night.png" : "assets/filter_day.png";
+        return loadIcon(path);
+    }
+
     public static ImageIcon getRestoreIcon(){
         String path = useNightMode ? "assets/restore_night.png" : "assets/restore_day.png";
         return loadIcon(path);
     }
 
-    // Method to toggle the color mode
     public static void toggleColorMode(){
         useNightMode = !useNightMode;
     }
@@ -123,7 +149,6 @@ public class common {
             return new ImageIcon(image);
         }catch (Exception e){
             System.err.println("Error loading icon: " + resourcePath);
-            //e.printStackTrace();
             return null;
         }
     }

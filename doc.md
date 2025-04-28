@@ -86,7 +86,7 @@ The `JSONUtils` class provides utility methods for JSON file operations, replaci
 - **`createBaseDirectory()`**:
   Creates the application's base directory and initializes an empty tasks file if needed.
 
-- **`createEmptyJsonFile(String filePath)`**:
+- **`createDefaultJsonFile(String filePath)`**:
   Creates an empty JSON file with the standard structure for tasks.
 
 - **`readJsonFile(File file)`**:

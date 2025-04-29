@@ -56,10 +56,13 @@ public class TaskController {
         view.refreshTaskListDisplay(filteredTasks);
     }
 
-    public void handleNewTaskRequest() {
-        System.out.println("Controller: New task request received.");
-        // TODO: Implement logic to show a 'New Task' dialog/frame
-
+    /**
+     * Handles creation of a new task from the UI input.
+     */
+    public void handleCreateTask(String title, String description, String folderName, String dueDate) {
+        System.out.println("Controller: Creating new task: " + title);
+        taskHandler.addTask(title, description, "pending", dueDate, folderName);
+        view.refreshTaskListDisplay(taskHandler.userTasksList);
     }
 
     public void handleSyncRequest() {
@@ -69,7 +72,6 @@ public class TaskController {
             if ( succes ){
                 System.out.println("Controller: Async sync completed successfully. Updating UI.");
                 view.updateLastSyncLabel(taskHandler.getLastSync());
-                // Refresh the task list display AFTER sync completes
                 view.refreshTaskListDisplay(taskHandler.userTasksList);
             }
         }).exceptionally(ex -> {
@@ -119,10 +121,7 @@ public class TaskController {
         System.out.println("Controller: Delete task request for ID " + taskId);
         Task task = taskHandler.getTaskById(taskId);
         if (task != null) {
-            // Set the deleted_at timestamp using updateTask
-            // Pass null for fields not being changed
             taskHandler.updateTask(task, null, null, null, null, null, LocalDateTime.now());
-            // Refresh the view to hide the deleted task
             view.refreshTaskListDisplay(taskHandler.userTasksList);
         } else {
             System.err.println("Controller: Could not find task with ID " + taskId + " to delete.");

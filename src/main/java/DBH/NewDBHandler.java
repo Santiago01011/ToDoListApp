@@ -182,6 +182,22 @@ public class NewDBHandler {
         }
     }
 
+    // public List<Folder> getAccessibleFolders(UUID userId) throws SQLException {
+    //     String sql = "SELECT folder_id, folder_name FROM todo.get_accessible_folders(?)";
+    //     try (var conn = NeonPool.getConnection();
+    //          var ps = conn.prepareStatement(sql)) {
+    //       ps.setObject(1, userId);
+    //       try (var rs = ps.executeQuery()) {
+    //         List<Folder> folders = new ArrayList<>();
+    //         while (rs.next()) {
+    //           folders.add(new Folder(rs.getObject("folder_id", UUID.class),
+    //                                  rs.getString("folder_name")));
+    //         }
+    //         return folders;
+    //       }
+    //     }
+    // }
+
     /**
      * Merges cloud tasks into the local userTasksList according to the following rules:
      * 1. If a task in cloudTasks is not present in userTasksList, add it.

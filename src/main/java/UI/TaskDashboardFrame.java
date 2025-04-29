@@ -2,8 +2,11 @@ package UI;
 
 import java.awt.*;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.event.WindowStateListener;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.util.List;
@@ -22,6 +25,11 @@ public class TaskDashboardFrame extends Frame {
     private JPanel taskListPanel;
     private JComboBox<String> folderComboBox;
     private JLabel lastSyncLabel;
+    private JPanel contentContainer;
+    private JPanel mainPanel;
+    private JPanel newTaskPanel;
+    private JButton newTaskButton;
+    private boolean isNewTaskVisible = false;
 
     public TaskDashboardFrame(String title) {
         super(title);
@@ -62,6 +70,13 @@ public class TaskDashboardFrame extends Frame {
 
     private void initComponents() {
         setLayout(new BorderLayout(0, 0));
+        contentContainer = new JPanel(null);
+        add(contentContainer, BorderLayout.CENTER);
+
+        int width = getWidth();
+        int height = getHeight();
+
+        mainPanel = new JPanel(new BorderLayout(0, 0));
         JPanel topBarPanel = createTopBarPanel();
         add(topBarPanel, BorderLayout.NORTH);
 
@@ -71,10 +86,120 @@ public class TaskDashboardFrame extends Frame {
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
-        add(scrollPane, BorderLayout.CENTER);
+        mainPanel.add(scrollPane, BorderLayout.CENTER);
 
         JPanel bottomBarPanel = createBottomBarPanel();
         add(bottomBarPanel, BorderLayout.SOUTH);
+
+        mainPanel.setBounds(0, 0, width, height);
+        contentContainer.add(mainPanel);
+
+        newTaskPanel = createNewTaskPanel();
+        newTaskPanel.setBounds(width, 0, width, height);
+        contentContainer.add(newTaskPanel);
+        contentContainer.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                int w = contentContainer.getWidth();
+                int h = contentContainer.getHeight();
+                if (isNewTaskVisible) {
+                    mainPanel.setBounds(-w, 0, w, h);
+                    newTaskPanel.setBounds(0, 0, w, h);
+                } else {
+                    mainPanel.setBounds(0, 0, w, h);
+                    newTaskPanel.setBounds(w, 0, w, h);
+                }
+            }
+        });
+
+    }
+
+    private JPanel createNewTaskPanel() {        
+        JPanel panel = new JPanel(new MigLayout("insets 5", "[grow]", "[][][][grow][]"));
+        panel.setBorder(new EmptyBorder(10,5,5,5));
+        panel.add(new JLabel("New Task"), "wrap");
+        JTextField titleField = new JTextField();
+        panel.add(new JLabel("Title:"), "split 2");
+        panel.add(titleField, "growx, wrap");
+        
+        JTextArea descArea = new JTextArea(5,20);
+        panel.add(new JLabel("Description:"), "split 2");
+        panel.add(new JScrollPane(descArea), "growx, wrap");
+        JTextField dueField = new JTextField();
+        panel.add(new JLabel("Due Date (YYYY-MM-DDTHH:MM):"), "split 2");
+        panel.add(dueField, "growx, wrap");
+        JComboBox<String> folderBox = new JComboBox<>(taskController.getFolderList().toArray(new String[0]));
+        panel.add(new JLabel("Folder:"), "split 2");
+        panel.add(folderBox, "growx, wrap");
+        
+        JButton saveBtn = new JButton("Save");
+        saveBtn.addActionListener(e -> {
+            taskController.handleCreateTask(titleField.getText(), descArea.getText(), (String)folderBox.getSelectedItem(), dueField.getText());
+            newTaskButton.setEnabled(true);
+            titleField.setText("");
+            descArea.setText("");
+            dueField.setText("");
+            folderBox.setSelectedIndex(0);
+            folderComboBox.setEnabled(true);
+            folderComboBox.requestFocusInWindow();
+            slideOutNewTaskPanel();
+        });
+        JButton goBackBtn = new JButton(common.getBackIcon());
+        goBackBtn.setToolTipText("Go back");
+        goBackBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        goBackBtn.addActionListener(e -> {
+            newTaskButton.setEnabled(true);
+            titleField.setText("");
+            descArea.setText("");
+            dueField.setText("");
+            folderBox.setSelectedIndex(0);
+            folderComboBox.setEnabled(true);
+            folderComboBox.requestFocusInWindow();
+            slideOutNewTaskPanel();
+        });
+        panel.add(goBackBtn, "split 2"); panel.add(saveBtn, "wrap");
+        addFocusListeners(titleField, "Enter task title...");
+        return panel;
+    }
+
+    private void slideInNewTaskPanel() {
+        if (isNewTaskVisible) return;
+        isNewTaskVisible = true;
+        int width = contentContainer.getWidth();
+        Timer timer = new Timer(2, null);
+        timer.addActionListener(e -> {
+            Point mainLoc = mainPanel.getLocation();
+            Point newLoc = newTaskPanel.getLocation();
+            if (newLoc.x <= 0) {
+                newTaskPanel.setLocation(0,0);
+                mainPanel.setLocation(-width,0);
+                ((Timer)e.getSource()).stop();
+            } else {
+                mainPanel.setLocation(mainLoc.x - 40, 0);
+                newTaskPanel.setLocation(newLoc.x - 40,0);
+            }
+        });
+        timer.start();
+    }
+
+    private void slideOutNewTaskPanel() {
+        if (!isNewTaskVisible) return;
+        isNewTaskVisible = false;
+        int width = contentContainer.getWidth();
+        Timer timer = new Timer(2, null);
+        timer.addActionListener(e -> {
+            Point mainLoc = mainPanel.getLocation();
+            Point newLoc = newTaskPanel.getLocation();
+            if (mainLoc.x >= 0) {
+                mainPanel.setLocation(0,0);
+                newTaskPanel.setLocation(width,0);
+                ((Timer)e.getSource()).stop();
+            } else {
+                mainPanel.setLocation(mainLoc.x + 40, 0);
+                newTaskPanel.setLocation(newLoc.x + 40,0);
+            }
+        });
+        timer.start();
     }
 
     private JPanel createTopBarPanel() {
@@ -138,16 +263,15 @@ public class TaskDashboardFrame extends Frame {
                 "[]"));
         panel.setBackground(common.getPanelColor().darker());
 
-        JButton newTaskButton = new JButton("New task");
+        newTaskButton = new JButton("New task");
         newTaskButton.setIcon(new ImageIcon(common.getAddIcon().getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH)));
         newTaskButton.setIconTextGap(5);
         newTaskButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         newTaskButton.addActionListener(e -> {
-            if (taskController != null) {
-                System.out.println("New Task button clicked");
-                taskController.handleNewTaskRequest();
-            }
+            newTaskButton.setEnabled(false);
+            slideInNewTaskPanel();
         });
+            
         panel.add(newTaskButton, "gapleft 5");
 
         lastSyncLabel = new JLabel("Sync status unknown");
@@ -373,4 +497,5 @@ public class TaskDashboardFrame extends Frame {
             taskController.loadInitialSyncTime();
         }
     }
+
 }

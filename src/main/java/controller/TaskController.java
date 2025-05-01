@@ -2,6 +2,7 @@ package controller;
 
 import model.TaskHandler;
 import model.Task;
+import model.Folder;
 import UI.TaskDashboardFrame;
 import COMMON.UserProperties;
 import java.util.List;
@@ -35,7 +36,7 @@ public class TaskController {
     }
 
     public void loadInitialFolderList() {
-        List<String> folders = taskHandler.getFolderList();
+        List<String> folders = taskHandler.getFoldersNamesList();
         view.updateFolderList(folders);
     }
 
@@ -73,6 +74,7 @@ public class TaskController {
                 System.out.println("Controller: Async sync completed successfully. Updating UI.");
                 view.updateLastSyncLabel(taskHandler.getLastSync());
                 view.refreshTaskListDisplay(taskHandler.userTasksList);
+                view.updateFolderList(taskHandler.getFoldersNamesList());
             }
         }).exceptionally(ex -> {
             System.out.println("Controller: Exception during sync: " + ex.getMessage());
@@ -137,7 +139,7 @@ public class TaskController {
     }
 
     public List<String> getFolderList() {
-        return taskHandler.getFolderList();
+        return taskHandler.getFoldersNamesList();
     }
 
     public LocalDateTime getLastSyncTime() {

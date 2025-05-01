@@ -30,6 +30,7 @@ public class TaskDashboardFrame extends Frame {
     private JPanel newTaskPanel;
     private JButton newTaskButton;
     private boolean isNewTaskVisible = false;
+    private JComboBox<String> newTaskFolderBox;
 
     public TaskDashboardFrame(String title) {
         super(title);
@@ -115,50 +116,56 @@ public class TaskDashboardFrame extends Frame {
     }
 
     private JPanel createNewTaskPanel() {        
-        JPanel panel = new JPanel(new MigLayout("insets 5", "[grow]", "[][][][grow][]"));
+        JPanel panel = new JPanel(new MigLayout("insets 5", "[grow]", "[][][][][]"));
         panel.setBorder(new EmptyBorder(10,5,5,5));
         panel.add(new JLabel("New Task"), "wrap");
         JTextField titleField = new JTextField();
+        titleField.setText("Enter task title...");
+        addFocusListeners(titleField, "Enter task title...");
         panel.add(new JLabel("Title:"), "split 2");
         panel.add(titleField, "growx, wrap");
         
-        JTextArea descArea = new JTextArea(5,20);
+        JTextArea descArea = new JTextArea(5,10);
         panel.add(new JLabel("Description:"), "split 2");
         panel.add(new JScrollPane(descArea), "growx, wrap");
         JTextField dueField = new JTextField();
-        panel.add(new JLabel("Due Date (YYYY-MM-DDTHH:MM):"), "split 2");
-        panel.add(dueField, "growx, wrap");
-        JComboBox<String> folderBox = new JComboBox<>(taskController.getFolderList().toArray(new String[0]));
+        //panel.add(new JLabel("Due Date (YYYY-MM-DDTHH:MM):"), "split 2");
+        //panel.add(dueField, "growx, wrap");
+        newTaskFolderBox = new JComboBox<>();
+        newTaskFolderBox.setModel(new DefaultComboBoxModel<>(new String[]{"Default Folder"}));
         panel.add(new JLabel("Folder:"), "split 2");
-        panel.add(folderBox, "growx, wrap");
+        panel.add(newTaskFolderBox, "growx, wrap");
         
         JButton saveBtn = new JButton("Save");
         saveBtn.addActionListener(e -> {
-            taskController.handleCreateTask(titleField.getText(), descArea.getText(), (String)folderBox.getSelectedItem(), dueField.getText());
-            newTaskButton.setEnabled(true);
-            titleField.setText("");
-            descArea.setText("");
-            dueField.setText("");
-            folderBox.setSelectedIndex(0);
-            folderComboBox.setEnabled(true);
-            folderComboBox.requestFocusInWindow();
-            slideOutNewTaskPanel();
+            if ( titleField.getText().isEmpty() || titleField.getText().equals("Enter task title...") ) {
+                JOptionPane.showMessageDialog(TaskDashboardFrame.this, "The title field can't be empty.", "Error", JOptionPane.ERROR_MESSAGE);
+            }else{
+                taskController.handleCreateTask(titleField.getText(), descArea.getText(), (String)newTaskFolderBox.getSelectedItem(), dueField.getText());
+                newTaskButton.setEnabled(true);
+                titleField.setText("Enter task title...");
+                descArea.setText("");
+                dueField.setText("");
+                newTaskFolderBox.setSelectedIndex(0);
+                folderComboBox.setEnabled(true);
+                folderComboBox.requestFocusInWindow();
+                slideOutNewTaskPanel();
+            }
         });
         JButton goBackBtn = new JButton(common.getBackIcon());
         goBackBtn.setToolTipText("Go back");
         goBackBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         goBackBtn.addActionListener(e -> {
             newTaskButton.setEnabled(true);
-            titleField.setText("");
+            titleField.setText("Enter task title...");
             descArea.setText("");
             dueField.setText("");
-            folderBox.setSelectedIndex(0);
+            newTaskFolderBox.setSelectedIndex(0);
             folderComboBox.setEnabled(true);
             folderComboBox.requestFocusInWindow();
             slideOutNewTaskPanel();
         });
         panel.add(goBackBtn, "split 2"); panel.add(saveBtn, "wrap");
-        addFocusListeners(titleField, "Enter task title...");
         return panel;
     }
 
@@ -246,6 +253,15 @@ public class TaskDashboardFrame extends Frame {
         });
         panel.add(userButton);
 
+        JButton toggleColorButton = new JButton(common.getModeIcon());
+        styleIconButton(toggleColorButton, "Toggle color mode");
+        panel.add(toggleColorButton, "aligny center, gapleft 10");
+        toggleColorButton.addActionListener(e -> {
+            common.toggleColorMode();
+            refreshTheme();
+            toggleColorButton.setIcon(common.getModeIcon());
+        });
+
         return panel;
     }
 
@@ -269,6 +285,12 @@ public class TaskDashboardFrame extends Frame {
         newTaskButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         newTaskButton.addActionListener(e -> {
             newTaskButton.setEnabled(false);
+            folderComboBox.setEnabled(false);
+            String [] folderBoxArray = taskController.getFolderList().toArray(new String[0]);
+            if(folderBoxArray.length > 0){
+                newTaskFolderBox.setModel(new DefaultComboBoxModel<>(folderBoxArray));
+                newTaskFolderBox.setSelectedItem("Default Folder");
+            }
             slideInNewTaskPanel();
         });
             

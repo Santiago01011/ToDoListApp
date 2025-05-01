@@ -17,6 +17,7 @@ public class TaskHandler {
     private static final String TASKS_JSON_FILE = JSONUtils.BASE_DIRECTORY + File.separator + "tasks.json";
     private static final String SHADOWS_JSON_FILE = JSONUtils.BASE_DIRECTORY + File.separator + "shadows.json";
     public List<Task> userTasksList;
+    private List<Folder> userFoldersList;
     private LocalDateTime last_sync = null;
     private Map<String, Task> shadowUpdates = new HashMap<>();
 
@@ -40,6 +41,11 @@ public class TaskHandler {
             .description(description)
             .dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate))
             .folderName(folderName)
+            .folderId(folderName == null ? null : userFoldersList.stream()
+                .filter(folder -> folder.getFolder_name().equals(folderName))
+                .findFirst()
+                .map(Folder::getFolder_id)
+                .orElse(null))
             .status(status)
             .sync_status("new")
             .createdAt(LocalDateTime.now())
@@ -283,20 +289,6 @@ public class TaskHandler {
         }
     }
 
-    /**
-     * * Retrieves the list of folders from the userTasksList.
-     * @return A list of folder names.
-     */
-    public List<String> getFolderList() {
-        List<String> folderList = new ArrayList<>();
-        for (Task task : userTasksList) {
-            if (!folderList.contains(task.getFolder_name())) {
-                folderList.add(task.getFolder_name());
-            }
-        }
-        return folderList;
-    }
-
     public List<Task> getTasksByFolder(String selectedFolder) {
         List<Task> filteredTasks = new ArrayList<>();
         for (Task task : userTasksList) {
@@ -326,5 +318,26 @@ public class TaskHandler {
 
     public void clearShadowUpdate(String taskId) {
         shadowUpdates.remove(taskId);
+    }
+
+    public void setFoldersList(List<Folder> foldersList) {
+        this.userFoldersList = foldersList;
+    }
+
+    public List<Folder> getFoldersList() {
+        return userFoldersList;
+    }
+
+    /**
+     * Returns a list of folder names extracted from the userFoldersList.
+     * @return A list of strings containing folder names.
+     */
+    public List<String> getFoldersNamesList() {
+        if (userFoldersList == null) {
+            return new ArrayList<>();
+        }
+        return userFoldersList.stream()
+            .map(Folder::getFolder_name)
+            .toList();
     }
 }

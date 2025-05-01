@@ -94,12 +94,22 @@ public class LoginFrame extends Frame{
             }
         });
 
-        // toggleColorButton.addActionListener(e -> {
-        //     common.toggleColorMode();
-        //     SwingUtilities.updateComponentTreeUI(this);
-        //     toggleColorButton.setIcon(common.getModeIcon());
-        //     keepLoggedInCheckBox.setForeground(common.getTextColor());
-        // });
+        toggleColorButton.addActionListener(e -> {
+            common.toggleColorMode();
+            refreshTheme();
+            usernameField.setBackground(common.getTertiaryColor());
+            usernameField.setForeground(common.getTextColor());            
+            passwordField.setBackground(common.getTertiaryColor());
+            passwordField.setForeground(common.getTextColor());
+            loginButton.setBackground(common.getSecondaryColor());
+            loginButton.setForeground(common.getTextColor());
+            registerLabel.setForeground(common.getTextColor());
+            titleLabel.setForeground(common.getTextColor());
+            keepLoggedInCheckBox.setBackground(common.getPrimaryColor());
+            keepLoggedInCheckBox.setForeground(common.getTextColor());
+            toggleColorButton.setBackground(common.getPrimaryColor());         
+            toggleColorButton.setIcon(common.getModeIcon());
+        });
        
 
         loginButton.addActionListener(e -> {
@@ -107,15 +117,25 @@ public class LoginFrame extends Frame{
             userController.setPassword(new String(passwordField.getPassword()));
             boolean remember = keepLoggedInCheckBox.isSelected();
             userController.setKeepLoggedIn(remember);
-            UserProperties.setProperty("rememberMe", Boolean.toString(remember));
             boolean success = userController.doLogin();
             if (success) {
                 userController.launchDashboard(LoginFrame.this);
+                UserProperties.setProperty("rememberMe", Boolean.toString(remember));
             } else {
-                JOptionPane.showMessageDialog(LoginFrame.this,
+                if(userController.getKeepLoggedIn()) {
+                    userController.setUserUUID(UserProperties.getProperty("userUUID").toString());
+                    userController.launchDashboard(LoginFrame.this);
+                    UserProperties.setProperty("rememberMe", Boolean.toString(remember));
+                    JOptionPane.showMessageDialog(LoginFrame.this,
+                    "Login without connection, the application will work offline and save your work when you are back online.",
+                    "Connection Error",
+                    JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(LoginFrame.this,
                     "Login failed. Please check your credentials and try again.",
                     "Login Error",
                     JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
         SwingUtilities.invokeLater(() -> {

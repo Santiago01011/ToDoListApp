@@ -3,6 +3,7 @@ package DBH;
 import COMMON.JSONUtils;
 import model.TaskHandler;
 import model.Task;
+import model.Folder;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -94,8 +95,8 @@ public class NewDBHandler {
      */
     private void updateTasksFromJSON(UUID userUUID, String jsonContent) {
         String query = "SELECT * FROM todo.update_tasks_from_jsonb(?, ?::jsonb)";   
-        System.out.println("Updating tasks from JSON for user: " + userUUID);
-        System.out.println("JSON Content: " + jsonContent);
+        // System.out.println("Updating tasks from JSON for user: " + userUUID);
+        // System.out.println("JSON Content: " + jsonContent);
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setObject(1, userUUID);
@@ -108,11 +109,8 @@ public class NewDBHandler {
                     List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
                     for (Map<String, Object> successItem : successList) {
                         String taskId = (String) successItem.get("task_id");
-                        // Clear the shadow entry (handles deletions and updates alike)
                         taskHandler.clearShadowUpdate(taskId);
-                        // Remove any stale to_update entries in the main list (if present)
                         taskHandler.userTasksList.removeIf(t -> "to_update".equals(t.getSync_status()) && t.getTask_id().equals(taskId));
-                        // Promote any 'local' version to cloud
                         taskHandler.userTasksList.stream()
                             .filter(t -> t.getTask_id().equals(taskId) && "local".equals(t.getSync_status()))
                             .forEach(t -> {
@@ -132,7 +130,7 @@ public class NewDBHandler {
 
     private List<Task> retrieveTasksFromCloud(UUID userUUID, OffsetDateTime lastSync) {
         String query = "SELECT * FROM todo.retrieve_tasks_modified_since_in_jsonb(?, ?)";
-        System.out.println("Retrieving tasks from cloud for user: " + userUUID + " after last sync: " + lastSync);
+        //System.out.println("Retrieving tasks from cloud for user: " + userUUID + " after last sync: " + lastSync);
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setObject(1, userUUID);
@@ -142,7 +140,7 @@ public class NewDBHandler {
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     String jsonbResult = rs.getString(2);
-                    System.out.println("JSONB Result: " + jsonbResult);
+                    //System.out.println("JSONB Result: " + jsonbResult);
                     Map<String, Object> resultMap = JSONUtils.fromJsonString(jsonbResult);
                     @SuppressWarnings("unchecked")
                     List<String> columns = (List<String>) resultMap.get("columns");
@@ -182,6 +180,29 @@ public class NewDBHandler {
         }
     }
 
+
+    private List<Folder> getAccesibleFolders(UUID userUUID) {
+        String query = "SELECT * FROM todo.get_accessible_folders(?)";
+        try (Connection conn = NeonPool.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            List<Folder> folders = new ArrayList<>();
+            pstmt.setObject(1, userUUID);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Folder folder = new Folder.Builder(rs.getObject("folder_id", UUID.class).toString())
+                            .folderName(rs.getString("folder_name"))
+                            .build();
+                    System.out.println("Folder ID: " + folder.getFolder_id() + ", Folder Name: " + folder.getFolder_name());
+                    folders.add(folder);
+                }
+                return folders;
+            }
+        } catch (SQLException e) {
+            System.err.println("Error retrieving folders: " + e.getMessage());
+            return new ArrayList<>();
+        }
+
+    }
     // public List<Folder> getAccessibleFolders(UUID userId) throws SQLException {
     //     String sql = "SELECT folder_id, folder_name FROM todo.get_accessible_folders(?)";
     //     try (var conn = NeonPool.getConnection();
@@ -233,7 +254,6 @@ public class NewDBHandler {
         if (!tasksToRemove.isEmpty()) {
             taskHandler.userTasksList.removeIf(task -> tasksToRemove.contains(task.getTask_id()));
         }
-        // Extra safeguard: remove any task with deleted_at != null
         taskHandler.userTasksList.removeIf(task -> task.getDeleted_at() != null);
     }
 
@@ -251,13 +271,9 @@ public class NewDBHandler {
 
     // TODO: note the error in case that the local list is empty but the shadow is not
     private void syncTasks() {
-        if ( userUUID == null ) {
-            System.err.println("User UUID is not set. Cannot start sync process.");
-            return;
-        }
+        taskHandler.setFoldersList(getAccesibleFolders(userUUID));
         if ( taskHandler.userTasksList.isEmpty()) {
             System.err.println("No tasks found in local storage. Retrieving from cloud.");
-            // Initial load: merge cloud tasks (including any deletions) into empty local list
             List<Task> retrievedTasks = retrieveTasksFromCloud(userUUID, null);
             mergeTasks(retrievedTasks);
             if (taskHandler.userTasksList.isEmpty()) {
@@ -265,7 +281,7 @@ public class NewDBHandler {
                 return;
             }
             taskHandler.setLastSync(LocalDateTime.now());
-            return;  // skip pushes on first sync
+            return;
         }
         OffsetDateTime retrieveLastSync = taskHandler.getLastSync().atZone(ZoneId.systemDefault()).toOffsetDateTime();
         taskHandler.setLastSync(LocalDateTime.now());
@@ -275,8 +291,6 @@ public class NewDBHandler {
         if ( updateJsonContent != null ) updateTasksFromJSON(userUUID, updateJsonContent);
         List<Task> cloudTasks = retrieveTasksFromCloud(userUUID, retrieveLastSync);
         if ( !cloudTasks.isEmpty() ) mergeTasks(cloudTasks);
-        // Persist all changes (tasks and shadows) locally after full sync
-        taskHandler.saveTasksToJson();
     }
 
     public void setUserUUID(String userUUID) {

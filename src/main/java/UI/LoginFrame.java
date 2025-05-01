@@ -89,13 +89,18 @@ public class LoginFrame extends Frame{
 
         registerLabel.addMouseListener(new java.awt.event.MouseAdapter() {
             public void mouseClicked(java.awt.event.MouseEvent evt) {
-            //userController.showRegistration();
-            LoginFrame.this.dispose();
+            SwingUtilities.invokeLater(() -> {
+                RegisterFrame registerFrame = new RegisterFrame("Register");
+                registerFrame.setController(new UserController());
+                registerFrame.setVisible(true);
+                LoginFrame.this.dispose();
+            });
             }
         });
 
         toggleColorButton.addActionListener(e -> {
             common.toggleColorMode();
+            UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
             refreshTheme();
             usernameField.setBackground(common.getTertiaryColor());
             usernameField.setForeground(common.getTextColor());            

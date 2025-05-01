@@ -12,9 +12,6 @@ import java.awt.Image;
 
 public class common {
 
-    // Variable to store the current mode based on the time
-    //private static boolean useNightMode = (java.time.LocalTime.now().getHour() >= 22 || java.time.LocalTime.now().getHour() < 7) ? true : false;
-    //public static boolean useNightMode = false;
     public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
 
     // Day mode colors
@@ -132,6 +129,23 @@ public class common {
         String path = useNightMode ? "assets/restore_night.png" : "assets/restore_day.png";
         return loadIcon(path);
     }
+
+    // Added methods for user action icons
+    public static ImageIcon getLogoutIcon() {
+        String path = useNightMode ? "assets/logout_night.png" : "assets/logout_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getEditUserIcon() {
+        String path = useNightMode ? "assets/editUser_night.png" : "assets/editUser_day.png";
+        return loadIcon(path);
+    }
+
+    public static ImageIcon getDeleteUserIcon() {
+        String path = useNightMode ? "assets/deleteUser_night.png" : "assets/deleteUser_day.png";
+        return loadIcon(path);
+    }
+
 
     public static void toggleColorMode(){
         useNightMode = !useNightMode;

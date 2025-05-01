@@ -79,6 +79,13 @@ public class Frame extends JFrame{
         UIManager.put("OptionPane.messageForeground", common.getTextColor());
         UIManager.put("OptionPane.background", common.getPrimaryColor());
         UIManager.put("Panel.background", common.getPrimaryColor());
+        UIManager.put("PopupMenu.background", common.getTertiaryColor());
+        UIManager.put("PopupMenu.border", javax.swing.BorderFactory.createLineBorder(common.getPanelColor().darker(), 2));
+        UIManager.put("MenuItem.foreground", common.getTextColor());
+        UIManager.put("MenuItem.selectionBackground", common.getSecondaryColor());
+        UIManager.put("MenuItem.selectionForeground", common.getTextColor());
+        UIManager.put("MenuItem.acceleratorForeground", common.getTextColor().darker());
+        UIManager.put("MenuItem.acceleratorSelectionForeground", common.getTextColor());
 
     }
 

@@ -3,6 +3,7 @@ package controller;
 import model.TaskHandler;
 import model.Task;
 import model.Folder;
+import UI.LoginFrame;
 import UI.TaskDashboardFrame;
 import COMMON.UserProperties;
 import java.util.List;
@@ -11,6 +12,9 @@ import java.util.concurrent.CompletableFuture;
 import DBH.NewDBHandler;
 
 import java.time.LocalDateTime;
+
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 public class TaskController {
 
@@ -36,8 +40,20 @@ public class TaskController {
     }
 
     public void loadInitialFolderList() {
-        List<String> folders = taskHandler.getFoldersNamesList();
-        view.updateFolderList(folders);
+        // Fetch accessible folders asynchronously to avoid UI blocking and handle offline fallback
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return dbHandler.fetchAccessibleFolders();
+            } catch (Exception ex) {
+                System.err.println("Warning: Unable to fetch folders (offline?): " + ex.getMessage());
+                return taskHandler.getFoldersList();
+            }
+        }).thenAcceptAsync(folders -> {
+            taskHandler.setFoldersList(folders);
+            SwingUtilities.invokeLater(() ->
+                view.updateFolderList(taskHandler.getFoldersNamesList())
+            );
+        });
     }
 
     public void loadInitialSyncTime() {
@@ -70,11 +86,12 @@ public class TaskController {
         System.out.println("Controller: Sync request received.");
         CompletableFuture<Boolean> syncFuture = dbHandler.startSyncProcess();
         syncFuture.thenAcceptAsync(succes -> {
-            if ( succes ){
+            if (succes) {
                 System.out.println("Controller: Async sync completed successfully. Updating UI.");
                 view.updateLastSyncLabel(taskHandler.getLastSync());
                 view.refreshTaskListDisplay(taskHandler.userTasksList);
-                view.updateFolderList(taskHandler.getFoldersNamesList());
+                // reload folders from DB
+                loadInitialFolderList();
             }
         }).exceptionally(ex -> {
             System.out.println("Controller: Exception during sync: " + ex.getMessage());
@@ -153,6 +170,37 @@ public class TaskController {
         } else {
              System.err.println("Controller: Could not find task to toggle completion.");
         }
+    }
+
+    // --- User Action Handlers ---
+
+    public void handleLogoutRequest() {
+        System.out.println("Controller: Logout request received.");
+        UserProperties.setProperty("rememberMe", "false");
+        UserProperties.logOut();
+        view.dispose();
+        SwingUtilities.invokeLater(() -> {
+            LoginFrame loginFrame = new LoginFrame("Login");
+            loginFrame.setController(new UserController());
+        });
+        System.out.println("Controller: User logged out, dashboard closed.");
+    }
+
+    public void handleChangeUsernameRequest() {
+        System.out.println("Controller: Change Username request received.");
+        // TODO: Implement logic to show a dialog for changing username
+        String newUsername = JOptionPane.showInputDialog(view, "Enter new username:");
+        if (newUsername != null && !newUsername.trim().isEmpty()) {
+            // Call API to change username
+            System.out.println("Attempting to change username to: " + newUsername);
+        }
+    }
+
+    public void handleDeleteAccountRequest() {
+        System.out.println("Controller: Delete Account request received.");
+        // TODO: Implement logic to permanently delete the user account
+        // This is a destructive action, will be maneged through the API
+        
     }
 
 }

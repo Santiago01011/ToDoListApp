@@ -73,6 +73,16 @@ public class UserController {
         return false;
     }
 
+    public boolean doRegister() {
+        try {
+            boolean success = APIService.register(username, userEmail, password);
+            return success;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return false;
+        }
+    }
+
     public void launchDashboard(LoginFrame loginFrame) {
         TaskHandler taskHandler = new TaskHandler();
         NewDBHandler dbHandler = new NewDBHandler(taskHandler);

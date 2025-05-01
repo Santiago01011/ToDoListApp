@@ -15,8 +15,8 @@ public class APIService {
     private static final String BASE_URL = (String) UserProperties.getProperty("authApiUrl");
 
     /**
-     * Performs user login and returns the JSON response as a map.
-     */
+    * Performs user login and returns the JSON response as a map.
+    */
     public static Map<String, Object> login(String username, String password) throws IOException, InterruptedException {
         Map<String, String> creds = new HashMap<>();
         creds.put("username", username);
@@ -31,8 +31,22 @@ public class APIService {
     }
 
     /**
-     * Sends a POST request to the given API path, optionally including the stored JWT.
-     */
+    * Performs user registration and returns true if the response code is 200.
+    */
+    public static boolean register(String username, String email, String password) throws IOException, InterruptedException {
+        Map<String, String> creds = new HashMap<>();
+        creds.put("username", username);
+        creds.put("email", email);
+        creds.put("password", password);
+        String requestBody = JSONUtils.toJsonString(creds);
+        HttpResponse<String> response = post("/api/auth/register", requestBody, false);
+        return response.statusCode() == 200;
+        //TODO: Throw exception if not 200
+    }
+
+    /**
+    * Sends a POST request to the given API path, optionally including the stored JWT.
+    */
     public static HttpResponse<String> post(String path, String jsonBody, boolean withAuth) throws IOException, InterruptedException {
         HttpRequest.Builder builder = HttpRequest.newBuilder()
             .uri(URI.create(BASE_URL + path))

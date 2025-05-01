@@ -13,7 +13,6 @@ import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -85,11 +84,12 @@ public class NewDBHandler {
 
     /**
      * Updates tasks in the database from a JSON string and updates the user's task list.
-     * 
+     * <p>
      * This method executes a database function that validates and updates a list of tasks with the updated status,
      * and returns a JSON String with success and failed key-value pairs. For each successful task, updates the local
      * task list setting the sync status from "local" to "cloud", delete the "updated" copy of the task 
      * and sets the last sync timestamp.
+     * </p>
      * @param userUUID
      * @param jsonContent
      */
@@ -128,6 +128,28 @@ public class NewDBHandler {
         }
     }
 
+
+    
+    /**
+     * Retrieves tasks for a specific user from the cloud database that have been modified
+     * since the provided last synchronization timestamp.
+     * <p>
+     * This method executes a database function {@code todo.retrieve_tasks_modified_since_in_jsonb}
+     * which returns the task data in JSONB format. The JSONB result is then parsed to reconstruct
+     * a list of {@link Task} objects.
+     * </p>
+     * <p>
+     * If {@code lastSync} is null, it implies that all tasks for the user should be retrieved.
+     * </p>
+     *
+     * @param userUUID
+     * @param lastSync The timestamp of the last synchronization. Only tasks modified
+     *                 at or after this time will be retrieved. Can be null to fetch
+     *                 all user tasks.
+     * @return A List of {@link Task} objects retrieved from the cloud database.
+     *         Returns an empty list if no tasks are found or if an error occurs during
+     *         retrieval or processing.
+     */
     private List<Task> retrieveTasksFromCloud(UUID userUUID, OffsetDateTime lastSync) {
         String query = "SELECT * FROM todo.retrieve_tasks_modified_since_in_jsonb(?, ?)";
         //System.out.println("Retrieving tasks from cloud for user: " + userUUID + " after last sync: " + lastSync);
@@ -180,8 +202,18 @@ public class NewDBHandler {
         }
     }
 
-
-    private List<Folder> getAccesibleFolders(UUID userUUID) {
+    /**
+     * Retrieves a list of folders accessible to the user from the cloud database.
+     * <p>
+     * This method executes a database function {@code todo.get_accessible_folders}
+     * which returns the folder data. The result is then parsed to reconstruct
+     * a list of {@link Folder} objects.
+     * </p>
+     *
+     * @param userUUID The UUID of the user for whom to retrieve accessible folders.
+     * @return A List of {@link Folder} objects representing the user's accessible folders.
+     */
+    private List<Folder> getAccessibleFolders(UUID userUUID) {
         String query = "SELECT * FROM todo.get_accessible_folders(?)";
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
@@ -192,7 +224,6 @@ public class NewDBHandler {
                     Folder folder = new Folder.Builder(rs.getObject("folder_id", UUID.class).toString())
                             .folderName(rs.getString("folder_name"))
                             .build();
-                    System.out.println("Folder ID: " + folder.getFolder_id() + ", Folder Name: " + folder.getFolder_name());
                     folders.add(folder);
                 }
                 return folders;
@@ -201,23 +232,7 @@ public class NewDBHandler {
             System.err.println("Error retrieving folders: " + e.getMessage());
             return new ArrayList<>();
         }
-
     }
-    // public List<Folder> getAccessibleFolders(UUID userId) throws SQLException {
-    //     String sql = "SELECT folder_id, folder_name FROM todo.get_accessible_folders(?)";
-    //     try (var conn = NeonPool.getConnection();
-    //          var ps = conn.prepareStatement(sql)) {
-    //       ps.setObject(1, userId);
-    //       try (var rs = ps.executeQuery()) {
-    //         List<Folder> folders = new ArrayList<>();
-    //         while (rs.next()) {
-    //           folders.add(new Folder(rs.getObject("folder_id", UUID.class),
-    //                                  rs.getString("folder_name")));
-    //         }
-    //         return folders;
-    //       }
-    //     }
-    // }
 
     /**
      * Merges cloud tasks into the local userTasksList according to the following rules:
@@ -271,7 +286,6 @@ public class NewDBHandler {
 
     // TODO: note the error in case that the local list is empty but the shadow is not
     private void syncTasks() {
-        taskHandler.setFoldersList(getAccesibleFolders(userUUID));
         if ( taskHandler.userTasksList.isEmpty()) {
             System.err.println("No tasks found in local storage. Retrieving from cloud.");
             List<Task> retrievedTasks = retrieveTasksFromCloud(userUUID, null);
@@ -301,4 +315,11 @@ public class NewDBHandler {
         return userUUID.toString();
     }
 
+    /**
+     * Public wrapper to retrieve the current user's accessible folders.
+     * @return List of accessible Folder objects
+     */
+    public List<Folder> fetchAccessibleFolders() {
+        return getAccessibleFolders(userUUID);
+    }
 }

@@ -32,9 +32,11 @@ public class TaskHandler {
     public TaskHandler() {
         this.userTasksList = loadTasksFromJson();
         loadShadowsFromJson();
+        this.userFoldersList = new ArrayList<>();
     }
     
     public void addTask(String title, String description, String status, String targetDate, String folderName) {
+        //TODO: Null Safety and Initialization, check and validate folders.
         String id = UUID.randomUUID().toString();
         Task task = new Task.Builder(id)
             .taskTitle(title)

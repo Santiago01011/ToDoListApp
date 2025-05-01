@@ -1,22 +1,14 @@
 package controller;
 
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.URI;
-import java.util.HashMap;
 import java.util.Map;
 
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
-
-import COMMON.JSONUtils;
 import COMMON.UserProperties;
 import UI.LoginFrame;
 import model.TaskHandler;
 import DBH.NewDBHandler;
 import UI.TaskDashboardFrame;
 import controller.TaskController;
+import service.APIService;
 
 public class UserController {
 
@@ -24,12 +16,7 @@ public class UserController {
     private boolean keepLoggedIn = Boolean.valueOf((String) UserProperties.getProperty("rememberMe"));
     private String username = (String) UserProperties.getProperty("username");
     private String password = (String) UserProperties.getProperty("password");
-    private String authUrl = (String) UserProperties.getProperty("authApiUrl");
     private String userEmail;
-
-    public UserController() {
-
-    }
 
     public boolean getKeepLoggedIn() {
         return keepLoggedIn;
@@ -55,7 +42,6 @@ public class UserController {
         this.username = userName;
     }
     
-    // Allow setting password from login UI
     public void setPassword(String password) {
         this.password = password;
     }
@@ -69,35 +55,32 @@ public class UserController {
     }
 
     public boolean doLogin() {
-        try {
-            Map<String, String> creds = new HashMap<>();
-            creds.put("username", username);
-            creds.put("email", "");
-            creds.put("password", password);
-            String requestBody = JSONUtils.toJsonString(creds);
-            HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(authUrl + "/api/auth/login"))
-                .header("Content-Type", "application/json")
-                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                .build();
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() == 200) {
-                Map<String, Object> respMap = JSONUtils.fromJsonString(response.body());
-                userUUID = (String) respMap.get("userId");
-                String token = (String) respMap.get("token");
-                UserProperties.setProperty("token", token);
-                UserProperties.setProperty("userUUID", userUUID);
+        try{
+            Map<String, Object> response = APIService.login(username, password);
+            if (response != null) {
+                String token = (String) response.get("token");
+                userUUID = (String) response.get("userId");
                 UserProperties.setProperty("username", username);
                 UserProperties.setProperty("password", password);
+                UserProperties.setProperty("token", token);
+                UserProperties.setProperty("userUUID", userUUID);
                 return true;
-            } else {
-                System.err.println("Login failed: " + response.body());
             }
         } catch (Exception e) {
-            System.err.println("Error during login: " + e.getMessage());
+            System.err.println(e.getMessage());
+            return false;
         }
         return false;
+    }
+
+    public boolean doRegister() {
+        try {
+            boolean success = APIService.register(username, userEmail, password);
+            return success;
+        } catch (Exception e) {
+            System.err.println(e.getMessage());
+            return false;
+        }
     }
 
     public void launchDashboard(LoginFrame loginFrame) {

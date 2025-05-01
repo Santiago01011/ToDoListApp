@@ -1,22 +1,47 @@
 package UI;
 
-import java.awt.*;
-import java.awt.event.ActionListener;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Image;
+import java.awt.Insets;
+import java.awt.Point;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import java.util.List;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
+import javax.swing.BorderFactory;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.ImageIcon;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.UIManager;
+import javax.swing.border.EmptyBorder;
 
-import model.Task;
+import COMMON.UserProperties;
 import COMMON.common;
 import controller.TaskController;
+import model.Task;
 import net.miginfocom.swing.MigLayout;
 
 public class TaskDashboardFrame extends Frame {
@@ -28,8 +53,13 @@ public class TaskDashboardFrame extends Frame {
     private JPanel contentContainer;
     private JPanel mainPanel;
     private JPanel newTaskPanel;
+    private JPanel topBarPanel;
+    private JButton toggleColorButton;
     private JButton newTaskButton;
     private boolean isNewTaskVisible = false;
+    private JComboBox<String> newTaskFolderBox;
+    private boolean suppressFolderEvents = false;
+    private JPopupMenu userPopupMenu;
 
     public TaskDashboardFrame(String title) {
         super(title);
@@ -49,6 +79,20 @@ public class TaskDashboardFrame extends Frame {
         });
     }
 
+    private void rebuildUI() {
+        SwingUtilities.invokeLater(() -> {
+            Container content = getContentPane();
+            content.removeAll();
+            initComponents();
+            taskController.loadInitialFolderList();
+            taskController.loadInitialTasks();
+            updateLastSyncLabel();
+            toggleColorButton.setIcon(common.getModeIcon());
+            revalidate();
+            repaint();
+        });
+    }
+
     public void setController(TaskController taskController) {
         this.taskController = taskController;
     }
@@ -57,8 +101,8 @@ public class TaskDashboardFrame extends Frame {
         if (taskController == null) {
             System.err.println("Error: TaskController not set before initializing TaskDashboardFrame.");
             JOptionPane.showMessageDialog(this,
-                "Application initialization failed: Controller not set.",
-                "Initialization Error", JOptionPane.ERROR_MESSAGE);
+                    "Application initialization failed: Controller not set.",
+                    "Initialization Error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
             return;
         }
@@ -77,7 +121,7 @@ public class TaskDashboardFrame extends Frame {
         int height = getHeight();
 
         mainPanel = new JPanel(new BorderLayout(0, 0));
-        JPanel topBarPanel = createTopBarPanel();
+        topBarPanel = createTopBarPanel();
         add(topBarPanel, BorderLayout.NORTH);
 
         taskListPanel = new JPanel(new MigLayout("wrap 1, fillx, inset 15", "[grow, fill]", ""));
@@ -112,58 +156,71 @@ public class TaskDashboardFrame extends Frame {
             }
         });
 
+
     }
 
-    private JPanel createNewTaskPanel() {        
-        JPanel panel = new JPanel(new MigLayout("insets 5", "[grow]", "[][][][grow][]"));
-        panel.setBorder(new EmptyBorder(10,5,5,5));
+    private JPanel createNewTaskPanel() {
+        JPanel panel = new JPanel(new MigLayout("insets 5", "[grow]", "[][][][][]"));
+        panel.setBorder(new EmptyBorder(10, 5, 5, 5));
         panel.add(new JLabel("New Task"), "wrap");
         JTextField titleField = new JTextField();
+        titleField.setText("Enter task title...");
+        addFocusListeners(titleField, "Enter task title...");
         panel.add(new JLabel("Title:"), "split 2");
         panel.add(titleField, "growx, wrap");
-        
-        JTextArea descArea = new JTextArea(5,20);
+
+        JTextArea descArea = new JTextArea(5, 10);
         panel.add(new JLabel("Description:"), "split 2");
         panel.add(new JScrollPane(descArea), "growx, wrap");
         JTextField dueField = new JTextField();
-        panel.add(new JLabel("Due Date (YYYY-MM-DDTHH:MM):"), "split 2");
-        panel.add(dueField, "growx, wrap");
-        JComboBox<String> folderBox = new JComboBox<>(taskController.getFolderList().toArray(new String[0]));
+        // panel.add(new JLabel("Due Date (YYYY-MM-DDTHH:MM):"), "split 2");
+        // panel.add(dueField, "growx, wrap");
+        newTaskFolderBox = new JComboBox<>();
+        newTaskFolderBox.setModel(new DefaultComboBoxModel<>(new String[] { "Default Folder" }));
         panel.add(new JLabel("Folder:"), "split 2");
-        panel.add(folderBox, "growx, wrap");
-        
+        panel.add(newTaskFolderBox, "growx, wrap");
+
         JButton saveBtn = new JButton("Save");
         saveBtn.addActionListener(e -> {
-            taskController.handleCreateTask(titleField.getText(), descArea.getText(), (String)folderBox.getSelectedItem(), dueField.getText());
-            newTaskButton.setEnabled(true);
-            titleField.setText("");
-            descArea.setText("");
-            dueField.setText("");
-            folderBox.setSelectedIndex(0);
-            folderComboBox.setEnabled(true);
-            folderComboBox.requestFocusInWindow();
-            slideOutNewTaskPanel();
+            if (titleField.getText().isEmpty() || titleField.getText().equals("Enter task title...")) {
+                JOptionPane.showMessageDialog(TaskDashboardFrame.this, "The title field can't be empty.", "Error",
+                        JOptionPane.ERROR_MESSAGE);
+            } else {
+                taskController.handleCreateTask(titleField.getText(), descArea.getText(),
+                        (String) newTaskFolderBox.getSelectedItem(), dueField.getText());
+                newTaskButton.setEnabled(true);
+                titleField.setText("Enter task title...");
+                descArea.setText("");
+                dueField.setText("");
+                if (newTaskFolderBox.getItemCount() > 0)
+                    newTaskFolderBox.setSelectedIndex(0);
+                folderComboBox.setEnabled(true);
+                folderComboBox.requestFocusInWindow();
+                slideOutNewTaskPanel();
+            }
         });
         JButton goBackBtn = new JButton(common.getBackIcon());
         goBackBtn.setToolTipText("Go back");
         goBackBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         goBackBtn.addActionListener(e -> {
             newTaskButton.setEnabled(true);
-            titleField.setText("");
+            titleField.setText("Enter task title...");
             descArea.setText("");
             dueField.setText("");
-            folderBox.setSelectedIndex(0);
+            if (newTaskFolderBox.getItemCount() > 0)
+                newTaskFolderBox.setSelectedIndex(0);
             folderComboBox.setEnabled(true);
             folderComboBox.requestFocusInWindow();
             slideOutNewTaskPanel();
         });
-        panel.add(goBackBtn, "split 2"); panel.add(saveBtn, "wrap");
-        addFocusListeners(titleField, "Enter task title...");
+        panel.add(goBackBtn, "split 2");
+        panel.add(saveBtn, "wrap");
         return panel;
     }
 
     private void slideInNewTaskPanel() {
-        if (isNewTaskVisible) return;
+        if (isNewTaskVisible)
+            return;
         isNewTaskVisible = true;
         int width = contentContainer.getWidth();
         Timer timer = new Timer(2, null);
@@ -171,19 +228,20 @@ public class TaskDashboardFrame extends Frame {
             Point mainLoc = mainPanel.getLocation();
             Point newLoc = newTaskPanel.getLocation();
             if (newLoc.x <= 0) {
-                newTaskPanel.setLocation(0,0);
-                mainPanel.setLocation(-width,0);
-                ((Timer)e.getSource()).stop();
+                newTaskPanel.setLocation(0, 0);
+                mainPanel.setLocation(-width, 0);
+                ((Timer) e.getSource()).stop();
             } else {
                 mainPanel.setLocation(mainLoc.x - 40, 0);
-                newTaskPanel.setLocation(newLoc.x - 40,0);
+                newTaskPanel.setLocation(newLoc.x - 40, 0);
             }
         });
         timer.start();
     }
 
     private void slideOutNewTaskPanel() {
-        if (!isNewTaskVisible) return;
+        if (!isNewTaskVisible)
+            return;
         isNewTaskVisible = false;
         int width = contentContainer.getWidth();
         Timer timer = new Timer(2, null);
@@ -191,12 +249,12 @@ public class TaskDashboardFrame extends Frame {
             Point mainLoc = mainPanel.getLocation();
             Point newLoc = newTaskPanel.getLocation();
             if (mainLoc.x >= 0) {
-                mainPanel.setLocation(0,0);
-                newTaskPanel.setLocation(width,0);
-                ((Timer)e.getSource()).stop();
+                mainPanel.setLocation(0, 0);
+                newTaskPanel.setLocation(width, 0);
+                ((Timer) e.getSource()).stop();
             } else {
                 mainPanel.setLocation(mainLoc.x + 40, 0);
-                newTaskPanel.setLocation(newLoc.x + 40,0);
+                newTaskPanel.setLocation(newLoc.x + 40, 0);
             }
         });
         timer.start();
@@ -216,12 +274,11 @@ public class TaskDashboardFrame extends Frame {
 
         folderComboBox = new JComboBox<>();
         folderComboBox.addActionListener(e -> {
-            if (taskController != null && folderComboBox.getItemCount() > 0) {
-                if (e.getActionCommand().equals("comboBoxChanged")) {
-                    String selectedFolder = (String) folderComboBox.getSelectedItem();
-                    System.out.println("Folder selected: " + selectedFolder);
-                    taskController.handleFilterByFolderRequest(selectedFolder);
-                }
+            if (suppressFolderEvents || taskController == null || folderComboBox.getItemCount() == 0)
+                return;
+            if ("comboBoxChanged".equals(e.getActionCommand())) {
+                String selectedFolder = (String) folderComboBox.getSelectedItem();
+                taskController.handleFilterByFolderRequest(selectedFolder);
             }
         });
         panel.add(folderComboBox, "width 150!");
@@ -238,13 +295,22 @@ public class TaskDashboardFrame extends Frame {
 
         JButton userButton = new JButton(common.getUserConfigIcon());
         styleIconButton(userButton, "User Profile");
+        createUserPopupMenu();
         userButton.addActionListener(e -> {
-            if (taskController != null) {
-                System.out.println("User button clicked");
-                taskController.handleUserButtonClicked();
-            }
+            userPopupMenu.show(userButton, 0, userButton.getHeight());
         });
         panel.add(userButton);
+
+        toggleColorButton = new JButton(common.getModeIcon());
+        styleIconButton(toggleColorButton, "Toggle color mode");
+        panel.add(toggleColorButton, "aligny center, gapleft 10");
+        // Attach theme toggle action listener
+        toggleColorButton.addActionListener(e -> {
+            common.toggleColorMode();
+            UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
+            refreshTheme();
+            rebuildUI();
+        });
 
         return panel;
     }
@@ -264,14 +330,17 @@ public class TaskDashboardFrame extends Frame {
         panel.setBackground(common.getPanelColor().darker());
 
         newTaskButton = new JButton("New task");
-        newTaskButton.setIcon(new ImageIcon(common.getAddIcon().getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH)));
+        newTaskButton
+                .setIcon(new ImageIcon(common.getAddIcon().getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH)));
         newTaskButton.setIconTextGap(5);
         newTaskButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         newTaskButton.addActionListener(e -> {
             newTaskButton.setEnabled(false);
+            folderComboBox.setEnabled(false);
+            updateNewTaskFolderBox(taskController.getFolderList());
             slideInNewTaskPanel();
         });
-            
+
         panel.add(newTaskButton, "gapleft 5");
 
         lastSyncLabel = new JLabel("Sync status unknown");
@@ -306,7 +375,8 @@ public class TaskDashboardFrame extends Frame {
             if (tasks != null && !tasks.isEmpty()) {
                 boolean tasksDisplayed = false;
                 for (Task task : tasks) {
-                    if (task == null) continue;
+                    if (task == null)
+                        continue;
 
                     JPanel taskCard = createTaskCardPanel(task);
                     taskListPanel.add(taskCard, "growx, gapbottom 10");
@@ -331,49 +401,47 @@ public class TaskDashboardFrame extends Frame {
 
     public void updateFolderList(List<String> folderList) {
         SwingUtilities.invokeLater(() -> {
-            if (folderComboBox != null) {
-                String currentSelection = (String) folderComboBox.getSelectedItem();
-
-                ActionListener[] listeners = folderComboBox.getActionListeners();
-                for (ActionListener l : listeners) {
-                    folderComboBox.removeActionListener(l);
-                }
-
-                folderComboBox.removeAllItems();
-                folderComboBox.addItem("All Folders");
-                if (folderList != null) {
-                    for (String folder : folderList) {
-                        folderComboBox.addItem(folder);
-                    }
-                }
-
-                boolean selectionRestored = false;
-                if (currentSelection != null && folderList != null) {
-                    for (String item : folderList) {
-                        if (item.equals(currentSelection)) {
-                            folderComboBox.setSelectedItem(currentSelection);
-                            selectionRestored = true;
-                            break;
-                        }
-                    }
-                }
-                if (!selectionRestored) {
-                    folderComboBox.setSelectedItem("All Folders");
-                }
-
-                for (ActionListener l : listeners) {
-                    folderComboBox.addActionListener(l);
+            if (folderComboBox == null)
+                return;
+            suppressFolderEvents = true;
+            String currentSelection = (String) folderComboBox.getSelectedItem();
+            folderComboBox.removeAllItems();
+            folderComboBox.addItem("All Folders");
+            if (folderList != null) {
+                for (String folder : folderList) {
+                    folderComboBox.addItem(folder);
                 }
             }
+            if (currentSelection != null && folderList != null && folderList.contains(currentSelection)) {
+                folderComboBox.setSelectedItem(currentSelection);
+            } else {
+                folderComboBox.setSelectedItem("All Folders");
+            }
+            suppressFolderEvents = false;
         });
+    }
+
+
+    private void updateNewTaskFolderBox(List<String> folderList) {
+        DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) newTaskFolderBox.getModel();
+        model.removeAllElements();
+        // model.addElement("Default Folder");
+        if (folderList != null) {
+            for (String folder : folderList) {
+                model.addElement(folder);
+            }
+        }
+        model.setSelectedItem("Default Folder");
     }
 
     public void updateLastSyncLabel(LocalDateTime lastSyncTime) {
         SwingUtilities.invokeLater(() -> {
             if (lastSyncLabel != null) {
                 DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm:ss");
-                if (lastSyncTime != null) lastSyncLabel.setText("Last Sync: " + lastSyncTime.format(dateFormatter));
-                else lastSyncLabel.setText("Never synced.");
+                if (lastSyncTime != null)
+                    lastSyncLabel.setText("Last Sync: " + lastSyncTime.format(dateFormatter));
+                else
+                    lastSyncLabel.setText("Never synced.");
             }
         });
     }
@@ -405,11 +473,12 @@ public class TaskDashboardFrame extends Frame {
         card.add(titleLabel, "growx");
 
         RoundedLabel statusLabel = new RoundedLabel(
-            task.getStatus() != null ? task.getStatus() : "Unknown",
-            15
-        );
-        Color statusColor = task.getStatus().equalsIgnoreCase("in_progress") ? common.getContrastColor() : common.getPanelColor().darker();
-        statusLabel.setForeground(task.getStatus().equalsIgnoreCase("in_progress") ?  common.getTextColor().darker() : common.getTextColor());
+                task.getStatus() != null ? task.getStatus() : "Unknown",
+                15);
+        Color statusColor = task.getStatus().equalsIgnoreCase("in_progress") ? common.getContrastColor()
+                : common.getPanelColor().darker();
+        statusLabel.setForeground(task.getStatus().equalsIgnoreCase("in_progress") ? common.getTextColor().darker()
+                : common.getTextColor());
         statusLabel.setBackground(statusColor);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 9, 3, 9));
         statusLabel.setFont(statusLabel.getFont().deriveFont(Font.PLAIN, 11f));
@@ -496,6 +565,45 @@ public class TaskDashboardFrame extends Frame {
         if (taskController != null) {
             taskController.loadInitialSyncTime();
         }
+    }
+
+    private void createUserPopupMenu() {
+        userPopupMenu = new JPopupMenu();
+
+        JMenuItem logoutItem = new JMenuItem("Log out", common.getLogoutIcon());
+        logoutItem.addActionListener(e -> {
+            if (taskController != null) {
+                System.out.println("Log out selected");
+                taskController.handleLogoutRequest();
+            }
+        });
+        userPopupMenu.add(logoutItem);
+
+        JMenuItem changeUsernameItem = new JMenuItem("Edit Account", common.getEditUserIcon());
+        changeUsernameItem.addActionListener(e -> {
+            if (taskController != null) {
+                System.out.println("Edit Accoun selected");
+                taskController.handleChangeUsernameRequest();
+            }
+        });
+        userPopupMenu.add(changeUsernameItem);
+
+        JMenuItem deleteAccountItem = new JMenuItem("Delete Account", common.getDeleteUserIcon());
+        deleteAccountItem.setForeground(common.CONTRAST_COLOR_NIGHT.brighter());
+        deleteAccountItem.addActionListener(e -> {
+            if (taskController != null) {
+                System.out.println("Delete Account selected");
+                int result = JOptionPane.showConfirmDialog(TaskDashboardFrame.this,
+                        "Are you sure you want to permanently delete your account and all associated data?",
+                        "Confirm Account Deletion",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+                if (result == JOptionPane.YES_OPTION) {
+                    taskController.handleDeleteAccountRequest();
+                }
+            }
+        });
+        userPopupMenu.add(deleteAccountItem);
     }
 
 }

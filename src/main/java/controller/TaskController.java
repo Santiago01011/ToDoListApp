@@ -3,11 +3,16 @@ package controller;
 import model.TaskHandler;
 import model.Task;
 import model.Folder;
+import model.FiltersCriteria;
 import UI.LoginFrame;
 import UI.TaskDashboardFrame;
 import COMMON.UserProperties;
+
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 
 import DBH.NewDBHandler;
 
@@ -36,7 +41,7 @@ public class TaskController {
     }
 
     public void loadInitialTasks() {
-        view.refreshTaskListDisplay(taskHandler.userTasksList);
+        view.refreshTaskListDisplay();
     }
 
     public void loadInitialFolderList() {
@@ -60,26 +65,55 @@ public class TaskController {
         view.updateLastSyncLabel(taskHandler.getLastSync());
     }
 
-    // --- Action Handlers ---
+    public List<Task> getTasksByFolder(List<Task> sourceList ,String selectedFolder) {
+        return sourceList.stream()
+                .filter(task -> task.getFolder_name().equals(selectedFolder))
+                .toList();                
+    }
 
-    public void handleFilterByFolderRequest(String selectedFolder) {
-        System.out.println("Controller: Filtering tasks by folder: " + selectedFolder);
-        List<Task> filteredTasks;
-        if ("All Folders".equals(selectedFolder) || selectedFolder == null) {
-            filteredTasks = taskHandler.userTasksList;
-        } else {
-            filteredTasks = taskHandler.getTasksByFolder(selectedFolder);
-        }
-        view.refreshTaskListDisplay(filteredTasks);
+    public List<Task> getTasksByStatus(List<Task> sourceList, String status) {
+        return sourceList.stream()
+                .filter(task -> task.getStatus().equals(status))
+                .toList();                
+    }
+
+    /**
+    * Filters tasks based on the provided criteria object.
+    * Applies filters sequentially.
+    *
+    * @param criteria The TaskFilterCriteria record containing filter settings.
+    * @return A new list containing tasks matching the criteria.
+    */
+    public List<Task> getTasksByFilters(FiltersCriteria criteria) {
+        List<Task> filteredTasks = new ArrayList<>(taskHandler.userTasksList);
+        if (criteria.folderName() != null && !criteria.folderName().equals("All Folders"))
+            filteredTasks = getTasksByFolder(filteredTasks, criteria.folderName());
+
+        if (criteria.filterByStatus() != null && criteria.filterByStatus())
+            filteredTasks = getTasksByStatus(filteredTasks, criteria.status()); 
+        
+        return filteredTasks;
     }
 
     /**
      * Handles creation of a new task from the UI input.
      */
-    public void handleCreateTask(String title, String description, String folderName, String dueDate) {
+    public void handleCreateTask(String title, String description, String folderName, LocalDateTime dueDate, String status) {
         System.out.println("Controller: Creating new task: " + title);
-        taskHandler.addTask(title, description, "pending", dueDate, folderName);
-        view.refreshTaskListDisplay(taskHandler.userTasksList);
+        String id = UUID.randomUUID().toString();
+        Task task = new Task.Builder(id)
+            .taskTitle(title)
+            .description(description)
+            .dueDate(dueDate)
+            .folderName(folderName)
+            .folderId(taskHandler.getFolderIdByName(folderName))
+            .status(status)
+            .sync_status("new")
+            .createdAt(LocalDateTime.now())
+            .updatedAt(LocalDateTime.now())
+            .build();
+        taskHandler.userTasksList.add(task);
+        view.refreshTaskListDisplay();
     }
 
     public void handleSyncRequest() {
@@ -89,8 +123,7 @@ public class TaskController {
             if (succes) {
                 System.out.println("Controller: Async sync completed successfully. Updating UI.");
                 view.updateLastSyncLabel(taskHandler.getLastSync());
-                view.refreshTaskListDisplay(taskHandler.userTasksList);
-                // reload folders from DB
+                view.refreshTaskListDisplay();
                 loadInitialFolderList();
             }
         }).exceptionally(ex -> {
@@ -107,11 +140,6 @@ public class TaskController {
     public void handleFilterButtonClicked() {
         System.out.println("Controller: Filter button clicked.");
         // TODO: Implement logic to show filter options (e.g., a dialog)
-    }
-
-    public void handleUserButtonClicked() {
-        System.out.println("Controller: User button clicked.");
-        // TODO: Implement logic to show user profile/settings view
     }
 
     public void handleViewTaskRequest(String taskId) {
@@ -141,7 +169,7 @@ public class TaskController {
         Task task = taskHandler.getTaskById(taskId);
         if (task != null) {
             taskHandler.updateTask(task, null, null, null, null, null, LocalDateTime.now());
-            view.refreshTaskListDisplay(taskHandler.userTasksList);
+            view.refreshTaskListDisplay();
         } else {
             System.err.println("Controller: Could not find task with ID " + taskId + " to delete.");
         }
@@ -166,7 +194,7 @@ public class TaskController {
     public void handleTaskCompletionToggle(Task task) {
         if (task != null) {
             taskHandler.updateTask(task, null, null, !task.getStatus().equals("completed") ? "completed" : "pending", null, null, null);
-            view.refreshTaskListDisplay(taskHandler.userTasksList);
+            view.refreshTaskListDisplay();
         } else {
              System.err.println("Controller: Could not find task to toggle completion.");
         }

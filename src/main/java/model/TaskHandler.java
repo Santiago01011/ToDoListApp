@@ -36,7 +36,6 @@ public class TaskHandler {
     }
     
     public void addTask(String title, String description, String status, String targetDate, String folderName) {
-        //TODO: Null Safety and Initialization, check and validate folders.
         String id = UUID.randomUUID().toString();
         Task task = new Task.Builder(id)
             .taskTitle(title)
@@ -291,15 +290,15 @@ public class TaskHandler {
         }
     }
 
-    public List<Task> getTasksByFolder(String selectedFolder) {
-        List<Task> filteredTasks = new ArrayList<>();
-        for (Task task : userTasksList) {
-            if (task.getFolder_name().equals(selectedFolder)) {
-                filteredTasks.add(task);
-            }
-        }
-        return filteredTasks;
-    }
+    // public List<Task> getTasksByFolder(String selectedFolder) { //TODO: Remove this method
+    //     List<Task> filteredTasks = new ArrayList<>();
+    //     for (Task task : userTasksList) {
+    //         if (task.getFolder_name().equals(selectedFolder)) {
+    //             filteredTasks.add(task);
+    //         }
+    //     }
+    //     return filteredTasks;
+    // }
 
     public Task getTaskById(String task_id) {
         return userTasksList.stream()
@@ -341,5 +340,13 @@ public class TaskHandler {
         return userFoldersList.stream()
             .map(Folder::getFolder_name)
             .toList();
+    }
+
+    public String getFolderIdByName(String folderName) {
+        return userFoldersList.stream()
+            .filter(folder -> folder.getFolder_name().equals(folderName))
+            .findFirst()
+            .map(Folder::getFolder_id)
+            .orElse(null);
     }
 }

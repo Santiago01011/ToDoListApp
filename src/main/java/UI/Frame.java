@@ -11,6 +11,7 @@ import javax.swing.SwingUtilities;
 import com.formdev.flatlaf.FlatDarkLaf;
 import com.formdev.flatlaf.FlatLightLaf;
 import com.formdev.flatlaf.FlatIntelliJLaf;
+import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
 import COMMON.common;
 
@@ -80,7 +81,6 @@ public class Frame extends JFrame{
         UIManager.put("OptionPane.background", common.getPrimaryColor());
         UIManager.put("Panel.background", common.getPrimaryColor());
         UIManager.put("PopupMenu.background", common.getTertiaryColor());
-        UIManager.put("PopupMenu.border", javax.swing.BorderFactory.createLineBorder(common.getPanelColor().darker(), 2));
         UIManager.put("MenuItem.foreground", common.getTextColor());
         UIManager.put("MenuItem.selectionBackground", common.getSecondaryColor());
         UIManager.put("MenuItem.selectionForeground", common.getTextColor());

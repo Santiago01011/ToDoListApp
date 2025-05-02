@@ -93,7 +93,7 @@ public class UserController {
         dashboard.setController(controller);
         dashboard.initialize();
         dashboard.setVisible(true);
-        dashboard.refreshTaskListDisplay(taskHandler.userTasksList);
+        dashboard.refreshTaskListDisplay();
         loginFrame.dispose();
     }
 }

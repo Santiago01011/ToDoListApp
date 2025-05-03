@@ -62,7 +62,7 @@ public class TaskController {
     }
 
     public void loadInitialSyncTime() {
-        view.updateLastSyncLabel(taskHandler.getLastSync());
+        view.updateLastSyncLabel(getLastSyncTime());
     }
 
     public List<Task> getTasksByFolder(List<Task> sourceList ,String selectedFolder) {
@@ -125,7 +125,7 @@ public class TaskController {
         syncFuture.thenAcceptAsync(succes -> {
             if (succes) {
                 System.out.println("Controller: Async sync completed successfully. Updating UI.");
-                view.updateLastSyncLabel(taskHandler.getLastSync());
+                view.updateLastSyncLabel(getLastSyncTime());
                 view.refreshTaskListDisplay();
                 loadInitialFolderList();
             }
@@ -140,10 +140,6 @@ public class TaskController {
         // TODO: Implement logic to show a 'History' view/frame
     }
 
-    public void handleFilterButtonClicked() {
-        System.out.println("Controller: Filter button clicked.");
-        // TODO: Implement logic to show filter options (e.g., a dialog)
-    }
 
     public void handleViewTaskRequest(String taskId) {
         System.out.println("Controller: View task request for ID " + taskId);
@@ -191,7 +187,7 @@ public class TaskController {
     }
 
     public LocalDateTime getLastSyncTime() {
-        return taskHandler.getLastSync();
+        return taskHandler.getLastSync() != null ? taskHandler.getLastSync() : UserProperties.getProperty("lastSyncTime") != null ? LocalDateTime.parse((String) UserProperties.getProperty("lastSyncTime")) : null;
     }
 
     public void handleTaskCompletionToggle(Task task) {

@@ -96,7 +96,7 @@ public class NewDBHandler {
     private void updateTasksFromJSON(UUID userUUID, String jsonContent) {
         String query = "SELECT * FROM todo.update_tasks_from_jsonb(?, ?::jsonb)";   
         // System.out.println("Updating tasks from JSON for user: " + userUUID);
-        // System.out.println("JSON Content: " + jsonContent);
+        System.out.println("JSON Content: " + jsonContent);
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setObject(1, userUUID);

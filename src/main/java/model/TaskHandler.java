@@ -12,10 +12,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TaskHandler {
     private static final String TASKS_JSON_FILE = JSONUtils.BASE_DIRECTORY + File.separator + "tasks.json";
     private static final String SHADOWS_JSON_FILE = JSONUtils.BASE_DIRECTORY + File.separator + "shadows.json";
+    private static final Logger LOGGER = Logger.getLogger(TaskHandler.class.getName());
     public List<Task> userTasksList;
     private List<Folder> userFoldersList;
     private LocalDateTime last_sync = null;
@@ -33,26 +36,6 @@ public class TaskHandler {
         this.userTasksList = loadTasksFromJson();
         loadShadowsFromJson();
         this.userFoldersList = new ArrayList<>();
-    }
-    
-    public void addTask(String title, String description, String status, String targetDate, String folderName) {
-        String id = UUID.randomUUID().toString();
-        Task task = new Task.Builder(id)
-            .taskTitle(title)
-            .description(description)
-            .dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate))
-            .folderName(folderName)
-            .folderId(folderName == null ? null : userFoldersList.stream()
-                .filter(folder -> folder.getFolder_name().equals(folderName))
-                .findFirst()
-                .map(Folder::getFolder_id)
-                .orElse(null))
-            .status(status)
-            .sync_status("new")
-            .createdAt(LocalDateTime.now())
-            .updatedAt(LocalDateTime.now())
-            .build();
-        userTasksList.add(task);
     }
 
     /**
@@ -75,7 +58,7 @@ public class TaskHandler {
      * @param folderName New folder name for the task (null if unchanged)
      * @param deleted_at Deletion timestamp if the task is being deleted, null otherwise
      */
-    public void updateTask(Task task, String title, String description, String status, String targetDate, String folderName, LocalDateTime deleted_at) {
+    public void updateTask(Task task, String title, String description, TaskStatus status, String targetDate, String folderName, LocalDateTime deleted_at) {
         LocalDateTime updateTime = LocalDateTime.now();
         if (task.getSync_status().equals("new")) {
             if ( deleted_at != null ){
@@ -96,7 +79,7 @@ public class TaskHandler {
                 .updatedAt(updateTime);
             if (title != null && !title.isEmpty()) builder.taskTitle(title);
             if (description != null) builder.description(description);
-            if (status != null && !status.isEmpty()) builder.status(status);
+            if (status != null) builder.status(status);
             if (targetDate != null) builder.dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
             if (folderName != null) builder.folderName(folderName);
             if (deleted_at != null) builder.deletedAt(deleted_at);
@@ -129,7 +112,7 @@ public class TaskHandler {
             }
             if (title != null && !title.isEmpty()) builder.taskTitle(title);
             if (description != null) builder.description(description);
-            if (status != null && !status.isEmpty()) builder.status(status);
+            if (status != null) builder.status(status);
             if (targetDate != null) builder.dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
             if (folderName != null) builder.folderName(folderName);
             if (deleted_at != null) builder.deletedAt(deleted_at);
@@ -145,18 +128,23 @@ public class TaskHandler {
     }
     
     // Helper method to update task fields
-    private void updateTaskFields(Task task, String title, String description, String status, String targetDate, String folderName) {
+    private void updateTaskFields(Task task, String title, String description, TaskStatus status, String targetDate, String folderName) {
         if (title != null && !title.isEmpty()) {
             task.setTitle(title);
         }
         if (description != null) {
             task.setDescription(description);
         }
-        if (status != null && !status.isEmpty()) {
+        if (status != null) {
             task.setStatus(status);
         }
         if (targetDate != null) {
-            task.setDue_date(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
+            try {
+                task.setDue_date(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
+            } catch (DateTimeParseException e) {
+                LOGGER.log(Level.WARNING, "Invalid date format for task " + task.getTask_id() + ": " + targetDate, e);
+                task.setDue_date(null);
+            }
         }
         if (folderName != null) {
             task.setFolder_name(folderName);
@@ -251,18 +239,69 @@ public class TaskHandler {
         for (int i = 0; i < columns.size(); i++) {
             taskMap.put(columns.get(i), row.get(i));
         }
+
+        TaskStatus status = TaskStatus.pending;
+        String statusStr = (String) taskMap.get("status");
+        if (statusStr != null) {
+            try {
+                status = TaskStatus.valueOf(statusStr);
+            } catch (IllegalArgumentException e) {
+                LOGGER.log(Level.WARNING, "Invalid status value found in JSON: " + statusStr + ". Defaulting to pending.", e);
+            }
+        }
+
+        LocalDateTime dueDate = null;
+        String dueDateStr = (String) taskMap.get("due_date");
+        if (dueDateStr != null) {
+            try {
+                dueDate = LocalDateTime.parse(dueDateStr);
+            } catch (DateTimeParseException e) {
+                LOGGER.log(Level.WARNING, "Invalid due_date format in JSON: " + dueDateStr, e);
+            }
+        }
+
+        LocalDateTime createdAt = null;
+        String createdAtStr = (String) taskMap.get("created_at");
+        if (createdAtStr != null) {
+            try {
+                createdAt = LocalDateTime.parse(createdAtStr);
+            } catch (DateTimeParseException e) {
+                LOGGER.log(Level.WARNING, "Invalid created_at format in JSON: " + createdAtStr, e);
+            }
+        }
+
+        LocalDateTime lastSync = null;
+        String lastSyncStr = (String) taskMap.get("last_sync");
+        if (lastSyncStr != null) {
+            try {
+                lastSync = LocalDateTime.parse(lastSyncStr);
+            } catch (DateTimeParseException e) {
+                LOGGER.log(Level.WARNING, "Invalid last_sync format in JSON: " + lastSyncStr, e);
+            }
+        }
+
+        LocalDateTime deletedAt = null;
+        String deletedAtStr = (String) taskMap.get("deleted_at");
+        if (deletedAtStr != null) {
+            try {
+                deletedAt = LocalDateTime.parse(deletedAtStr);
+            } catch (DateTimeParseException e) {
+                LOGGER.log(Level.WARNING, "Invalid deleted_at format in JSON: " + deletedAtStr, e);
+            }
+        }
+
         return new Task.Builder((String) taskMap.get("task_id"))
             .taskTitle((String) taskMap.get("task_title"))
             .folderId((String) taskMap.get("folder_id"))
             .folderName((String) taskMap.get("folder_name"))
             .description((String) taskMap.get("description"))
             .sync_status((String) taskMap.get("sync_status"))
-            .status((String) taskMap.get("status"))
-            .dueDate(taskMap.get("due_date") != null ? LocalDateTime.parse((String) taskMap.get("due_date")) : null)
-            .createdAt(taskMap.get("created_at") != null ? LocalDateTime.parse((String) taskMap.get("created_at")) : null)
+            .status(status)
+            .dueDate(dueDate)
+            .createdAt(createdAt)
             .updatedAt(getLastSync())
-            .lastSync(taskMap.get("last_sync") != null ? LocalDateTime.parse((String) taskMap.get("last_sync")) : null)
-            .deletedAt(taskMap.get("deleted_at") != null ? LocalDateTime.parse((String) taskMap.get("deleted_at")) : null)
+            .lastSync(lastSync)
+            .deletedAt(deletedAt)
             .build();
     }
 
@@ -289,16 +328,6 @@ public class TaskHandler {
             System.err.println("Error saving shadows to JSON: " + e.getMessage());
         }
     }
-
-    // public List<Task> getTasksByFolder(String selectedFolder) { //TODO: Remove this method
-    //     List<Task> filteredTasks = new ArrayList<>();
-    //     for (Task task : userTasksList) {
-    //         if (task.getFolder_name().equals(selectedFolder)) {
-    //             filteredTasks.add(task);
-    //         }
-    //     }
-    //     return filteredTasks;
-    // }
 
     public Task getTaskById(String task_id) {
         return userTasksList.stream()

@@ -17,14 +17,18 @@ import java.awt.event.WindowEvent;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Collections;
 
 import javax.swing.BorderFactory;
 import javax.swing.DefaultComboBoxModel;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
-import javax.swing.JFormattedTextField; // Add editor field for DatePicker
+import javax.swing.JFormattedTextField;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -39,14 +43,15 @@ import javax.swing.Timer;
 import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
-import java.time.LocalDate; // For DatePicker selected date
+import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter; // For formatting the date
+import java.time.format.DateTimeFormatter;
 
 import COMMON.UserProperties;
 import COMMON.common;
 import controller.TaskController;
 import model.FiltersCriteria;
+import model.TaskStatus;
 import model.Task;
 import net.miginfocom.swing.MigLayout;
 import raven.datetime.DatePicker;
@@ -71,12 +76,17 @@ public class TaskDashboardFrame extends Frame {
     private JPopupMenu userPopupMenu;
 
     private JComboBox<String> folderFilterBox;
-    private Boolean filterByStatus = false;
-    private String filterStatus;
+    FiltersCriteria filterCriteria = FiltersCriteria.defaultCriteria();
     private JPopupMenu filterPopupMenu;
 
     private DatePicker datePicker;
     private TimePicker timePicker;
+
+    // Keep track of the filter menu items to easily clear them
+    private JCheckBoxMenuItem filterPendingItem;
+    private JCheckBoxMenuItem filterCompletedItem;
+    private JCheckBoxMenuItem filterInProgressItem;
+    private JCheckBoxMenuItem filterCancelledItem; // Add if you have this status
 
     public TaskDashboardFrame(String title) {
         super(title);
@@ -255,7 +265,7 @@ public class TaskDashboardFrame extends Frame {
                     }
                 }
                 taskController.handleCreateTask(titleField.getText(), descArea.getText(),
-                        (String) newTaskFolderBox.getSelectedItem(), dueDateTime, (String) statusBox.getSelectedItem());
+                        (String) newTaskFolderBox.getSelectedItem(), dueDateTime, TaskStatus.valueOf(statusBox.getSelectedItem().toString()));
                 newTaskButton.setEnabled(true);
                 titleField.setText("Enter task title...");
                 descArea.setText("");
@@ -354,9 +364,15 @@ public class TaskDashboardFrame extends Frame {
         folderFilterBox.addActionListener(e -> {
             if (suppressFolderEvents || taskController == null || folderFilterBox.getItemCount() == 0)
                 return;
-            if ("comboBoxChanged".equals(e.getActionCommand())) {
-                refreshTaskListDisplay();
-            }
+
+            String selectedFolder = (String) folderFilterBox.getSelectedItem();
+            String folderNameToFilter = "All Folders".equals(selectedFolder) ? null : selectedFolder;
+
+            filterCriteria = new FiltersCriteria(folderNameToFilter, filterCriteria.statuses());
+            updateFilterMenuChecks();
+
+            refreshTaskListDisplay();
+
         });
         panel.add(folderFilterBox, "width 150!");
 
@@ -446,7 +462,6 @@ public class TaskDashboardFrame extends Frame {
 
     public void refreshTaskListDisplay() {
         List<Task> tasksToDisplay;
-        FiltersCriteria filterCriteria = new FiltersCriteria( (String) folderFilterBox.getSelectedItem(), filterByStatus, filterStatus);
         tasksToDisplay = taskController.getTasksByFilters(filterCriteria);
         final List<Task> finalTasksToDisplay = tasksToDisplay;
         SwingUtilities.invokeLater(() -> {
@@ -497,7 +512,6 @@ public class TaskDashboardFrame extends Frame {
         });
     }
 
-
     private void updateNewTaskFolderBox(List<String> folderList) {
         DefaultComboBoxModel<String> model = (DefaultComboBoxModel<String>) newTaskFolderBox.getModel();
         model.removeAllElements();
@@ -533,7 +547,8 @@ public class TaskDashboardFrame extends Frame {
         card.setBorder(new RoundedLineBorder(outlineColor, thickness, arc));
 
         JCheckBox checkBox = new JCheckBox();
-        checkBox.setSelected(task.getStatus().equals("completed"));
+        checkBox.setSelected(task.getStatus().equals(TaskStatus.completed));
+        checkBox.setToolTipText("Mark as " + (task.getStatus().equals(TaskStatus.completed) ? "pending" : "complete"));
         checkBox.setOpaque(false);
         checkBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         checkBox.addActionListener(e -> {
@@ -548,11 +563,11 @@ public class TaskDashboardFrame extends Frame {
         card.add(titleLabel, "growx");
 
         RoundedLabel statusLabel = new RoundedLabel(
-                task.getStatus() != null ? task.getStatus() : "Unknown",
+                task.getStatus() != null ? task.getStatus().toString() : "Unknown",
                 15);
-        Color statusColor = task.getStatus().equalsIgnoreCase("in_progress") ? common.getContrastColor()
+        Color statusColor = task.getStatus().equals(TaskStatus.in_progress) ? common.getContrastColor()
                 : common.getPanelColor().darker();
-        statusLabel.setForeground(task.getStatus().equalsIgnoreCase("in_progress") ? common.getTextColor().darker()
+        statusLabel.setForeground(task.getStatus().equals(TaskStatus.in_progress) ? common.getTextColor().darker()
                 : common.getTextColor());
         statusLabel.setBackground(statusColor);
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 9, 3, 9));
@@ -570,14 +585,14 @@ public class TaskDashboardFrame extends Frame {
 
         JLabel dateLabel = new JLabel();
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-        boolean isCompleted = "completed".equalsIgnoreCase(task.getStatus());
+        //boolean isCompleted = "completed".equalsIgnoreCase(task.getStatus());
 
         card.setBackground(common.getTertiaryColor());
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
         titleLabel.setText(task.getTitle() != null ? task.getTitle() : "No Title");
         dateLabel.setForeground(UIManager.getColor("Label.foreground"));
 
-        if (isCompleted) {
+        if (task.getStatus().equals(TaskStatus.completed)) {
             card.setBackground(common.getSecondaryColor().darker());
             titleLabel.setFont(titleLabel.getFont().deriveFont(Font.ITALIC | Font.BOLD));
             titleLabel.setText("<html><s>" + (task.getTitle() != null ? task.getTitle() : "No Title") + "</s></html>");
@@ -668,38 +683,51 @@ public class TaskDashboardFrame extends Frame {
 
     private void createFilterPopupMenu() {
         filterPopupMenu = new JPopupMenu();
-        JMenuItem clearFilterItem = new JMenuItem("Clear Filters");
+
+        JMenuItem clearFilterItem = new JMenuItem("Clear Status Filters");
         clearFilterItem.addActionListener(e -> {
-            filterByStatus = false;
-            filterStatus = null;
-            folderFilterBox.setSelectedItem("All Folders");
+            filterCriteria = new FiltersCriteria(filterCriteria.folderName(), Collections.emptySet());
+            if (filterPendingItem != null) filterPendingItem.setSelected(false);
+            if (filterCompletedItem != null) filterCompletedItem.setSelected(false);
+            if (filterInProgressItem != null) filterInProgressItem.setSelected(false);
+
             refreshTaskListDisplay();
         });
         filterPopupMenu.add(clearFilterItem);
+        filterPopupMenu.addSeparator();
 
-        JMenuItem filterPendingItem = new JMenuItem("Pending");
-        filterPendingItem.addActionListener(e -> {
-            filterByStatus = true;
-            filterStatus = "pending";
-            refreshTaskListDisplay();
-        });
+        filterPendingItem = new JCheckBoxMenuItem("Pending");
+        addStatusFilterListener(filterPendingItem, TaskStatus.pending);
         filterPopupMenu.add(filterPendingItem);
 
-        JMenuItem filterCompletedItem = new JMenuItem("Completed");
-        filterCompletedItem.addActionListener(e -> {
-            filterByStatus = true;
-            filterStatus = "completed";
-            refreshTaskListDisplay();
-        });
+        filterCompletedItem = new JCheckBoxMenuItem("Completed");
+        addStatusFilterListener(filterCompletedItem, TaskStatus.completed);
         filterPopupMenu.add(filterCompletedItem);
 
-        JMenuItem filterInProgressItem = new JMenuItem("In Progress");
-        filterInProgressItem.addActionListener(e -> {
-            filterByStatus = true;
-            filterStatus = "in_progress";
-            refreshTaskListDisplay();
-        });
+        filterInProgressItem = new JCheckBoxMenuItem("In Progress");
+        addStatusFilterListener(filterInProgressItem, TaskStatus.in_progress);
         filterPopupMenu.add(filterInProgressItem);
+
+        updateFilterMenuChecks();
     }
 
+    private void addStatusFilterListener(JCheckBoxMenuItem item, TaskStatus status) {
+        item.addActionListener(e -> {
+            Set<TaskStatus> newStatuses = new HashSet<>(filterCriteria.statuses());
+            if (item.isSelected())
+                newStatuses.add(status);
+            else
+                newStatuses.remove(status);
+            filterCriteria = new FiltersCriteria(filterCriteria.folderName(), newStatuses);
+            refreshTaskListDisplay();
+        });
+    }
+
+    private void updateFilterMenuChecks() {
+         if (filterCriteria == null || filterCriteria.statuses() == null) return;
+         Set<TaskStatus> currentStatuses = filterCriteria.statuses();
+         if (filterPendingItem != null) filterPendingItem.setSelected(currentStatuses.contains(TaskStatus.pending));
+         if (filterCompletedItem != null) filterCompletedItem.setSelected(currentStatuses.contains(TaskStatus.completed));
+         if (filterInProgressItem != null) filterInProgressItem.setSelected(currentStatuses.contains(TaskStatus.in_progress));
+    }
 }

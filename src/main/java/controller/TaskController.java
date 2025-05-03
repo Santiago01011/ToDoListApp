@@ -1,6 +1,7 @@
 package controller;
 
 import model.TaskHandler;
+import model.TaskStatus;
 import model.Task;
 import model.Folder;
 import model.FiltersCriteria;
@@ -45,7 +46,6 @@ public class TaskController {
     }
 
     public void loadInitialFolderList() {
-        // Fetch accessible folders asynchronously to avoid UI blocking and handle offline fallback
         CompletableFuture.supplyAsync(() -> {
             try {
                 return dbHandler.fetchAccessibleFolders();
@@ -89,8 +89,11 @@ public class TaskController {
         if (criteria.folderName() != null && !criteria.folderName().equals("All Folders"))
             filteredTasks = getTasksByFolder(filteredTasks, criteria.folderName());
 
-        if (criteria.filterByStatus() != null && criteria.filterByStatus())
-            filteredTasks = getTasksByStatus(filteredTasks, criteria.status()); 
+        if (criteria.statuses() != null && !criteria.statuses().isEmpty()) {
+            filteredTasks = filteredTasks.stream()
+                .filter(task -> criteria.statuses().contains(task.getStatus()))
+                .collect(Collectors.toList());
+        }
         
         return filteredTasks;
     }
@@ -98,7 +101,7 @@ public class TaskController {
     /**
      * Handles creation of a new task from the UI input.
      */
-    public void handleCreateTask(String title, String description, String folderName, LocalDateTime dueDate, String status) {
+    public void handleCreateTask(String title, String description, String folderName, LocalDateTime dueDate, TaskStatus status) {
         System.out.println("Controller: Creating new task: " + title);
         String id = UUID.randomUUID().toString();
         Task task = new Task.Builder(id)
@@ -193,7 +196,7 @@ public class TaskController {
 
     public void handleTaskCompletionToggle(Task task) {
         if (task != null) {
-            taskHandler.updateTask(task, null, null, !task.getStatus().equals("completed") ? "completed" : "pending", null, null, null);
+            taskHandler.updateTask(task, null, null, !task.getStatus().equals(TaskStatus.completed) ? TaskStatus.completed : TaskStatus.pending, null, null, null);
             view.refreshTaskListDisplay();
         } else {
              System.err.println("Controller: Could not find task to toggle completion.");

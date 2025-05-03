@@ -4,12 +4,14 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import model.TaskStatus;
 
 public class Task {
     private String task_id;
     private String task_title;
     private String description;
-    private String status;
+    private TaskStatus status;
     private String sync_status;
     private LocalDateTime due_date;
     private LocalDateTime created_at;
@@ -21,11 +23,12 @@ public class Task {
 
     public Task() {}
 
+    @JsonCreator
     public Task(
         @JsonProperty("task_id") String task_id,
         @JsonProperty("task_title") String task_title,
         @JsonProperty("description") String description,
-        @JsonProperty("status") String status,
+        @JsonProperty("status") TaskStatus status,
         @JsonProperty("sync_status") String sync_status,
         @JsonProperty("due_date") LocalDateTime due_date,
         @JsonProperty("created_at") LocalDateTime created_at,
@@ -53,7 +56,7 @@ public class Task {
         private String task_id;
         private String task_title;
         private String description;
-        private String status;
+        private TaskStatus status; 
         private String sync_status;
         private LocalDateTime due_date;
         private LocalDateTime created_at;
@@ -77,7 +80,7 @@ public class Task {
             return this;
         }
 
-        public Builder status(String status) {
+        public Builder status(TaskStatus status) {
             this.status = status;
             return this;
         }
@@ -164,12 +167,16 @@ public class Task {
         this.description = description;
     }
 
-    public String getStatus() {
+    public TaskStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(TaskStatus status) {
         this.status = status;
+    }
+
+    public void setStatus(String status) {
+        this.status = TaskStatus.valueOf(status);
     }
 
     public String getSync_status() {

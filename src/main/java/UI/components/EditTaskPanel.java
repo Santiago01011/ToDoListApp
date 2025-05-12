@@ -1,5 +1,6 @@
 package UI.components;
 
+import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.Frame;
 import java.awt.event.ActionListener;
@@ -37,7 +38,11 @@ public class EditTaskPanel extends JPanel {
 
     public EditTaskPanel(Listener listener, Task task) {
         setLayout(new MigLayout("insets 5", "[grow]", "[][][][][][]"));
-        setBorder(new EmptyBorder(10,5,5,5));
+        setBackground(common.getTertiaryColor());
+        Color outlineColor = common.getPanelColor().darker();
+        int arc = 10, thickness = 2;
+        putClientProperty("FlatLaf.style", "arc: " + arc);
+        setBorder(new UI.components.RoundedLineBorder(outlineColor, thickness, arc));
         add(new JLabel("Edit Task"), "wrap");
 
         JTextField titleField = new JTextField(task.getTitle());

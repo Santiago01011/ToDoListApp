@@ -8,16 +8,19 @@ import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Point;
+import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.event.ActionEvent;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
 import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -25,6 +28,7 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import java.awt.LayoutManager;
 
 import COMMON.UserProperties;
 import COMMON.common;
@@ -32,6 +36,7 @@ import UI.components.TopBarPanel;
 import UI.components.BottomBarPanel;
 import UI.components.NewTaskPanel;
 import UI.components.EditTaskPanel;
+import UI.components.ViewTaskPanel;
 import UI.components.TaskCardPanel;
 import controller.TaskController;
 import model.FiltersCriteria;
@@ -43,22 +48,26 @@ public class TaskDashboardFrame extends Frame {
     private static final int ANIMATION_DURATION = 150;
     private static final int TIMER_DELAY = 15;
     private static final int CARD_ANIMATION_DURATION = 100;
-    private static final int CARD_TIMER_DELAY = 15;
+    private static final int CARD_TIMER_DELAY = 10;
+    private static final int STAGGER_DELAY = 50;
+    private static final int FIRST_RUN_DELAY = 200;
 
     private TaskController taskController;
+    private boolean firstRun = true;
     private JPanel taskListPanel;
+    private MigLayout taskListLayout;
     private JPanel contentContainer;
     private JPanel mainPanel;
-    private NewTaskPanel newTaskPanel;
-    private EditTaskPanel editTaskPanel;
+    private NewTaskPanel newTaskPanel;    private EditTaskPanel editTaskPanel;
     private EditTaskPanel editTaskCardPanel;
     private TaskCardPanel activeEditCardPanel;
+    private ViewTaskPanel viewTaskCardPanel;
+    private TaskCardPanel activeViewCardPanel;
     private TopBarPanel topBarPanel;
     private BottomBarPanel bottomBarPanel;
     private boolean isNewTaskVisible = false;
     private boolean isEditTaskVisible = false;
     private List<String> currentFolderList = new ArrayList<>();
-    private Timer addCardTimer;
 
     FiltersCriteria filterCriteria = FiltersCriteria.defaultCriteria();
 
@@ -155,11 +164,12 @@ public class TaskDashboardFrame extends Frame {
         });
         add(topBarPanel, BorderLayout.NORTH);
 
-        taskListPanel = new JPanel(new MigLayout("wrap 1, fillx, inset 15", "[grow, fill]", ""));
+        taskListLayout = new MigLayout("wrap 1, fillx, inset 15, hidemode 3", "[grow, fill]", "");
+        taskListPanel = new JPanel(taskListLayout);
         JScrollPane scrollPane = new JScrollPane(taskListPanel);
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         mainPanel.add(scrollPane, BorderLayout.CENTER);
 
@@ -269,112 +279,302 @@ public class TaskDashboardFrame extends Frame {
         timer.start();
     }
 
-    private void toggleEditTaskCard(Task taskToEdit, TaskCardPanel cardPanel) {
-        if (editTaskCardPanel != null && activeEditCardPanel == cardPanel) {
-            taskListPanel.remove(editTaskCardPanel);
-            editTaskCardPanel = null;
-            activeEditCardPanel = null;
-            taskListPanel.revalidate();
-            taskListPanel.repaint();
-            return;
-        }
-        if (editTaskCardPanel != null) {
-            taskListPanel.remove(editTaskCardPanel);
-        }
-        activeEditCardPanel = cardPanel;
-        editTaskCardPanel = new EditTaskPanel(new EditTaskPanel.Listener() {
-            public void onSaveEdit(String title, String desc, String folder, LocalDateTime due, TaskStatus status) {
-                taskController.handleEditTaskRequest(taskToEdit.getTask_id(), title, desc, folder, due, status);
-                taskListPanel.remove(editTaskCardPanel);
-                editTaskCardPanel = null;
-                activeEditCardPanel = null;
-                refreshTaskListDisplay();
-            }
-            public void onCancelEdit() {
-                taskListPanel.remove(editTaskCardPanel);
-                editTaskCardPanel = null;
-                activeEditCardPanel = null;
-                taskListPanel.revalidate();
-                taskListPanel.repaint();
-            }
-        }, taskToEdit);
-        editTaskCardPanel.setFolders(this.currentFolderList);
-        Component[] comps = taskListPanel.getComponents();
-        int idx = -1;
-        for (int i = 0; i < comps.length; i++) {
-            if (comps[i] == cardPanel) {
-                idx = i;
-                break;
-            }
-        }
-        int pos = (idx >= 0) ? idx + 1 : comps.length;
-        taskListPanel.add(editTaskCardPanel, "growx, gapbottom 10", pos);
-        taskListPanel.revalidate();
-        taskListPanel.repaint();
-    }
-
-    private void animateCardSlideDown(JPanel card) {
-        Dimension full = card.getPreferredSize();
+    private void animatePanelHeight(JPanel panel, int targetHeight, Runnable onFinish) {
         int steps = Math.max(1, CARD_ANIMATION_DURATION / CARD_TIMER_DELAY);
-        int delta = Math.max(1, full.height / steps);
-        card.setPreferredSize(new Dimension(full.width, 0));
+        int delta = Math.max(1, targetHeight / steps);
+        final int[] curr = {0};
         Timer t = new Timer(CARD_TIMER_DELAY, null);
-        t.addActionListener(e -> {
-            Dimension curr = card.getPreferredSize();
-            int h = Math.min(full.height, curr.height + delta);
-            card.setPreferredSize(new Dimension(full.width, h));
-            card.revalidate();
-            Container parent = card.getParent();
-            if (parent != null) { parent.revalidate(); parent.repaint(); }
-            if (h >= full.height) {
-                card.setPreferredSize(null);
+        t.addActionListener((ActionEvent e) -> {
+            if (panel.getParent() != taskListPanel) {
                 ((Timer)e.getSource()).stop();
+                if (onFinish != null) onFinish.run();
+                return;
+            }
+            curr[0] = Math.min(targetHeight, curr[0] + delta);
+            try {
+                taskListLayout.setComponentConstraints(panel, "growx, gapbottom 10, h " + curr[0] + "!");
+            } catch (IllegalArgumentException ignored) {}
+            taskListPanel.revalidate(); taskListPanel.repaint();
+            if (curr[0] >= targetHeight) {
+                ((Timer)e.getSource()).stop();
+                try {
+                    taskListLayout.setComponentConstraints(panel, "growx, gapbottom 10");
+                } catch (IllegalArgumentException ignored) {}
+                if (onFinish != null) onFinish.run();
             }
         });
         t.start();
     }
 
-    public void refreshTaskListDisplay() {
-        List<Task> tasksToDisplay = taskController.getTasksByFilters(filterCriteria);
-        final List<Task> finalTasksToDisplay = tasksToDisplay;
-        SwingUtilities.invokeLater(() -> {
-            taskListPanel.removeAll();
-            if (addCardTimer != null) {
-                addCardTimer.stop();
-                addCardTimer = null;
+    private void animatePanelCollapse(JPanel panel, Runnable onFinish) {
+        int initial = panel.getHeight();
+        int steps = Math.max(1, CARD_ANIMATION_DURATION / CARD_TIMER_DELAY);
+        int delta = Math.max(1, initial / steps);
+        final int[] curr = {initial};
+        Timer t = new Timer(CARD_TIMER_DELAY, null);
+        t.addActionListener(e -> {
+            if (panel.getParent() != taskListPanel) {
+                ((Timer)e.getSource()).stop();
+                if (onFinish != null) onFinish.run();
+                return;
             }
-            if (finalTasksToDisplay != null && !finalTasksToDisplay.isEmpty()) {
-                addCardTimer = new Timer(CARD_TIMER_DELAY, null);
-                addCardTimer.addActionListener(new java.awt.event.ActionListener() {
-                    private int idx = 0;
-                    public void actionPerformed(java.awt.event.ActionEvent e) {
-                        if (idx >= finalTasksToDisplay.size()) {
-                            addCardTimer.stop();
-                            addCardTimer = null;
-                            return;
-                        }
-                        Task task = finalTasksToDisplay.get(idx++);
-                        final TaskCardPanel[] holder = new TaskCardPanel[1];
-                        final TaskCardPanel card = new TaskCardPanel(task, new TaskCardPanel.Listener() {
-                            public void onToggleComplete(Task t) { taskController.handleTaskCompletionToggle(t); }
-                            public void onView(Task t) { taskController.handleViewTaskRequest(t.getTask_id()); }
-                            public void onEdit(Task t) { toggleEditTaskCard(t, holder[0]); }
-                            public void onDelete(Task t) { taskController.handleDeleteTaskRequest(t.getTask_id()); }
+            curr[0] = Math.max(0, curr[0] - delta);
+            try {
+                taskListLayout.setComponentConstraints(panel, "growx, gapbottom 10, h " + curr[0] + "!");
+            } catch (IllegalArgumentException ignored) {}
+            taskListPanel.revalidate(); taskListPanel.repaint();
+            if (curr[0] <= 0) {
+                ((Timer)e.getSource()).stop();
+                if (onFinish != null) onFinish.run();
+            }
+        });
+        t.start();
+    }
+
+    private void toggleEditTaskCard(Task taskToEdit, TaskCardPanel cardPanel) {
+        if (editTaskCardPanel != null && activeEditCardPanel == cardPanel) {
+            final int position = findComponentPosition(editTaskCardPanel);
+            
+            final int originalCardHeight = cardPanel.getPreferredSize().height;
+            
+            animatePanelCollapse(editTaskCardPanel, () -> {
+                taskListPanel.remove(editTaskCardPanel);
+                
+                if (position >= 0 && position < taskListPanel.getComponentCount() + 1) {
+                    taskListPanel.add(cardPanel, "growx, gapbottom 10", position);
+                    animatePanelHeight(cardPanel, originalCardHeight, null);
+                }
+                
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+                editTaskCardPanel = null;
+                activeEditCardPanel = null;
+            });
+            return;
+        }
+        
+        if (editTaskCardPanel != null) {
+            final int oldPosition = findComponentPosition(editTaskCardPanel);
+            
+            final TaskCardPanel previousCard = activeEditCardPanel;
+            final int previousCardHeight = previousCard.getPreferredSize().height;
+            
+            animatePanelCollapse(editTaskCardPanel, () -> {
+                taskListPanel.remove(editTaskCardPanel);
+                
+                if (oldPosition >= 0 && oldPosition < taskListPanel.getComponentCount() + 1 && previousCard != cardPanel) {
+                    taskListPanel.add(previousCard, "growx, gapbottom 10", oldPosition);
+                    animatePanelHeight(previousCard, previousCardHeight, null);
+                }
+                
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+            });
+        }
+        
+        final int position = findComponentPosition(cardPanel);
+        
+        if (position >= 0) {
+            animatePanelCollapse(cardPanel, () -> {
+                taskListPanel.remove(cardPanel);
+                
+                activeEditCardPanel = cardPanel;
+                editTaskCardPanel = new EditTaskPanel(new EditTaskPanel.Listener() {
+                    public void onSaveEdit(String title, String desc, String folder, LocalDateTime due, TaskStatus status) {
+                        taskController.handleEditTaskRequest(taskToEdit.getTask_id(), title, desc, folder, due, status);
+                        
+                        final int editPosition = findComponentPosition(editTaskCardPanel);
+                        
+                        final int originalCardHeight = cardPanel.getPreferredSize().height;
+                        
+                        animatePanelCollapse(editTaskCardPanel, () -> {
+                            taskListPanel.remove(editTaskCardPanel);
+                            
+                            if (editPosition >= 0 && editPosition < taskListPanel.getComponentCount() + 1) {
+                                taskListPanel.add(cardPanel, "growx, gapbottom 10", editPosition);
+                                animatePanelHeight(cardPanel, originalCardHeight, null);
+                            }
+                            
+                            taskListPanel.revalidate();
+                            taskListPanel.repaint();
+                            editTaskCardPanel = null;
+                            activeEditCardPanel = null;
+                            refreshTaskListDisplay();
                         });
-                        holder[0] = card;
-                        taskListPanel.add(card, "growx, gapbottom 10");
-                        animateCardSlideDown(card);
-                        taskListPanel.revalidate();
-                        taskListPanel.repaint();
+                    }
+                    
+                    public void onCancelEdit() {
+                        final int editPosition = findComponentPosition(editTaskCardPanel);
+                        
+                        final int originalCardHeight = cardPanel.getPreferredSize().height;
+                        
+                        animatePanelCollapse(editTaskCardPanel, () -> {
+                            taskListPanel.remove(editTaskCardPanel);
+                            
+                            if (editPosition >= 0 && editPosition < taskListPanel.getComponentCount() + 1) {
+                                taskListPanel.add(cardPanel, "growx, gapbottom 10", editPosition);
+                                animatePanelHeight(cardPanel, originalCardHeight, null);
+                            }
+                            
+                            taskListPanel.revalidate();
+                            taskListPanel.repaint();
+                            editTaskCardPanel = null;
+                            activeEditCardPanel = null;
+                        });
+                    }
+                }, taskToEdit);
+                
+                editTaskCardPanel.setFolders(currentFolderList);
+                
+                taskListPanel.add(editTaskCardPanel, "growx, gapbottom 10, h 0!", position);
+                
+                SwingUtilities.invokeLater(() -> {
+                    JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
+                    if (scrollPane != null) {
+                        Rectangle bounds = editTaskCardPanel.getBounds();
+                        scrollPane.getViewport().setViewPosition(new Point(0, bounds.y));
                     }
                 });
-                addCardTimer.setInitialDelay(0);
-                addCardTimer.start();
+                
+                Dimension full = editTaskCardPanel.getPreferredSize();
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+                animatePanelHeight(editTaskCardPanel, full.height, null);
+            });
+        }
+    }
+
+    private void toggleViewTaskCard(Task taskToView, TaskCardPanel cardPanel) {
+        // If the same card is being viewed, close it and restore the original card
+        if (viewTaskCardPanel != null && activeViewCardPanel == cardPanel) {
+            final int position = findComponentPosition(viewTaskCardPanel);
+            
+            final int originalCardHeight = cardPanel.getPreferredSize().height;
+            
+            animatePanelCollapse(viewTaskCardPanel, () -> {
+                taskListPanel.remove(viewTaskCardPanel);
+                
+                if (position >= 0 && position < taskListPanel.getComponentCount() + 1) {
+                    taskListPanel.add(cardPanel, "growx, gapbottom 10", position);
+                    animatePanelHeight(cardPanel, originalCardHeight, null);
+                }
+                
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+                viewTaskCardPanel = null;
+                activeViewCardPanel = null;
+            });
+            return;
+        }
+        
+        if (viewTaskCardPanel != null) {
+            final int oldPosition = findComponentPosition(viewTaskCardPanel);
+            
+            final TaskCardPanel previousCard = activeViewCardPanel;
+            final int previousCardHeight = previousCard.getPreferredSize().height;
+            
+            animatePanelCollapse(viewTaskCardPanel, () -> {
+                taskListPanel.remove(viewTaskCardPanel);
+                
+                if (oldPosition >= 0 && oldPosition < taskListPanel.getComponentCount() + 1 && previousCard != cardPanel) {
+                    taskListPanel.add(previousCard, "growx, gapbottom 10", oldPosition);
+                    animatePanelHeight(previousCard, previousCardHeight, null);
+                }
+                
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+            });
+        }
+        
+        final int position = findComponentPosition(cardPanel);
+        
+        if (position >= 0) {
+            animatePanelCollapse(cardPanel, () -> {
+                taskListPanel.remove(cardPanel);
+                
+                activeViewCardPanel = cardPanel;
+                viewTaskCardPanel = new ViewTaskPanel(new ViewTaskPanel.Listener() {
+                    public void onClose() {
+                        final int viewPosition = findComponentPosition(viewTaskCardPanel);
+                        
+                        final int originalCardHeight = cardPanel.getPreferredSize().height;
+                        
+                        animatePanelCollapse(viewTaskCardPanel, () -> {
+                            taskListPanel.remove(viewTaskCardPanel);
+                            
+                            if (viewPosition >= 0 && viewPosition < taskListPanel.getComponentCount() + 1) {
+                                taskListPanel.add(cardPanel, "growx, gapbottom 10", viewPosition);
+                                animatePanelHeight(cardPanel, originalCardHeight, null);
+                            }
+                            
+                            taskListPanel.revalidate();
+                            taskListPanel.repaint();
+                            viewTaskCardPanel = null;
+                            activeViewCardPanel = null;
+                        });
+                    }
+                }, taskToView);
+                taskListPanel.add(viewTaskCardPanel, "growx, gapbottom 10, h 0!", position);
+                
+                SwingUtilities.invokeLater(() -> {
+                    JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
+                    if (scrollPane != null) {
+                        Rectangle bounds = viewTaskCardPanel.getBounds();
+                        scrollPane.getViewport().setViewPosition(new Point(0, bounds.y));
+                    }
+                });
+                
+                Dimension full = viewTaskCardPanel.getPreferredSize();
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+                animatePanelHeight(viewTaskCardPanel, full.height, null);
+            });
+        }
+    }
+
+    private int findComponentPosition(Component component) {
+        Component[] components = taskListPanel.getComponents();
+        for (int i = 0; i < components.length; i++) {
+            if (components[i] == component) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void refreshTaskListDisplay() {
+        List<Task> tasksToDisplay = taskController.getTasksByFilters(filterCriteria);
+        SwingUtilities.invokeLater(() -> {
+            taskListPanel.removeAll();
+            if (tasksToDisplay != null && !tasksToDisplay.isEmpty()) {
+                int idx = 0;
+                for (Task task : tasksToDisplay) {
+                    final TaskCardPanel[] holder = new TaskCardPanel[1];                    TaskCardPanel card = new TaskCardPanel(task, new TaskCardPanel.Listener() {
+                        public void onToggleComplete(Task t) { taskController.handleTaskCompletionToggle(t); }
+                        public void onView(Task t) { toggleViewTaskCard(t, holder[0]); }
+                        public void onEdit(Task t) { toggleEditTaskCard(t, holder[0]); }
+                        public void onDelete(Task t) { taskController.handleDeleteTaskRequest(t.getTask_id()); }
+                    });
+                    holder[0] = card;
+                    Dimension full = card.getPreferredSize();
+                    taskListPanel.add(card, "growx, gapbottom 10, h 0!");
+                    int baseDelay = firstRun ? FIRST_RUN_DELAY : 0;
+                    int delay = baseDelay + idx * STAGGER_DELAY;
+                    Timer starter = new Timer(CARD_TIMER_DELAY, null);
+                    starter.setInitialDelay(delay);
+                    starter.setRepeats(false);
+                    starter.addActionListener(e -> animatePanelHeight(card, full.height, null));
+                    starter.start();
+                    idx++;
+                }
+                firstRun = false;
             } else {
                 JLabel noTasksLabel = new JLabel("No tasks found matching criteria.");
                 noTasksLabel.setHorizontalAlignment(SwingUtilities.CENTER);
                 taskListPanel.add(noTasksLabel, "growx");
             }
+            taskListPanel.revalidate();
+            taskListPanel.repaint();
         });
     }
 

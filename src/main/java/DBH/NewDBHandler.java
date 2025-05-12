@@ -96,7 +96,7 @@ public class NewDBHandler {
     private void updateTasksFromJSON(UUID userUUID, String jsonContent) {
         String query = "SELECT * FROM todo.update_tasks_from_jsonb(?, ?::jsonb)";   
         // System.out.println("Updating tasks from JSON for user: " + userUUID);
-        // System.out.println("JSON Content: " + jsonContent);
+        System.out.println("JSON Content: " + jsonContent);
         try (Connection conn = NeonPool.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             pstmt.setObject(1, userUUID);
@@ -203,12 +203,10 @@ public class NewDBHandler {
     }
 
     /**
-     * Retrieves a list of folders accessible to the user from the cloud database.
-     * <p>
-     * This method executes a database function {@code todo.get_accessible_folders}
+     * <h4>Retrieves a list of folders accessible to the user from the cloud database.</h4>
+     * <p>This method executes a database function {@code todo.get_accessible_folders}
      * which returns the folder data. The result is then parsed to reconstruct
-     * a list of {@link Folder} objects.
-     * </p>
+     * a list of {@link Folder} objects.</p>
      *
      * @param userUUID The UUID of the user for whom to retrieve accessible folders.
      * @return A List of {@link Folder} objects representing the user's accessible folders.
@@ -235,11 +233,20 @@ public class NewDBHandler {
     }
 
     /**
-     * Merges cloud tasks into the local userTasksList according to the following rules:
-     * 1. If a task in cloudTasks is not present in userTasksList, add it.
-     * 2. If a task is present in both, but cloud has a newer updated_at, replace local with cloud.
-     * 3. If a task is present in both with same id and updated_at, keep the local one.
-     */
+     * <h4>Merges cloud tasks into the local userTasksList.</h4>
+     * <p>This method compares tasks from the cloud with local tasks and updates the local task list accordingly.
+     * It handles the following scenarios:</p>
+     * <ol>
+     * <li>If a task in cloudTasks is not present in userTasksList, it is added.</li>
+     * <li>If a task is present in both, but the cloud version has a newer updated_at timestamp,
+     * the local task is replaced with the cloud version.</li>
+     * <li>If a task is present in both with the same id and updated_at timestamp, the local version is kept.</li>
+     * </ol>
+     * <p>Additionally, if a task in cloudTasks has a deleted_at timestamp, it is removed from the local list.</p>
+     * <p>Finally, it removes any tasks from userTasksList that have a deleted_at timestamp.</p>
+     * 
+     * @param cloudTasks A list of tasks retrieved from the cloud database in the sync process.
+    */
     private void mergeTasks(List<Task> cloudTasks) {
         Map<String, Task> localTaskMap = new HashMap<>();
         for (Task localTask : taskHandler.userTasksList) {
@@ -272,8 +279,16 @@ public class NewDBHandler {
         taskHandler.userTasksList.removeIf(task -> task.getDeleted_at() != null);
     }
 
+    /**
+     * <h4>Starts the synchronization process asynchronously.</h4>
+     * <p>This method runs the syncTasks() method in a separate thread using CompletableFuture.</p>
+     * @return A CompletableFuture that completes with true if the sync process was successful,
+     *         or false if an error occurred.
+     */
     public CompletableFuture<Boolean> startSyncProcess(){
         return CompletableFuture.supplyAsync(() -> {
+            if (userUUID == null)
+                throw new IllegalStateException("User UUID is not set. Cannot start sync process.");
             try {
                 syncTasks();
                 return true;
@@ -284,16 +299,18 @@ public class NewDBHandler {
         });
     }
 
-    // TODO: note the error in case that the local list is empty but the shadow is not
+    /**
+     * <h4>Synchronizes tasks between the local userTasksList and the cloud database.</h4>
+     * <p>This method retrieves tasks from the cloud that have been modified since the last sync,
+     * and merges them with the local task list. It also prepares and sends any new or updated
+     * tasks to the cloud for synchronization.</p>
+     */
     private void syncTasks() {
-        if ( taskHandler.userTasksList.isEmpty()) {
-            System.err.println("No tasks found in local storage. Retrieving from cloud.");
+        if ( taskHandler.userTasksList.isEmpty() && taskHandler.getShadowUpdatesForSync().isEmpty() ) {
             List<Task> retrievedTasks = retrieveTasksFromCloud(userUUID, null);
             mergeTasks(retrievedTasks);
-            if (taskHandler.userTasksList.isEmpty()) {
-                System.err.println("No tasks found in the cloud for user: " + userUUID);
+            if (taskHandler.userTasksList.isEmpty())
                 return;
-            }
             taskHandler.setLastSync(LocalDateTime.now());
             return;
         }

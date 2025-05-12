@@ -4,8 +4,8 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.toDoList</groupId>
-    <artifactId>ToDoListApp</artifactId>
-    <version>v1.2.5-alpha</version>
+    <artifactId>TrashTDL</artifactId>
+    <version>v2.0.0</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -34,20 +34,6 @@
             <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.12.5</version>
         </dependency>
-                
-        <!-- HikariCP dependency -->
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>5.0.1</version>
-        </dependency>
-
-        <!-- dotenv-java dependency -->
-        <dependency>
-            <groupId>io.github.cdimascio</groupId>
-            <artifactId>dotenv-java</artifactId>
-            <version>2.2.0</version>
-        </dependency>
 
         <!-- JBCrypt dependency -->
         <dependency>
@@ -63,13 +49,17 @@
             <version>2.2</version>
         </dependency>
 
-        <!-- NetBeans -->
+        <!-- UI dependencies -->
         <dependency>
-            <groupId>org.netbeans.external</groupId>
-            <artifactId>AbsoluteLayout</artifactId>
-            <version>RELEASE240</version>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf</artifactId>
+            <version>3.6</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.formdev</groupId>
+            <artifactId>flatlaf-extras</artifactId>
+            <version>3.6</version>
+        </dependency>
         <dependency>
             <groupId>com.miglayout</groupId>
             <artifactId>miglayout-swing</artifactId>
@@ -77,9 +67,9 @@
         </dependency>
 
         <dependency>
-            <groupId>com.formdev</groupId>
-            <artifactId>flatlaf</artifactId>
-            <version>3.0</version>
+            <groupId>io.github.dj-raven</groupId>
+            <artifactId>swing-datetime-picker</artifactId>
+            <version>2.1.0</version>
         </dependency>
 
     </dependencies>

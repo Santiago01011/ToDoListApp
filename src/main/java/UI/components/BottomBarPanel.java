@@ -24,7 +24,7 @@ public class BottomBarPanel extends JPanel {
     public BottomBarPanel(Listener listener) {
         this.listener = listener;
         setLayout(new MigLayout("insets 5 10 5 10, fillx", "[]push[][][]", "[]"));
-        setBackground(common.getPanelColor().darker());
+        setBackground(getBackground().darker());
 
         JButton newTaskBtn = new JButton("New task", new javax.swing.ImageIcon(
                 common.getAddIcon().getImage().getScaledInstance(16, 16, java.awt.Image.SCALE_SMOOTH)));

@@ -46,7 +46,7 @@ public class TaskCardPanel extends JPanel {
         add(titleLabel, "growx");
 
         RoundedLabel statusLabel = new RoundedLabel(
-                task.getStatus() != null ? task.getStatus().toString() : "Unknown", 15);
+                task.getStatus() != null ? TaskStatus.getStatusToString(task.getStatus()) : "Unknown", 15);
         Color statusColor = task.getStatus() == TaskStatus.in_progress ? common.getContrastColor()
                 : common.getPanelColor().darker();
         statusLabel.setBackground(statusColor);
@@ -68,7 +68,7 @@ public class TaskCardPanel extends JPanel {
         JLabel dateLabel = new JLabel();
         DateTimeFormatter df = DateTimeFormatter.ofPattern("MMM dd, yyyy");
         if (task.getStatus() == TaskStatus.completed) {
-            setBackground(common.getSecondaryColor().darker());
+            setBackground(getBackground().darker());
             titleLabel.setFont(titleLabel.getFont().deriveFont(java.awt.Font.ITALIC | java.awt.Font.BOLD));
             titleLabel.setText("<html><s>" + (task.getTitle() != null ? task.getTitle() : "No Title") + "</s></html>");
         } else if (task.getDue_date() != null) {
@@ -79,7 +79,7 @@ public class TaskCardPanel extends JPanel {
         } else {
             dateLabel.setText("No due date");
         }
-        dateLabel.setFont(dateLabel.getFont().deriveFont(java.awt.Font.PLAIN, 11f));
+        dateLabel.setFont(dateLabel.getFont().deriveFont(java.awt.Font.PLAIN, 12f));
         add(dateLabel, "growx");
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));

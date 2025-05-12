@@ -54,11 +54,11 @@ public class TaskHandler {
      * @param title New title for the task (null if unchanged)
      * @param description New description for the task (null if unchanged)
      * @param status New status for the task (null if unchanged)
-     * @param targetDate New due date for the task in string format (null if unchanged)
+     * @param targetDate New due date for the task (null if unchanged)
      * @param folderName New folder name for the task (null if unchanged)
      * @param deleted_at Deletion timestamp if the task is being deleted, null otherwise
      */
-    public void updateTask(Task task, String title, String description, TaskStatus status, String targetDate, String folderName, LocalDateTime deleted_at) {
+    public void updateTask(Task task, String title, String description, TaskStatus status, LocalDateTime targetDate, String folderName, LocalDateTime deleted_at) {
         LocalDateTime updateTime = LocalDateTime.now();
         if (task.getSync_status().equals("new")) {
             if ( deleted_at != null ){
@@ -80,7 +80,7 @@ public class TaskHandler {
             if (title != null && !title.isEmpty()) builder.taskTitle(title);
             if (description != null) builder.description(description);
             if (status != null) builder.status(status);
-            if (targetDate != null) builder.dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
+            if (targetDate != null) builder.dueDate(targetDate);
             if (folderName != null) builder.folderName(folderName);
             if (deleted_at != null) builder.deletedAt(deleted_at);
             Task shadow = builder.build();
@@ -113,7 +113,7 @@ public class TaskHandler {
             if (title != null && !title.isEmpty()) builder.taskTitle(title);
             if (description != null) builder.description(description);
             if (status != null) builder.status(status);
-            if (targetDate != null) builder.dueDate(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
+            if (targetDate != null) builder.dueDate(targetDate);
             if (folderName != null) builder.folderName(folderName);
             if (deleted_at != null) builder.deletedAt(deleted_at);
 
@@ -128,7 +128,7 @@ public class TaskHandler {
     }
     
     // Helper method to update task fields
-    private void updateTaskFields(Task task, String title, String description, TaskStatus status, String targetDate, String folderName) {
+    private void updateTaskFields(Task task, String title, String description, TaskStatus status, LocalDateTime targetDate, String folderName) {
         if (title != null && !title.isEmpty()) {
             task.setTitle(title);
         }
@@ -139,12 +139,7 @@ public class TaskHandler {
             task.setStatus(status);
         }
         if (targetDate != null) {
-            try {
-                task.setDue_date(targetDate.isEmpty() ? null : LocalDateTime.parse(targetDate));
-            } catch (DateTimeParseException e) {
-                LOGGER.log(Level.WARNING, "Invalid date format for task " + task.getTask_id() + ": " + targetDate, e);
-                task.setDue_date(null);
-            }
+            task.setDue_date(targetDate);
         }
         if (folderName != null) {
             task.setFolder_name(folderName);

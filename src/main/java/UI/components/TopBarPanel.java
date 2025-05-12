@@ -11,6 +11,7 @@ import java.util.EnumMap;
 import java.util.Arrays;
 
 import javax.swing.BorderFactory;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JCheckBoxMenuItem;
@@ -19,6 +20,7 @@ import javax.swing.JMenu;
 import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
+import javax.swing.JRadioButtonMenuItem;
 import javax.swing.SwingConstants;
 
 import COMMON.common;
@@ -41,15 +43,20 @@ public class TopBarPanel extends JPanel {
     private Listener listener;
     private JComboBox<String> folderFilterBox;
     private JPopupMenu filterPopupMenu;
-    private Map<TaskStatus, JCheckBoxMenuItem> statusCheckBoxMenuItems;
+    private Map<TaskStatus, JCheckBoxMenuItem> filterCheckBoxMenuItems;
+    private Map<TaskStatus, JRadioButtonMenuItem> sortRadioButtonMenuItems;
+    private ButtonGroup sortButtonGroup;
     private JPopupMenu userPopupMenu;
     private JButton toggleColorButton;
+    private Set<TaskStatus> selectedCriterias = Collections.emptySet();
 
     public TopBarPanel(Listener listener) {
         this.listener = listener;
-        statusCheckBoxMenuItems = new EnumMap<>(TaskStatus.class);
+        filterCheckBoxMenuItems = new EnumMap<>(TaskStatus.class);
+        sortRadioButtonMenuItems = new EnumMap<>(TaskStatus.class);
+        sortButtonGroup = new ButtonGroup();
         setLayout(new MigLayout("insets 5 10 5 10, fillx", "[][][]push[][]", "[]"));
-        setBackground(common.getPanelColor().darker());
+        setBackground(getBackground().darker());
 
         JLabel logoLabel = new JLabel(common.getAppIcon());
         add(logoLabel, "gapright 10");
@@ -93,15 +100,16 @@ public class TopBarPanel extends JPanel {
     private void createFilterPopup() {
         filterPopupMenu = new JPopupMenu();
         JMenuItem clear = new JMenuItem("Clear All Filters");
-        clear.addActionListener(e -> listener.onClearFilters());
         filterPopupMenu.add(clear);
         filterPopupMenu.addSeparator();
 
         JMenu statusFilterMenu = new JMenu("Filter by status");
         for (TaskStatus status : Arrays.asList(TaskStatus.pending, TaskStatus.completed, TaskStatus.in_progress)) {
-            JCheckBoxMenuItem item = new JCheckBoxMenuItem(getDisplayTextForStatus(status));
-            item.addActionListener(e -> handleStatusItemClicked());
-            statusCheckBoxMenuItems.put(status, item);
+            JCheckBoxMenuItem item = new JCheckBoxMenuItem(TaskStatus.getStatusToString(status));
+            if(status == TaskStatus.pending || status == TaskStatus.in_progress)
+                item.setSelected(true);
+            item.addActionListener(e -> handleFilterItemClicked());
+            filterCheckBoxMenuItems.put(status, item);
             statusFilterMenu.add(item);
         }
         filterPopupMenu.add(statusFilterMenu);
@@ -109,48 +117,41 @@ public class TopBarPanel extends JPanel {
 
         JMenu dateSortMenu = new JMenu("Sort by date");
         for (TaskStatus status : Arrays.asList(TaskStatus.overdue, TaskStatus.incoming_due, TaskStatus.newest)) {
-            JCheckBoxMenuItem item = new JCheckBoxMenuItem(getDisplayTextForStatus(status));
+            JRadioButtonMenuItem item = new JRadioButtonMenuItem(TaskStatus.getStatusToString(status));
             item.addActionListener(e -> handleSortItemClicked());
-            statusCheckBoxMenuItems.put(status, item);
+            sortRadioButtonMenuItems.put(status, item);
+            sortButtonGroup.add(item);
             dateSortMenu.add(item);
         }
         filterPopupMenu.add(dateSortMenu);
+        clear.addActionListener(e -> {
+            selectedCriterias = Collections.emptySet();
+            for (JCheckBoxMenuItem item : filterCheckBoxMenuItems.values())
+                item.setSelected(true);
+            sortButtonGroup.clearSelection();
+            folderFilterBox.setSelectedIndex(0);
+            listener.onClearFilters();
+            });
     }
 
-    
-    private void handleStatusItemClicked() {
-        Set<TaskStatus> selected = new HashSet<>();
-        for (Map.Entry<TaskStatus, JCheckBoxMenuItem> entry : statusCheckBoxMenuItems.entrySet()) {
-            if (entry.getValue().isSelected()) {
-                selected.add(entry.getKey());
-            }
-        }
-        listener.onStatusFilterChanged(selected);
+    private void handleFilterItemClicked() {
+        selectedCriterias = new HashSet<>();
+        for (Map.Entry<TaskStatus, JCheckBoxMenuItem> entry : filterCheckBoxMenuItems.entrySet())
+            if (entry.getValue().isSelected()) selectedCriterias.add(entry.getKey());
+        listener.onStatusFilterChanged(selectedCriterias);
     }
 
     private void handleSortItemClicked() {
         Set<TaskStatus> selected = new HashSet<>();
-        for (Map.Entry<TaskStatus, JCheckBoxMenuItem> entry : statusCheckBoxMenuItems.entrySet()) {
+        for (Map.Entry<TaskStatus, JCheckBoxMenuItem> entry : filterCheckBoxMenuItems.entrySet())
+            if (entry.getValue().isSelected()) selected.add(entry.getKey());
+        for (Map.Entry<TaskStatus, JRadioButtonMenuItem> entry : sortRadioButtonMenuItems.entrySet()) {
             if (entry.getValue().isSelected()) {
                 selected.add(entry.getKey());
+                break;
             }
         }
         listener.onStatusFilterChanged(selected);
-    }
-
-    
-    private String getDisplayTextForStatus(TaskStatus status) {
-        switch (status) {
-            case pending: return "Pending";
-            case completed: return "Completed";
-            case in_progress: return "In Progress";
-            case overdue: return "Overdues";
-            case incoming_due: return "Incomings";
-            case newest: return "newests";
-            default:
-                String name = status.name().toLowerCase().replace('_', ' ');
-                return Character.toUpperCase(name.charAt(0)) + name.substring(1);
-        }
     }
 
     private void createUserPopup() {
@@ -168,12 +169,5 @@ public class TopBarPanel extends JPanel {
         folderFilterBox.addItem("All Folders");
         if (folders != null) folders.forEach(folderFilterBox::addItem);
         folderFilterBox.setSelectedIndex(0);
-    }
-
-    public void setSelectedStatuses(Set<TaskStatus> statuses) {
-        if (statuses == null) statuses = Collections.emptySet();
-        for (Map.Entry<TaskStatus, JCheckBoxMenuItem> entry : statusCheckBoxMenuItems.entrySet()) {
-            entry.getValue().setSelected(statuses.contains(entry.getKey()));
-        }
     }
 }

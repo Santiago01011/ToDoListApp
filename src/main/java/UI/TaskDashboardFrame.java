@@ -2,6 +2,7 @@ package UI;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Container;
 import java.awt.Cursor;
 import java.awt.Dimension;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.HashSet;
 import java.util.Collections;
+import java.util.ArrayList;
 
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
@@ -29,6 +31,7 @@ import COMMON.common;
 import UI.components.TopBarPanel;
 import UI.components.BottomBarPanel;
 import UI.components.NewTaskPanel;
+import UI.components.EditTaskPanel;
 import UI.components.TaskCardPanel;
 import controller.TaskController;
 import model.FiltersCriteria;
@@ -39,15 +42,23 @@ import net.miginfocom.swing.MigLayout;
 public class TaskDashboardFrame extends Frame {
     private static final int ANIMATION_DURATION = 150;
     private static final int TIMER_DELAY = 15;
+    private static final int CARD_ANIMATION_DURATION = 100;
+    private static final int CARD_TIMER_DELAY = 15;
 
     private TaskController taskController;
     private JPanel taskListPanel;
     private JPanel contentContainer;
     private JPanel mainPanel;
     private NewTaskPanel newTaskPanel;
+    private EditTaskPanel editTaskPanel;
+    private EditTaskPanel editTaskCardPanel;
+    private TaskCardPanel activeEditCardPanel;
     private TopBarPanel topBarPanel;
     private BottomBarPanel bottomBarPanel;
     private boolean isNewTaskVisible = false;
+    private boolean isEditTaskVisible = false;
+    private List<String> currentFolderList = new ArrayList<>();
+    private Timer addCardTimer;
 
     FiltersCriteria filterCriteria = FiltersCriteria.defaultCriteria();
 
@@ -56,7 +67,7 @@ public class TaskDashboardFrame extends Frame {
 
         setResizable(true);
         setSize(700, 700);
-        setMinimumSize(new Dimension(650, 400));
+        setMinimumSize(new Dimension(600, 400));
         setLocationRelativeTo(null);
 
         addWindowListener(new WindowAdapter() {
@@ -179,6 +190,7 @@ public class TaskDashboardFrame extends Frame {
         });
         newTaskPanel.setBounds(width, 0, width, height);
         contentContainer.add(newTaskPanel);
+
         contentContainer.addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -187,9 +199,21 @@ public class TaskDashboardFrame extends Frame {
                 if (isNewTaskVisible) {
                     mainPanel.setBounds(-w, 0, w, h);
                     newTaskPanel.setBounds(0, 0, w, h);
+                    if (editTaskPanel != null) {
+                        editTaskPanel.setBounds(-w, 0, w, h);
+                    }
+                } else if (isEditTaskVisible) {
+                    mainPanel.setBounds(w, 0, w, h);
+                    if (editTaskPanel != null) {
+                        editTaskPanel.setBounds(0, 0, w, h);
+                    }
+                    newTaskPanel.setBounds(w, 0, w, h);
                 } else {
                     mainPanel.setBounds(0, 0, w, h);
                     newTaskPanel.setBounds(w, 0, w, h);
+                    if (editTaskPanel != null) {
+                        editTaskPanel.setBounds(-w, 0, w, h);
+                    }
                 }
             }
         });
@@ -245,54 +269,129 @@ public class TaskDashboardFrame extends Frame {
         timer.start();
     }
 
+    private void toggleEditTaskCard(Task taskToEdit, TaskCardPanel cardPanel) {
+        if (editTaskCardPanel != null && activeEditCardPanel == cardPanel) {
+            taskListPanel.remove(editTaskCardPanel);
+            editTaskCardPanel = null;
+            activeEditCardPanel = null;
+            taskListPanel.revalidate();
+            taskListPanel.repaint();
+            return;
+        }
+        if (editTaskCardPanel != null) {
+            taskListPanel.remove(editTaskCardPanel);
+        }
+        activeEditCardPanel = cardPanel;
+        editTaskCardPanel = new EditTaskPanel(new EditTaskPanel.Listener() {
+            public void onSaveEdit(String title, String desc, String folder, LocalDateTime due, TaskStatus status) {
+                taskController.handleEditTaskRequest(taskToEdit.getTask_id(), title, desc, folder, due, status);
+                taskListPanel.remove(editTaskCardPanel);
+                editTaskCardPanel = null;
+                activeEditCardPanel = null;
+                refreshTaskListDisplay();
+            }
+            public void onCancelEdit() {
+                taskListPanel.remove(editTaskCardPanel);
+                editTaskCardPanel = null;
+                activeEditCardPanel = null;
+                taskListPanel.revalidate();
+                taskListPanel.repaint();
+            }
+        }, taskToEdit);
+        editTaskCardPanel.setFolders(this.currentFolderList);
+        Component[] comps = taskListPanel.getComponents();
+        int idx = -1;
+        for (int i = 0; i < comps.length; i++) {
+            if (comps[i] == cardPanel) {
+                idx = i;
+                break;
+            }
+        }
+        int pos = (idx >= 0) ? idx + 1 : comps.length;
+        taskListPanel.add(editTaskCardPanel, "growx, gapbottom 10", pos);
+        taskListPanel.revalidate();
+        taskListPanel.repaint();
+    }
+
+    private void animateCardSlideDown(JPanel card) {
+        Dimension full = card.getPreferredSize();
+        int steps = Math.max(1, CARD_ANIMATION_DURATION / CARD_TIMER_DELAY);
+        int delta = Math.max(1, full.height / steps);
+        card.setPreferredSize(new Dimension(full.width, 0));
+        Timer t = new Timer(CARD_TIMER_DELAY, null);
+        t.addActionListener(e -> {
+            Dimension curr = card.getPreferredSize();
+            int h = Math.min(full.height, curr.height + delta);
+            card.setPreferredSize(new Dimension(full.width, h));
+            card.revalidate();
+            Container parent = card.getParent();
+            if (parent != null) { parent.revalidate(); parent.repaint(); }
+            if (h >= full.height) {
+                card.setPreferredSize(null);
+                ((Timer)e.getSource()).stop();
+            }
+        });
+        t.start();
+    }
+
     public void refreshTaskListDisplay() {
-        List<Task> tasksToDisplay;
-        tasksToDisplay = taskController.getTasksByFilters(filterCriteria);
+        List<Task> tasksToDisplay = taskController.getTasksByFilters(filterCriteria);
         final List<Task> finalTasksToDisplay = tasksToDisplay;
         SwingUtilities.invokeLater(() -> {
             taskListPanel.removeAll();
+            if (addCardTimer != null) {
+                addCardTimer.stop();
+                addCardTimer = null;
+            }
             if (finalTasksToDisplay != null && !finalTasksToDisplay.isEmpty()) {
-                boolean tasksDisplayed = false;
-                for (Task task : finalTasksToDisplay) {
-                    TaskCardPanel card = new TaskCardPanel(task, new TaskCardPanel.Listener() {
-                        public void onToggleComplete(Task t) { taskController.handleTaskCompletionToggle(t); }
-                        public void onView(Task t) { taskController.handleViewTaskRequest(t.getTask_id()); }
-                        public void onEdit(Task t) { taskController.handleEditTaskRequest(t.getTask_id()); }
-                        public void onDelete(Task t) { taskController.handleDeleteTaskRequest(t.getTask_id()); }
-                    });
-                    taskListPanel.add(card, "growx, gapbottom 10");
-                    tasksDisplayed = true;
-                }
-                if (!tasksDisplayed) {
-                    JLabel noTasksLabel = new JLabel("No tasks found matching criteria.");
-                    noTasksLabel.setHorizontalAlignment(SwingUtilities.CENTER);
-                    taskListPanel.add(noTasksLabel, "growx");
-                }
+                addCardTimer = new Timer(CARD_TIMER_DELAY, null);
+                addCardTimer.addActionListener(new java.awt.event.ActionListener() {
+                    private int idx = 0;
+                    public void actionPerformed(java.awt.event.ActionEvent e) {
+                        if (idx >= finalTasksToDisplay.size()) {
+                            addCardTimer.stop();
+                            addCardTimer = null;
+                            return;
+                        }
+                        Task task = finalTasksToDisplay.get(idx++);
+                        final TaskCardPanel[] holder = new TaskCardPanel[1];
+                        final TaskCardPanel card = new TaskCardPanel(task, new TaskCardPanel.Listener() {
+                            public void onToggleComplete(Task t) { taskController.handleTaskCompletionToggle(t); }
+                            public void onView(Task t) { taskController.handleViewTaskRequest(t.getTask_id()); }
+                            public void onEdit(Task t) { toggleEditTaskCard(t, holder[0]); }
+                            public void onDelete(Task t) { taskController.handleDeleteTaskRequest(t.getTask_id()); }
+                        });
+                        holder[0] = card;
+                        taskListPanel.add(card, "growx, gapbottom 10");
+                        animateCardSlideDown(card);
+                        taskListPanel.revalidate();
+                        taskListPanel.repaint();
+                    }
+                });
+                addCardTimer.setInitialDelay(0);
+                addCardTimer.start();
             } else {
                 JLabel noTasksLabel = new JLabel("No tasks found matching criteria.");
                 noTasksLabel.setHorizontalAlignment(SwingUtilities.CENTER);
                 taskListPanel.add(noTasksLabel, "growx");
             }
-            taskListPanel.revalidate();
-            taskListPanel.repaint();
         });
     }
 
     public void updateFolderList(List<String> folderList) {
+        this.currentFolderList = new ArrayList<>(folderList);
         SwingUtilities.invokeLater(() -> {
             topBarPanel.updateFolders(folderList);
             newTaskPanel.setFolders(folderList);
         });
     }
 
-    // Update the bottom bar's sync label using controller's last sync time
     private void updateLastSyncLabel() {
         if (taskController != null) {
             bottomBarPanel.setLastSync(taskController.getLastSyncTime());
         }
     }
 
-    // Update sync label with provided timestamp
     public void updateLastSyncLabel(LocalDateTime lastSyncTime) {
         SwingUtilities.invokeLater(() -> {
             bottomBarPanel.setLastSync(lastSyncTime);

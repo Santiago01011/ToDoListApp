@@ -172,17 +172,6 @@ public class TaskController {
         // }
     }
 
-    public void handleEditTaskRequest(String taskId) {
-        System.out.println("Controller: Edit task request for ID " + taskId);
-        // TODO: Implement logic to show an edit dialog for the task
-        // Task task = taskHandler.getTaskById(taskId);
-        // if (task != null) {
-        //     EditTaskDialog dialog = new EditTaskDialog(view, this, task); // Pass controller and task
-        //     dialog.setVisible(true);
-        //     // After dialog closes and potentially saves changes, refresh:
-        //     // loadInitialTasks();
-        // }
-    }
 
     public void handleDeleteTaskRequest(String taskId) {
         System.out.println("Controller: Delete task request for ID " + taskId);
@@ -236,7 +225,7 @@ public class TaskController {
 
     public void handleChangeUsernameRequest() {
         System.out.println("Controller: Change Username request received.");
-        // TODO: Implement logic to show a dialog for changing username
+        // TODO: Implement logic to show a dialog for changing username and validate JWT to allow change
         String newUsername = JOptionPane.showInputDialog(view, "Enter new username:");
         if (newUsername != null && !newUsername.trim().isEmpty()) {
             // Call API to change username
@@ -246,9 +235,20 @@ public class TaskController {
 
     public void handleDeleteAccountRequest() {
         System.out.println("Controller: Delete Account request received.");
-        // TODO: Implement logic to permanently delete the user account
-        // This is a destructive action, will be maneged through the API
+        // TODO: Implement logic to show a dialog for delete user and validate JWT to allow change
         
+    }
+
+    public void handleEditTaskRequest(String task_id, String title, String desc, String folder, LocalDateTime due,
+            TaskStatus status) {
+        System.out.println("Controller: Edit task request for ID " + task_id);
+        Task task = taskHandler.getTaskById(task_id);
+        if (task != null) {
+            taskHandler.updateTask(task, title, desc, status, due, folder, null);
+            view.refreshTaskListDisplay();
+        } else {
+            System.err.println("Controller: Could not find task with ID " + task_id + " to edit.");
+        }
     }
 
 }

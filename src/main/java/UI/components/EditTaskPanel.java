@@ -19,47 +19,55 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
 import COMMON.common;
+import model.Task;
 import model.TaskStatus;
 import net.miginfocom.swing.MigLayout;
 import raven.datetime.DatePicker;
 import raven.datetime.TimePicker;
 
-
-public class NewTaskPanel extends JPanel {
+public class EditTaskPanel extends JPanel {
     public interface Listener {
-        void onSave(String title, String desc, String folder, LocalDateTime due, TaskStatus status);
-        void onCancel();
+        void onSaveEdit(String title, String desc, String folder, LocalDateTime due, TaskStatus status);
+        void onCancelEdit();
     }
     private JComboBox<String> folderBox;
     private DatePicker datePicker;
     private TimePicker timePicker;
+    private String folderName;
 
-    public NewTaskPanel(Listener listener) {
+    public EditTaskPanel(Listener listener, Task task) {
         setLayout(new MigLayout("insets 5", "[grow]", "[][][][][][]"));
         setBorder(new EmptyBorder(10,5,5,5));
-        add(new JLabel("New Task"), "wrap");
+        add(new JLabel("Edit Task"), "wrap");
 
-        JTextField titleField = new JTextField("Enter task title...");
+        JTextField titleField = new JTextField(task.getTitle());
         addFocusListeners(titleField, "Enter task title...");
         
         add(new JLabel("Title:"), "split 2"); add(titleField, "growx, wrap");
 
-        JTextArea descArea = new JTextArea(3,10);
+        JTextArea descArea = new JTextArea(task.getDescription(),3,10);
         descArea.setLineWrap(true); descArea.setWrapStyleWord(true);
-        add(new JLabel("Description:"), "split 2"); add(new JScrollPane(descArea), "growx, wrap");
+        add(new JLabel("Edit description"), "split 2"); add(new JScrollPane(descArea), "growx, wrap");
 
-
-        datePicker = new DatePicker(); datePicker.setDateFormat("dd/MM/yyyy"); datePicker.setCloseAfterSelected(true);
+        LocalDateTime taskDueDate = task.getDue_date();
+        
+        datePicker = new DatePicker(); datePicker.setDateFormat("dd/MM/yyyy"); datePicker.setCloseAfterSelected(true); 
         timePicker = new TimePicker(); timePicker.set24HourView(true);
+        if (taskDueDate != null) {
+            datePicker.setSelectedDate(taskDueDate.toLocalDate());
+            timePicker.setSelectedTime(taskDueDate.toLocalTime());
+        }
         JFormattedTextField dateEditor = new JFormattedTextField(); datePicker.setEditor(dateEditor);
         JFormattedTextField timeEditor = new JFormattedTextField(); timePicker.setEditor(timeEditor);
         add(new JLabel("Due Date:"), "split 4"); add(dateEditor, "growx"); add(new JLabel("Time:")); add(timeEditor, "growx, wrap");
 
         folderBox = new JComboBox<>();
         add(new JLabel("Folder:"), "split 2"); add(folderBox, "growx, wrap");
+        this.folderName = task.getFolder_name();
 
         JComboBox<String> statusBox = new JComboBox<>(new String[]{"Pending","In Progress","Completed"});
         add(new JLabel("Status:"), "split 2"); add(statusBox, "growx, wrap");
+        statusBox.setSelectedItem(task.getStatus().toString());
 
         JButton saveBtn = new JButton("Save");
         saveBtn.addActionListener(e -> {
@@ -75,7 +83,7 @@ public class NewTaskPanel extends JPanel {
             }
             String folder = (String) folderBox.getSelectedItem();
             TaskStatus status = TaskStatus.getStringToStatus((String) statusBox.getSelectedItem());
-            listener.onSave(title, descArea.getText(), folder, due, status);
+            listener.onSaveEdit(title, descArea.getText(), folder, due, status);
             titleField.setText("");
             descArea.setText("");
             datePicker.clearSelectedDate();
@@ -83,15 +91,30 @@ public class NewTaskPanel extends JPanel {
         });
         JButton cancelBtn = new JButton(common.getBackIcon()); cancelBtn.setToolTipText("Cancel");
         cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        cancelBtn.addActionListener(e -> listener.onCancel());
+        cancelBtn.addActionListener(e -> listener.onCancelEdit());
         add(cancelBtn, "split 2"); add(saveBtn, "wrap");
     }
 
     public void setFolders(List<String> folders) {
         SwingUtilities.invokeLater(() -> {
             folderBox.removeAllItems();
-            if (folders != null) folders.forEach(folderBox::addItem);
-            if (folderBox.getItemCount()>0) folderBox.setSelectedIndex(0);
+            boolean taskFolderFound = false;
+            if (folders != null) {
+                for (String folder : folders) {
+                    folderBox.addItem(folder);
+                    if (this.folderName != null && this.folderName.equals(folder)) {
+                        taskFolderFound = true;
+                    }
+                }
+            }
+
+            if (taskFolderFound) {
+                folderBox.setSelectedItem(this.folderName);
+            } else if (folderBox.getItemCount() > 0) {
+                folderBox.setSelectedIndex(0);
+            } else {
+                folderBox.setSelectedItem(null);
+            }
         });
     }
 

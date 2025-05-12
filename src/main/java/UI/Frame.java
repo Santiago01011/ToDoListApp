@@ -25,7 +25,7 @@ public class Frame extends JFrame{
         
         ImageIcon appIcon = common.getAppIcon();
         setIconImage(appIcon.getImage());
-        getContentPane().setBackground(common.getPrimaryColor());
+        //getContentPane().setBackground(common.getPrimaryColor());
     }
 
 

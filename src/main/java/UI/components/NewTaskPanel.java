@@ -1,6 +1,7 @@
 package UI.components;
 
 import java.awt.Cursor;
+import java.awt.Frame;
 import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,31 +24,31 @@ import net.miginfocom.swing.MigLayout;
 import raven.datetime.DatePicker;
 import raven.datetime.TimePicker;
 
+
 public class NewTaskPanel extends JPanel {
     public interface Listener {
         void onSave(String title, String desc, String folder, LocalDateTime due, TaskStatus status);
         void onCancel();
     }
-    private Listener listener;
     private JComboBox<String> folderBox;
     private DatePicker datePicker;
     private TimePicker timePicker;
 
     public NewTaskPanel(Listener listener) {
-        this.listener = listener;
         setLayout(new MigLayout("insets 5", "[grow]", "[][][][][][]"));
         setBorder(new EmptyBorder(10,5,5,5));
         add(new JLabel("New Task"), "wrap");
 
-        JTextField titleField = new JTextField();
-        titleField.setText("Enter task title...");
+        JTextField titleField = new JTextField("Enter task title...");
+        addFocusListeners(titleField, "Enter task title...");
+        
         add(new JLabel("Title:"), "split 2"); add(titleField, "growx, wrap");
 
         JTextArea descArea = new JTextArea(3,10);
         descArea.setLineWrap(true); descArea.setWrapStyleWord(true);
         add(new JLabel("Description:"), "split 2"); add(new JScrollPane(descArea), "growx, wrap");
 
-        // date and time pickers
+
         datePicker = new DatePicker(); datePicker.setDateFormat("dd/MM/yyyy"); datePicker.now(); datePicker.setCloseAfterSelected(true);
         timePicker = new TimePicker();
         JFormattedTextField dateEditor = new JFormattedTextField(); datePicker.setEditor(dateEditor);
@@ -87,6 +88,25 @@ public class NewTaskPanel extends JPanel {
             folderBox.removeAllItems();
             if (folders != null) folders.forEach(folderBox::addItem);
             if (folderBox.getItemCount()>0) folderBox.setSelectedIndex(0);
+        });
+    }
+
+    public void addFocusListeners(JTextField textField, String defaultText){
+        textField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusGained(java.awt.event.FocusEvent e) {
+                if (textField.getText().equals(defaultText)) {
+                    textField.setText("");
+                }
+            }
+        });
+        textField.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
+            public void focusLost(java.awt.event.FocusEvent e) {
+                if (textField.getText().isEmpty()) {
+                    textField.setText(defaultText);
+                }
+            }
         });
     }
 }

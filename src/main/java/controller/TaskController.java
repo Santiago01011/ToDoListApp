@@ -10,6 +10,7 @@ import UI.TaskDashboardFrame;
 import COMMON.UserProperties;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -88,12 +89,32 @@ public class TaskController {
         List<Task> filteredTasks = new ArrayList<>(taskHandler.userTasksList);
         if (criteria.folderName() != null && !criteria.folderName().equals("All Folders"))
             filteredTasks = getTasksByFolder(filteredTasks, criteria.folderName());
-
-        if (criteria.statuses() != null && !criteria.statuses().isEmpty()) {
+        if ( criteria.statuses() == null && criteria.statuses().isEmpty() )
+            return filteredTasks;
+        if ( criteria.statuses().contains(TaskStatus.completed) || criteria.statuses().contains(TaskStatus.pending) || criteria.statuses().contains(TaskStatus.in_progress) ) {
             filteredTasks = filteredTasks.stream()
                 .filter(task -> criteria.statuses().contains(task.getStatus()))
                 .collect(Collectors.toList());
         }
+        if ( criteria.statuses().contains(TaskStatus.newest) ) {
+            filteredTasks = filteredTasks.stream()
+                .filter(task -> task.getCreated_at() != null && task.getCreated_at().isBefore(LocalDateTime.now()))
+                .sorted(Comparator.comparing(Task::getCreated_at).reversed())
+                .collect(Collectors.toList());
+        }
+        if ( criteria.statuses().contains(TaskStatus.incoming_due) ) {
+            filteredTasks = filteredTasks.stream()
+                .filter(task -> task.getDue_date() != null && task.getDue_date().isAfter(LocalDateTime.now()))
+                .sorted(Comparator.comparing(Task::getDue_date))
+                .collect(Collectors.toList());
+        }
+        if ( criteria.statuses().contains(TaskStatus.overdue) ) {
+            filteredTasks = filteredTasks.stream()
+                .filter(task -> task.getDue_date() != null && task.getDue_date().isBefore(LocalDateTime.now()))
+                .collect(Collectors.toList());
+        }
+
+
         
         return filteredTasks;
     }

@@ -17,7 +17,7 @@ import COMMON.common;
 import controller.TaskController;
 import controller.UserController;
 import model.TaskHandler;
-import DBH.NewDBHandler;
+import DBH.DBHandler;
 import UI.TaskDashboardFrame;
 import net.miginfocom.swing.MigLayout;
 import javax.swing.JOptionPane;

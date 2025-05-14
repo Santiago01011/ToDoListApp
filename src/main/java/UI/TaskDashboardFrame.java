@@ -26,6 +26,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
 import java.awt.LayoutManager;
@@ -38,6 +39,7 @@ import UI.components.NewTaskPanel;
 import UI.components.EditTaskPanel;
 import UI.components.ViewTaskPanel;
 import UI.components.TaskCardPanel;
+import UI.components.HistoryPanel;
 import controller.TaskController;
 import model.FiltersCriteria;
 import model.TaskStatus;
@@ -58,7 +60,7 @@ public class TaskDashboardFrame extends Frame {
     private MigLayout taskListLayout;
     private JPanel contentContainer;
     private JPanel mainPanel;
-    private NewTaskPanel newTaskPanel;    private EditTaskPanel editTaskPanel;
+    private NewTaskPanel newTaskPanel;
     private EditTaskPanel editTaskCardPanel;
     private TaskCardPanel activeEditCardPanel;
     private ViewTaskPanel viewTaskCardPanel;
@@ -66,8 +68,10 @@ public class TaskDashboardFrame extends Frame {
     private TopBarPanel topBarPanel;
     private BottomBarPanel bottomBarPanel;
     private boolean isNewTaskVisible = false;
-    private boolean isEditTaskVisible = false;
     private List<String> currentFolderList = new ArrayList<>();
+
+    private HistoryPanel historyPanel;
+    private boolean isHistoryVisible = false;
 
     FiltersCriteria filterCriteria = FiltersCriteria.defaultCriteria();
 
@@ -142,9 +146,9 @@ public class TaskDashboardFrame extends Frame {
             }
             public void onSyncRequested() {
                 taskController.handleSyncRequest();
-            }
-            public void onHistoryRequested() {
+            }            public void onHistoryRequested() {
                 taskController.handleHistoryRequest();
+                displayTaskHistory();
             }
             public void onLogout() {
                 taskController.handleLogoutRequest();
@@ -179,9 +183,10 @@ public class TaskDashboardFrame extends Frame {
             }
             public void onSync() {
                 taskController.handleSyncRequest();
-            }
+            }            
             public void onHistory() {
                 taskController.handleHistoryRequest();
+                displayTaskHistory();
             }
         });
         add(bottomBarPanel, BorderLayout.SOUTH);
@@ -193,13 +198,58 @@ public class TaskDashboardFrame extends Frame {
             public void onSave(String title, String desc, String folder, LocalDateTime due, TaskStatus status) {
                 taskController.handleCreateTask(title, desc, folder, due, status);
                 slideOutNewTaskPanel();
+                bottomBarPanel.enableBottomBarButtons();
             }
             public void onCancel() {
                 slideOutNewTaskPanel();
+                bottomBarPanel.enableBottomBarButtons();
             }
-        });
+        });        
         newTaskPanel.setBounds(width, 0, width, height);
         contentContainer.add(newTaskPanel);
+          historyPanel = new HistoryPanel(new HistoryPanel.Listener() {
+            @Override
+            public void onClose() {
+                slideOutHistoryPanel();
+                bottomBarPanel.enableBottomBarButtons();
+            }            
+            @Override
+            public void onTaskSelected(Task task) {
+                SwingUtilities.invokeLater(() -> {
+                    javax.swing.JDialog dialog = new javax.swing.JDialog(TaskDashboardFrame.this, "Task Details", true);
+                    dialog.setLayout(new BorderLayout());
+                    ViewTaskPanel viewPanel = new ViewTaskPanel(new ViewTaskPanel.Listener() {
+                        @Override
+                        public void onClose() {
+                            dialog.dispose();
+                        }
+                    }, task);
+                    
+                    dialog.add(viewPanel, BorderLayout.CENTER);
+                    dialog.pack();
+                    dialog.setLocationRelativeTo(TaskDashboardFrame.this);
+                    dialog.setDefaultCloseOperation(javax.swing.JDialog.DISPOSE_ON_CLOSE);
+                    dialog.setResizable(false);
+                    dialog.setVisible(true);
+                });
+            }
+            
+            @Override
+            public void onTaskRestore(Task task) {
+                taskController.handleTaskCompletionToggle(task);
+                List<Task> taskHistory = taskController.getTaskHistory();
+                historyPanel.displayTaskHistory(taskHistory);
+            }
+            
+            @Override
+            public void onTaskDelete(Task task) {
+                taskController.handleDeleteTaskRequest(task.getTask_id());
+                List<Task> taskHistory = taskController.getTaskHistory();
+                historyPanel.displayTaskHistory(taskHistory);
+            }
+        });        
+        historyPanel.setBounds(-width, 0, width, height);
+        contentContainer.add(historyPanel);
 
         contentContainer.addComponentListener(new ComponentAdapter() {
             @Override
@@ -209,21 +259,15 @@ public class TaskDashboardFrame extends Frame {
                 if (isNewTaskVisible) {
                     mainPanel.setBounds(-w, 0, w, h);
                     newTaskPanel.setBounds(0, 0, w, h);
-                    if (editTaskPanel != null) {
-                        editTaskPanel.setBounds(-w, 0, w, h);
-                    }
-                } else if (isEditTaskVisible) {
+                    historyPanel.setBounds(-w, 0, w, h);
+                } else if (isHistoryVisible) {
                     mainPanel.setBounds(w, 0, w, h);
-                    if (editTaskPanel != null) {
-                        editTaskPanel.setBounds(0, 0, w, h);
-                    }
+                    historyPanel.setBounds(0, 0, w, h);
                     newTaskPanel.setBounds(w, 0, w, h);
                 } else {
                     mainPanel.setBounds(0, 0, w, h);
                     newTaskPanel.setBounds(w, 0, w, h);
-                    if (editTaskPanel != null) {
-                        editTaskPanel.setBounds(-w, 0, w, h);
-                    }
+                    historyPanel.setBounds(-w, 0, w, h);
                 }
             }
         });
@@ -279,6 +323,66 @@ public class TaskDashboardFrame extends Frame {
         timer.start();
     }
 
+    private void slideInHistoryPanel() {
+        if (isHistoryVisible) return;
+        isHistoryVisible = true;
+
+        int width = contentContainer.getWidth();
+        int totalSteps = Math.max(1, ANIMATION_DURATION / TIMER_DELAY);
+        int delta = Math.max(1, width / totalSteps);
+
+        Timer timer = new Timer(TIMER_DELAY, null);
+        timer.addActionListener(e -> {
+            Point mainLoc = mainPanel.getLocation();
+            Point historyLoc = historyPanel.getLocation();
+
+            if (historyLoc.x >= 0) {
+                historyPanel.setLocation(0, 0);
+                mainPanel.setLocation(width, 0);
+                timer.stop();
+            } else {
+                mainPanel.setLocation(mainLoc.x + delta, 0);
+                historyPanel.setLocation(historyLoc.x + delta, 0);
+            }
+        });
+        timer.start();
+    }    
+    
+    private void slideOutHistoryPanel() {
+        if (!isHistoryVisible) return;
+        isHistoryVisible = false;
+
+        int width = contentContainer.getWidth();
+        int totalSteps = Math.max(1, ANIMATION_DURATION / TIMER_DELAY);
+        int delta = Math.max(1, width / totalSteps);
+
+        Timer timer = new Timer(TIMER_DELAY, null);
+        timer.addActionListener(e -> {
+            Point mainLoc = mainPanel.getLocation();
+            Point historyLoc = historyPanel.getLocation();
+
+            if (mainLoc.x <= 0) {
+                mainPanel.setLocation(0, 0);
+                historyPanel.setLocation(-width, 0);
+                timer.stop();
+            } else {
+                mainPanel.setLocation(mainLoc.x - delta, 0);
+                historyPanel.setLocation(historyLoc.x - delta, 0);
+            }
+        });
+        timer.start();
+    }
+
+    /**
+     * Displays the task history by sliding in the history panel
+     * and loading task history data from the controller.
+     */
+    private void displayTaskHistory() {
+        slideInHistoryPanel();
+        List<Task> taskHistory = taskController.getTaskHistory();
+        historyPanel.displayTaskHistory(taskHistory);
+    }
+
     private void animatePanelHeight(JPanel panel, int targetHeight, Runnable onFinish) {
         int steps = Math.max(1, CARD_ANIMATION_DURATION / CARD_TIMER_DELAY);
         int delta = Math.max(1, targetHeight / steps);
@@ -332,27 +436,6 @@ public class TaskDashboardFrame extends Frame {
     }
 
     private void toggleEditTaskCard(Task taskToEdit, TaskCardPanel cardPanel) {
-        if (editTaskCardPanel != null && activeEditCardPanel == cardPanel) {
-            final int position = findComponentPosition(editTaskCardPanel);
-            
-            final int originalCardHeight = cardPanel.getPreferredSize().height;
-            
-            animatePanelCollapse(editTaskCardPanel, () -> {
-                taskListPanel.remove(editTaskCardPanel);
-                
-                if (position >= 0 && position < taskListPanel.getComponentCount() + 1) {
-                    taskListPanel.add(cardPanel, "growx, gapbottom 10", position);
-                    animatePanelHeight(cardPanel, originalCardHeight, null);
-                }
-                
-                taskListPanel.revalidate();
-                taskListPanel.repaint();
-                editTaskCardPanel = null;
-                activeEditCardPanel = null;
-            });
-            return;
-        }
-        
         if (editTaskCardPanel != null) {
             final int oldPosition = findComponentPosition(editTaskCardPanel);
             
@@ -425,48 +508,33 @@ public class TaskDashboardFrame extends Frame {
                 }, taskToEdit);
                 
                 editTaskCardPanel.setFolders(currentFolderList);
-                
                 taskListPanel.add(editTaskCardPanel, "growx, gapbottom 10, h 0!", position);
-                
-                SwingUtilities.invokeLater(() -> {
-                    JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
-                    if (scrollPane != null) {
-                        Rectangle bounds = editTaskCardPanel.getBounds();
-                        scrollPane.getViewport().setViewPosition(new Point(0, bounds.y));
-                    }
-                });
-                
-                Dimension full = editTaskCardPanel.getPreferredSize();
                 taskListPanel.revalidate();
                 taskListPanel.repaint();
+                
+                Dimension full = editTaskCardPanel.getPreferredSize();
+                Timer scrollTimer = new Timer(150, e -> {
+                    JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
+                    if (scrollPane != null) {
+                        SwingUtilities.invokeLater(() -> {
+                            JViewport viewport = scrollPane.getViewport();
+                            Rectangle cardBounds = editTaskCardPanel.getBounds();
+                            Point viewPos = SwingUtilities.convertPoint(taskListPanel, cardBounds.getLocation(), viewport);
+                            viewPos.y += 30;
+                            viewport.scrollRectToVisible(new Rectangle(viewPos, cardBounds.getSize()));
+                        });
+                    }
+                });
+                scrollTimer.setRepeats(false);
+                scrollTimer.start();
+
+                
                 animatePanelHeight(editTaskCardPanel, full.height, null);
             });
         }
     }
 
-    private void toggleViewTaskCard(Task taskToView, TaskCardPanel cardPanel) {
-        // If the same card is being viewed, close it and restore the original card
-        if (viewTaskCardPanel != null && activeViewCardPanel == cardPanel) {
-            final int position = findComponentPosition(viewTaskCardPanel);
-            
-            final int originalCardHeight = cardPanel.getPreferredSize().height;
-            
-            animatePanelCollapse(viewTaskCardPanel, () -> {
-                taskListPanel.remove(viewTaskCardPanel);
-                
-                if (position >= 0 && position < taskListPanel.getComponentCount() + 1) {
-                    taskListPanel.add(cardPanel, "growx, gapbottom 10", position);
-                    animatePanelHeight(cardPanel, originalCardHeight, null);
-                }
-                
-                taskListPanel.revalidate();
-                taskListPanel.repaint();
-                viewTaskCardPanel = null;
-                activeViewCardPanel = null;
-            });
-            return;
-        }
-        
+    private void toggleViewTaskCard(Task taskToView, TaskCardPanel cardPanel) {        
         if (viewTaskCardPanel != null) {
             final int oldPosition = findComponentPosition(viewTaskCardPanel);
             
@@ -514,19 +582,27 @@ public class TaskDashboardFrame extends Frame {
                         });
                     }
                 }, taskToView);
-                taskListPanel.add(viewTaskCardPanel, "growx, gapbottom 10, h 0!", position);
-                
-                SwingUtilities.invokeLater(() -> {
-                    JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
-                    if (scrollPane != null) {
-                        Rectangle bounds = viewTaskCardPanel.getBounds();
-                        scrollPane.getViewport().setViewPosition(new Point(0, bounds.y));
-                    }
-                });
-                
-                Dimension full = viewTaskCardPanel.getPreferredSize();
+                taskListPanel.add(viewTaskCardPanel, "growx, gapbottom 10, h 0!", position);                
                 taskListPanel.revalidate();
                 taskListPanel.repaint();
+                
+                Dimension full = viewTaskCardPanel.getPreferredSize();
+                Timer scrollTimer = new Timer(150, e -> {
+                    JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
+                    if (scrollPane != null) {
+                        SwingUtilities.invokeLater(() -> {
+                            JViewport viewport = scrollPane.getViewport();
+                            Rectangle cardBounds = viewTaskCardPanel.getBounds();
+                            Point viewPos = SwingUtilities.convertPoint(taskListPanel, cardBounds.getLocation(), viewport);
+                            viewPos.y += 15;
+                            viewport.scrollRectToVisible(new Rectangle(viewPos, cardBounds.getSize()));
+                        });
+                    }
+                });
+                scrollTimer.setRepeats(false);
+                scrollTimer.start();
+
+                
                 animatePanelHeight(viewTaskCardPanel, full.height, null);
             });
         }
@@ -549,7 +625,8 @@ public class TaskDashboardFrame extends Frame {
             if (tasksToDisplay != null && !tasksToDisplay.isEmpty()) {
                 int idx = 0;
                 for (Task task : tasksToDisplay) {
-                    final TaskCardPanel[] holder = new TaskCardPanel[1];                    TaskCardPanel card = new TaskCardPanel(task, new TaskCardPanel.Listener() {
+                    final TaskCardPanel[] holder = new TaskCardPanel[1];                    
+                    TaskCardPanel card = new TaskCardPanel(task, new TaskCardPanel.Listener() {
                         public void onToggleComplete(Task t) { taskController.handleTaskCompletionToggle(t); }
                         public void onView(Task t) { toggleViewTaskCard(t, holder[0]); }
                         public void onEdit(Task t) { toggleEditTaskCard(t, holder[0]); }

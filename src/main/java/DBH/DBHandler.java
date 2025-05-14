@@ -22,17 +22,17 @@ import java.util.HashMap;
 
 
 
-public class NewDBHandler {
+public class DBHandler {
     private TaskHandler taskHandler;
     private UUID userUUID = null;
     
     /**
-     * Constructor that initializes the NewDBHandler with a TaskHandler
+     * Constructor that initializes the DBHandler with a TaskHandler
      * to access the task list.
      *
      * @param taskHandler The TaskHandler instance to be used for task management
      */
-    public NewDBHandler(TaskHandler taskHandler) {
+    public DBHandler(TaskHandler taskHandler) {
         this.taskHandler = taskHandler;
     }
 

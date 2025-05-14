@@ -35,12 +35,15 @@ A cross-platform Java desktop application for managing personal tasks with both 
 - `README.md` - This file
 - `pom.xml` - Maven build file
 
-## Technologies Used
+## Technologies / Libraries
 
 - Java OpenJDK 21
 - PostgreSQL (cloud)
 - Jackson (JSON)
 - SnakeYAML (user config)
+- [Swing DateTime Picker](https://github.com/DJ-Raven/swing-datetime-picker)
+- [FlatLaf](https://github.com/JFormDesigner/FlatLaf)
+- [MigLayout](https://github.com/mikaelgrev/miglayout)
 
 ## Icons Used
 

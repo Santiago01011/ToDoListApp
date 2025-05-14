@@ -20,15 +20,17 @@ public class BottomBarPanel extends JPanel {
     @SuppressWarnings("unused")
     private Listener listener;
     private JLabel lastSyncLabel;
+    private JButton newTaskBtn;
+    private JButton historyButton;
 
     public BottomBarPanel(Listener listener) {
         this.listener = listener;
         setLayout(new MigLayout("insets 5 10 5 10, fillx", "[]push[][][]", "[]"));
         setBackground(getBackground().darker());
 
-        JButton newTaskBtn = new JButton("New task", new javax.swing.ImageIcon(
+        newTaskBtn = new JButton("New task", new javax.swing.ImageIcon(
                 common.getAddIcon().getImage().getScaledInstance(16, 16, java.awt.Image.SCALE_SMOOTH)));
-        newTaskBtn.addActionListener(e -> listener.onNewTask());
+        
         add(newTaskBtn, "gapleft 5");
 
         lastSyncLabel = new JLabel("Sync status unknown");
@@ -43,10 +45,25 @@ public class BottomBarPanel extends JPanel {
         syncButton.addActionListener(e -> listener.onSync());
         add(syncButton, "gapright 15");
 
-        JButton historyButton = new JButton("History");
+        historyButton = new JButton("History");
         historyButton.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
-        historyButton.addActionListener(e -> listener.onHistory());
         add(historyButton, "gapright 5");
+        
+        historyButton.addActionListener(e -> {
+            newTaskBtn.setEnabled(false);
+            historyButton.setEnabled(false);
+            listener.onHistory();
+        });
+        newTaskBtn.addActionListener(e -> {
+            newTaskBtn.setEnabled(false);
+            historyButton.setEnabled(false);
+            listener.onNewTask();
+        });
+    }
+    
+    public void enableBottomBarButtons() {
+        newTaskBtn.setEnabled(true);
+        historyButton.setEnabled(true);
     }
 
     public void setLastSync(LocalDateTime t) {

@@ -62,6 +62,8 @@ public class NewTaskPanel extends JPanel {
         add(new JLabel("Status:"), "split 2"); add(statusBox, "growx, wrap");
 
         JButton saveBtn = new JButton("Save");
+        saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        saveBtn.setToolTipText("Save Task");
         saveBtn.addActionListener(e -> {
             String title = titleField.getText().trim();
             if (title.isEmpty() || title.equals("Enter task title...")) {
@@ -82,9 +84,12 @@ public class NewTaskPanel extends JPanel {
             timePicker.clearSelectedTime();
         });
         JButton cancelBtn = new JButton(common.getBackIcon()); cancelBtn.setToolTipText("Cancel");
+        cancelBtn.setBorderPainted(false);
+        cancelBtn.setContentAreaFilled(false);
         cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         cancelBtn.addActionListener(e -> listener.onCancel());
-        add(cancelBtn, "split 2"); add(saveBtn, "wrap");
+        add(saveBtn, "split 2, growx, gapright 10");
+        add(cancelBtn, "right, gapright 10, wrap");
     }
 
     public void setFolders(List<String> folders) {

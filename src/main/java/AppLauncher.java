@@ -1,6 +1,6 @@
 import java.util.UUID;
 
-import DBH.NewDBHandler;
+import DBH.DBHandler;
 import model.TaskHandler;
 import javax.swing.SwingUtilities;
 import UI.TaskDashboardFrame;

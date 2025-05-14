@@ -16,7 +16,7 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
-import DBH.NewDBHandler;
+import DBH.DBHandler;
 
 import java.time.LocalDateTime;
 
@@ -27,7 +27,7 @@ public class TaskController {
 
     private TaskHandler taskHandler;
     private TaskDashboardFrame view;
-    private NewDBHandler dbHandler;
+    private DBHandler dbHandler;
 
     public void printUserTasks() {
         System.out.println("User Tasks:");
@@ -36,7 +36,7 @@ public class TaskController {
         }
     }
 
-    public TaskController(TaskHandler taskHandler, TaskDashboardFrame view, NewDBHandler dbHandler) {
+    public TaskController(TaskHandler taskHandler, TaskDashboardFrame view, DBHandler dbHandler) {
         this.taskHandler = taskHandler;
         this.view = view;
         this.dbHandler = dbHandler;
@@ -72,10 +72,10 @@ public class TaskController {
                 .toList();                
     }
 
-    public List<Task> getTasksByStatus(List<Task> sourceList, String status) {
+    public List<Task> getTasksByStatus(List<Task> sourceList, TaskStatus status) {
         return sourceList.stream()
                 .filter(task -> task.getStatus().equals(status))
-                .toList();                
+                .toList();
     }
 
     /**
@@ -249,6 +249,19 @@ public class TaskController {
         } else {
             System.err.println("Controller: Could not find task with ID " + task_id + " to edit.");
         }
+    }
+
+    /**
+     * Retrieves the task history for the current user.
+     * 
+     * @return List of Task objects representing the task history
+     */
+    public List<Task> getTaskHistory() {
+        return new ArrayList<>(
+            taskHandler.userTasksList.stream()
+                .filter(task -> task.getStatus() == TaskStatus.completed)
+                .collect(Collectors.toList())
+            );
     }
 
 }

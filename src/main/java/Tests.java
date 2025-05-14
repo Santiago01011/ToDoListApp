@@ -39,13 +39,4 @@ import COMMON.JSONUtils;
                 System.out.println(task.viewTaskDesc() + "\n");
             }
         }
-
-        public static void main(String[] args) {
-            TaskHandler taskHandler = new TaskHandler();
-           // testTasks(taskHandler);
-            printUserTasks(taskHandler);
-            testUpdateTask(taskHandler);
-            printUserTasks(taskHandler);
-            taskHandler.saveTasksToJson();
-        }
 }

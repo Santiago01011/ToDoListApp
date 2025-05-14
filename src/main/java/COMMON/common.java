@@ -17,7 +17,7 @@ public class common {
     // Day mode colors
     public static final Color PRIMARY_COLOR_DAY = Color.decode("#f6d76f");  //hex #f6d76f
     public static final Color PANEL_COLOR_DAY = Color.decode("#eed06d");  //hex #eed06d
-    public static final Color SECONDARY_COLOR_DAY = Color.decode("#ffea00");  //hex #ffea00
+    public static final Color SECONDARY_COLOR_DAY = Color.decode("#ffea00");  //hex #EFBF04
     public static final Color TERTIARY_COLOR_DAY = Color.decode("#fff989");  //hex #fff989
     public static final Color TEXT_COLOR_DAY = Color.decode("#473b00");  //hex #473b00
     public static final Color CONTRAST_COLOR_DAY = Color.decode("#3f89f7");  //hex #3f89f7

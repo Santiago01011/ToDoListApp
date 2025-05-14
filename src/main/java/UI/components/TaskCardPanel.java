@@ -17,21 +17,17 @@ import model.Task;
 import model.TaskStatus;
 import net.miginfocom.swing.MigLayout;
 
-public class TaskCardPanel extends JPanel {
+public class TaskCardPanel extends CardPanel {
     public interface Listener {
         void onToggleComplete(Task task);
         void onView(Task task);
         void onEdit(Task task);
         void onDelete(Task task);
-    }
-
+    }    
+    
     public TaskCardPanel(Task task, Listener listener) {
-        setLayout(new MigLayout("fillx, insets 10 15 10 15", "[][grow, fill][][]", "[]5[]5[]"));
-        setBackground(common.getTertiaryColor());
-        Color outlineColor = common.getPanelColor().darker();
-        int arc = 10, thickness = 2;
-        putClientProperty("FlatLaf.style", "arc: " + arc);
-        setBorder(new UI.components.RoundedLineBorder(outlineColor, thickness, arc));
+        super(new MigLayout("fillx, insets 10 15 10 15", "[][grow, fill][][]", "[]5[]5[]"));
+        setThemeColors(common.getTertiaryColor(), common.getPanelColor().darker());
 
         JCheckBox checkBox = new JCheckBox();
         checkBox.setSelected(task.getStatus() == TaskStatus.completed);

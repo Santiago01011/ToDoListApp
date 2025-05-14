@@ -5,7 +5,7 @@ import java.util.Map;
 import COMMON.UserProperties;
 import UI.LoginFrame;
 import model.TaskHandler;
-import DBH.NewDBHandler;
+import DBH.DBHandler;
 import UI.TaskDashboardFrame;
 import controller.TaskController;
 import service.APIService;
@@ -85,7 +85,7 @@ public class UserController {
 
     public void launchDashboard(LoginFrame loginFrame) {
         TaskHandler taskHandler = new TaskHandler();
-        NewDBHandler dbHandler = new NewDBHandler(taskHandler);
+        DBHandler dbHandler = new DBHandler(taskHandler);
         dbHandler.setUserUUID(userUUID);
         dbHandler.startSyncProcess();
         TaskDashboardFrame dashboard = new TaskDashboardFrame("TaskFlow");

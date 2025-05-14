@@ -587,70 +587,22 @@ public class TaskDashboardFrame extends Frame {
                 taskListPanel.repaint();
                 
                 Dimension full = viewTaskCardPanel.getPreferredSize();
-
                 Timer scrollTimer = new Timer(150, e -> {
                     JScrollPane scrollPane = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, taskListPanel);
-                    if (scrollPane == null) return;
-
-                    // Let layout stabilize first
-                    SwingUtilities.invokeLater(() -> {
-                        JViewport viewport = scrollPane.getViewport();
-                        Rectangle viewRect = viewport.getViewRect();
-
-                        // Convert card's location relative to viewport
-                        Point cardPos = SwingUtilities.convertPoint(viewTaskCardPanel.getParent(), viewTaskCardPanel.getLocation(), viewport);
-                        int cardTop = cardPos.y;
-                        int cardBottom = cardTop + viewTaskCardPanel.getHeight();
-
-                        int targetY;
-
-                        // If card is fully visible, do nothing
-                        if (cardTop >= viewRect.y && cardBottom <= viewRect.y + viewRect.height) {
-                            return;
-                        }
-
-                        // If card is taller than viewport, scroll to top
-                        if (viewTaskCardPanel.getHeight() > viewRect.height) {
-                            targetY = cardTop;
-                        }
-                        // If bottom is cut off, scroll down just enough
-                        else if (cardBottom > viewRect.y + viewRect.height) {
-                            targetY = cardBottom - viewRect.height;
-                        }
-                        // If top is cut off, scroll up
-                        else {
-                            targetY = cardTop;
-                        }
-
-                        // Clamp target
-                        int maxY = Math.max(0, taskListPanel.getHeight() - viewRect.height);
-                        targetY = Math.max(0, Math.min(targetY, maxY));
-
-                        // Smooth scroll
-                        final int startY = viewRect.y;
-                        final int distance = targetY - startY;
-                        final int[] step = {0};
-                        final int totalSteps = 20;
-
-                        Timer animator = new Timer(10, null);
-                        animator.addActionListener(ev -> {
-                            step[0]++;
-                            double t = step[0] / (double) totalSteps;
-                            double eased = 1 - Math.pow(1 - t, 3); // ease-out
-                            int currentY = startY + (int) (distance * eased);
-                            viewport.setViewPosition(new Point(viewRect.x, currentY));
-
-                            if (step[0] >= totalSteps) {
-                                animator.stop();
-                                viewport.setViewPosition(new Point(viewRect.x, targetY));
-                            }
+                    if (scrollPane != null) {
+                        SwingUtilities.invokeLater(() -> {
+                            JViewport viewport = scrollPane.getViewport();
+                            Rectangle cardBounds = viewTaskCardPanel.getBounds();
+                            Point viewPos = SwingUtilities.convertPoint(taskListPanel, cardBounds.getLocation(), viewport);
+                            viewPos.y += 15;
+                            viewport.scrollRectToVisible(new Rectangle(viewPos, cardBounds.getSize()));
                         });
-                        animator.start();
-                    });
+                    }
                 });
-
                 scrollTimer.setRepeats(false);
-                scrollTimer.start();                
+                scrollTimer.start();
+
+                
                 animatePanelHeight(viewTaskCardPanel, full.height, null);
             });
         }

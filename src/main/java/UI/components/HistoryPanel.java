@@ -14,6 +14,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
 import COMMON.common;
 import model.Task;
@@ -35,14 +36,13 @@ public class HistoryPanel extends JPanel {
         this.listener = listener;
         setLayout(new BorderLayout());
         setBorder(BorderFactory.createEmptyBorder(10, 10, 0, 10));
-        setBackground(common.getPanelColor());
         
         JPanel headerPanel = new JPanel(new MigLayout("fillx, insets 0", "[][grow][]"));
         headerPanel.setOpaque(false);
         
         JLabel titleLabel = new JLabel("Task History");
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 20f));
-        titleLabel.setForeground(common.getTextColor());
+        titleLabel.setForeground(UIManager.getColor("Label.foreground"));
         
         JButton closeBtn = new JButton(common.getBackIcon());
         closeBtn.setToolTipText("Close History");
@@ -73,7 +73,7 @@ public class HistoryPanel extends JPanel {
             
             if (taskHistory == null || taskHistory.isEmpty()) {
                 JLabel emptyLabel = new JLabel("No task history available");
-                emptyLabel.setForeground(common.getTextColor());
+                emptyLabel.setForeground(UIManager.getColor("Label.foreground"));
                 emptyLabel.setHorizontalAlignment(SwingUtilities.CENTER);
                 contentPanel.add(emptyLabel, "growx");
             } else {
@@ -91,18 +91,18 @@ public class HistoryPanel extends JPanel {
     private class HistoryItemPanel extends CardPanel {
         public HistoryItemPanel(Task task, java.util.function.Consumer<Task> onSelect) {
             super(new MigLayout("fillx, insets 10", "[grow][]", "[]5[]"));
-            setThemeColors(common.getTertiaryColor(), common.getPanelColor().darker());
+            setThemeColors(UIManager.getColor("Card.background"), UIManager.getColor("Panel.background").darker());
             
             JLabel titleLabel = new JLabel(task.getTitle() != null ? task.getTitle() : "No Title");
             titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD));
-            titleLabel.setForeground(common.getTextColor());
+            titleLabel.setForeground(UIManager.getColor("Label.foreground"));
             add(titleLabel, "cell 0 0, growx");
             
             LocalDateTime actionDate = task.getUpdated_at() != null ? task.getUpdated_at() : task.getCreated_at();
             String dateText = actionDate != null ? dateFormatter.format(actionDate) : "Unknown date";
             JLabel dateLabel = new JLabel(dateText);
             dateLabel.setFont(dateLabel.getFont().deriveFont(Font.PLAIN, 11f));
-            dateLabel.setForeground(common.getTextColor().darker());
+            dateLabel.setForeground(UIManager.getColor("Label.foreground").darker());
             add(dateLabel, "cell 0 1");
             
 

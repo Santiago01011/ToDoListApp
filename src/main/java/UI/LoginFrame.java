@@ -52,6 +52,7 @@ public class LoginFrame extends Frame{
         
         JLabel titleLabel = new JLabel("Login");
         titleLabel.setFont(new Font("Dialog", Font.BOLD, 30));
+        titleLabel.requestFocusInWindow();
         
         JButton toggleColorButton = new JButton(common.getModeIcon());
         toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
@@ -63,8 +64,6 @@ public class LoginFrame extends Frame{
         JTextField usernameField = new JTextField("Username");
         JPasswordField passwordField = new JPasswordField("Password");
         JCheckBox keepLoggedInCheckBox = new JCheckBox("Keep me logged in");
-        keepLoggedInCheckBox.setFont(new Font("Consolas", Font.PLAIN, 14));
-        keepLoggedInCheckBox.setForeground(common.getTextColor());
         keepLoggedInCheckBox.setOpaque(false);
         
         JButton loginButton = new JButton("Login");
@@ -100,20 +99,8 @@ public class LoginFrame extends Frame{
 
         toggleColorButton.addActionListener(e -> {
             common.toggleColorMode();
-            UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
-            refreshTheme();
-            usernameField.setBackground(common.getTertiaryColor());
-            usernameField.setForeground(common.getTextColor());            
-            passwordField.setBackground(common.getTertiaryColor());
-            passwordField.setForeground(common.getTextColor());
-            loginButton.setBackground(common.getSecondaryColor());
-            loginButton.setForeground(common.getTextColor());
-            registerLabel.setForeground(common.getTextColor());
-            titleLabel.setForeground(common.getTextColor());
-            keepLoggedInCheckBox.setBackground(common.getPrimaryColor());
-            keepLoggedInCheckBox.setForeground(common.getTextColor());
-            toggleColorButton.setBackground(common.getPrimaryColor());         
             toggleColorButton.setIcon(common.getModeIcon());
+            refreshTheme();
         });
        
 
@@ -144,7 +131,6 @@ public class LoginFrame extends Frame{
             }
         });
         SwingUtilities.invokeLater(() -> {
-            titleLabel.requestFocusInWindow();
             if (userController.getKeepLoggedIn()) {
                 usernameField.setText(userController.getUserName());
                 passwordField.setText(UserProperties.getProperty("password").toString());

@@ -11,6 +11,7 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 import COMMON.common;
@@ -25,7 +26,7 @@ public class ViewTaskPanel extends CardPanel {
     
     public ViewTaskPanel(Listener listener, Task task) {
         super("insets 15", "[grow]", "[][][][][][][]");
-        setThemeColors(common.getTertiaryColor(), common.getPanelColor().darker());
+        setThemeColors(UIManager.getColor("Card.background"), UIManager.getColor("Panel.background").darker());
 
         JLabel titleLabel = new JLabel("Task Details");
         titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 18));
@@ -61,7 +62,7 @@ public class ViewTaskPanel extends CardPanel {
         add(descriptionArea, "grow, wrap");
         
         JPanel metadataPanel = new JPanel(new MigLayout("insets 0", "[grow]"));
-        metadataPanel.setBackground(common.getTertiaryColor());
+        metadataPanel.setBackground(UIManager.getColor("Card.background"));
         
         String createdDate = task.getCreated_at() != null ? task.getCreated_at().format(DATE_FORMATTER) : "Unknown";
         JLabel createdAtLabel = new JLabel("Created: " + createdDate);
@@ -72,10 +73,6 @@ public class ViewTaskPanel extends CardPanel {
         JLabel updatedAtLabel = new JLabel("Last updated: " + updatedDate);
         updatedAtLabel.setFont(updatedAtLabel.getFont().deriveFont(Font.ITALIC, 11));
         metadataPanel.add(updatedAtLabel, "wrap");
-        
-        // JLabel taskIdLabel = new JLabel("Task ID: " + task.getTask_id());
-        // taskIdLabel.setFont(taskIdLabel.getFont().deriveFont(Font.ITALIC, 11));
-        // metadataPanel.add(taskIdLabel);
         
         JButton closeBtn = new JButton(common.getBackIcon());
         closeBtn.setToolTipText("Close");

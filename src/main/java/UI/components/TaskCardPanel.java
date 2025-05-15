@@ -11,6 +11,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.UIManager;
 
 import COMMON.common;
 import model.Task;
@@ -27,7 +28,7 @@ public class TaskCardPanel extends CardPanel {
     
     public TaskCardPanel(Task task, Listener listener) {
         super(new MigLayout("fillx, insets 10 15 10 15", "[][grow, fill][][]", "[]5[]5[]"));
-        setThemeColors(common.getTertiaryColor(), common.getPanelColor().darker());
+        setThemeColors(UIManager.getColor("Card.background"), UIManager.getColor("Panel.background").darker());
 
         JCheckBox checkBox = new JCheckBox();
         checkBox.setSelected(task.getStatus() == TaskStatus.completed);
@@ -43,11 +44,11 @@ public class TaskCardPanel extends CardPanel {
 
         RoundedLabel statusLabel = new RoundedLabel(
                 task.getStatus() != null ? TaskStatus.getStatusToString(task.getStatus()) : "Unknown", 15);
-        Color statusColor = task.getStatus() == TaskStatus.in_progress ? common.getContrastColor()
-                : common.getPanelColor().darker();
+        Color statusColor = task.getStatus() == TaskStatus.in_progress ? UIManager.getColor("Button.hoverForeground")
+                : UIManager.getColor("Panel.background").darker();
         statusLabel.setBackground(statusColor);
-        statusLabel.setForeground(task.getStatus() == TaskStatus.in_progress ? common.getTextColor().darker()
-                : common.getTextColor());
+        statusLabel.setForeground(task.getStatus() == TaskStatus.in_progress ? UIManager.getColor("Label.foreground").darker()
+                : UIManager.getColor("Label.foreground"));
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 9, 3, 9));
         statusLabel.setFont(statusLabel.getFont().deriveFont(java.awt.Font.PLAIN, 11f));
         add(statusLabel, "aligny top, wrap");

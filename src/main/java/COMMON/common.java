@@ -14,47 +14,6 @@ public class common {
 
     public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
 
-    // Day mode colors
-    public static final Color PRIMARY_COLOR_DAY = Color.decode("#f6d76f");  //hex #f6d76f
-    public static final Color PANEL_COLOR_DAY = Color.decode("#eed06d");  //hex #eed06d
-    public static final Color SECONDARY_COLOR_DAY = Color.decode("#ffea00");  //hex #EFBF04
-    public static final Color TERTIARY_COLOR_DAY = Color.decode("#fff989");  //hex #fff989
-    public static final Color TEXT_COLOR_DAY = Color.decode("#473b00");  //hex #473b00
-    public static final Color CONTRAST_COLOR_DAY = Color.decode("#3f89f7");  //hex #3f89f7
-
-    // Night mode colors
-    public static final Color PRIMARY_COLOR_NIGHT = Color.decode("#1a144b");  //hex #1a144b
-    public static final Color PANEL_COLOR_NIGHT = Color.decode("#0c005b");  //hex #0c005b
-    public static final Color SECONDARY_COLOR_NIGHT = Color.decode("#221f1f");  //hex #221f1f
-    public static final Color TERTIARY_COLOR_NIGHT = Color.decode("#130814");  //hex #130814
-    public static final Color TEXT_COLOR_NIGHT = Color.decode("#fab500");  //hex #fab500
-    public static final Color CONTRAST_COLOR_NIGHT = Color.decode("#490a0a");  //hex #490a0a
-
-    // Methods to get the current colors based on the mode
-    public static Color getPrimaryColor() {
-        return useNightMode ? PRIMARY_COLOR_NIGHT : PRIMARY_COLOR_DAY;
-    }
-
-    public static Color getPanelColor() {
-        return useNightMode ? PANEL_COLOR_NIGHT : PANEL_COLOR_DAY;
-    }
-
-    public static Color getSecondaryColor() {
-        return useNightMode ? SECONDARY_COLOR_NIGHT : SECONDARY_COLOR_DAY;
-    }
-
-    public static Color getTertiaryColor() {
-        return useNightMode ? TERTIARY_COLOR_NIGHT : TERTIARY_COLOR_DAY;
-    }
-
-    public static Color getTextColor(){
-        return useNightMode ? TEXT_COLOR_NIGHT : TEXT_COLOR_DAY;
-    }
-
-    public static Color getContrastColor(){
-        return useNightMode ? CONTRAST_COLOR_NIGHT : CONTRAST_COLOR_DAY;
-    }
-
     /*
      * Methods to get the path of the icons based on the mode
      * The icons are stored in the assets folder in the resources directory

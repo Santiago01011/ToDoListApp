@@ -14,18 +14,18 @@ import com.formdev.flatlaf.FlatIntelliJLaf;
 import com.formdev.flatlaf.extras.FlatAnimatedLafChange;
 
 import COMMON.common;
+import themes.CoffeYellow;
+import themes.NigthBlue;
 
 public class Frame extends JFrame{
     
     public Frame(String title) {
         super(title);
-        applyThemeDefaults();
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        
+        refreshTheme();
         ImageIcon appIcon = common.getAppIcon();
         setIconImage(appIcon.getImage());
-        //getContentPane().setBackground(common.getPrimaryColor());
     }
 
 
@@ -50,48 +50,14 @@ public class Frame extends JFrame{
 
     private void applyThemeDefaults() {
         try {
-            UIManager.setLookAndFeel(common.useNightMode ? new FlatDarkLaf() : new FlatLightLaf());
+            UIManager.setLookAndFeel(common.useNightMode ? new NigthBlue() : new CoffeYellow());
         } catch (Exception ex) {
             System.err.println("Failed to initialize LaF");
         }
-        UIManager.put("Button.font", new Font("Consolas", Font.BOLD, 14));
-        UIManager.put("Button.background", common.getSecondaryColor());
-        UIManager.put("Button.foreground", common.getTextColor());
-        UIManager.put("Label.font", new Font("Consolas", Font.PLAIN, 14));
-        UIManager.put("Label.foreground", common.getTextColor());
-        UIManager.put("TextField.font", new Font("Consolas", Font.PLAIN, 14));
-        UIManager.put("TextField.background", common.getTertiaryColor());
-        UIManager.put("TextField.foreground", common.getTextColor());
-        UIManager.put("TextField.caretForeground", common.getTextColor());
-        UIManager.put("PasswordField.font", new Font("Consolas", Font.PLAIN, 14));
-        UIManager.put("PasswordField.background", common.getTertiaryColor());
-        UIManager.put("PasswordField.foreground", common.getTextColor());
-        UIManager.put("PasswordField.caretForeground", common.getTextColor());
-        UIManager.put("ComboBox.font", new Font("Consolas", Font.PLAIN, 14));
-        UIManager.put("ComboBox.background", common.getTertiaryColor());
-        UIManager.put("ComboBox.foreground", common.getTextColor());
-        UIManager.put("TextArea.font", new Font("Consolas", Font.PLAIN, 11));
-        UIManager.put("TextArea.background", common.getTertiaryColor());
-        UIManager.put("TextArea.foreground", common.getTextColor());
-        UIManager.put("TitledBorder.font", new Font("Consolas", Font.BOLD, 14));
-        UIManager.put("TitledBorder.titleColor", common.getTextColor());
-        UIManager.put("TitledBorder.border", javax.swing.BorderFactory.createLineBorder(common.getTextColor()));
-        UIManager.put("Panel.background", common.getPanelColor());
-        UIManager.put("OptionPane.messageForeground", common.getTextColor());
-        UIManager.put("OptionPane.background", common.getPrimaryColor());
-        UIManager.put("Panel.background", common.getPrimaryColor());
-        UIManager.put("PopupMenu.background", common.getTertiaryColor());
-        UIManager.put("MenuItem.foreground", common.getTextColor());
-        UIManager.put("MenuItem.selectionBackground", common.getSecondaryColor());
-        UIManager.put("MenuItem.selectionForeground", common.getTextColor());
-        UIManager.put("MenuItem.acceleratorForeground", common.getTextColor().darker());
-        UIManager.put("MenuItem.acceleratorSelectionForeground", common.getTextColor());
-
     }
 
     public void refreshTheme() {
         applyThemeDefaults();
         SwingUtilities.updateComponentTreeUI(this);
-        getContentPane().setBackground(common.getPrimaryColor());
     }
 }

@@ -36,37 +36,26 @@ public class RegisterFrame extends Frame {
 
         titleLabel = new JLabel("Register", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Dialog", Font.BOLD, 25));
-        titleLabel.setForeground(common.getTextColor());
         titleLabel.setBounds(140, 50, 100, 30);
 
         JTextField usernameField = new JTextField("Username");
         usernameField.setFont(new Font("Dialog", Font.PLAIN, 15));
-        usernameField.setForeground(common.getTextColor());
         usernameField.setBounds(90, 100, 200, 30);
-        usernameField.setBackground(common.getTertiaryColor());
 
         JTextField emailField = new JTextField("Email");
         emailField.setFont(new Font("Dialog", Font.PLAIN, 15));
-        emailField.setForeground(common.getTextColor());
         emailField.setBounds(90, 150, 200, 30);
-        emailField.setBackground(common.getTertiaryColor());
 
         JPasswordField passwordField = new JPasswordField("Password");
         passwordField.setFont(new Font("Dialog", Font.PLAIN, 15));
-        passwordField.setForeground(common.getTextColor());
         passwordField.setBounds(90, 200, 200, 30);
-        passwordField.setBackground(common.getTertiaryColor());
 
         JPasswordField rePasswordField = new JPasswordField("Password");
         rePasswordField.setFont(new Font("Dialog", Font.PLAIN, 15));
-        rePasswordField.setForeground(common.getTextColor());
         rePasswordField.setBounds(90, 250, 200, 30);
-        rePasswordField.setBackground(common.getTertiaryColor());
 
         ImageIcon toggleColorIcon = common.getModeIcon();
         JButton toggleColorButton = new JButton(toggleColorIcon);
-        toggleColorButton.setBackground(common.getSecondaryColor());
-        toggleColorButton.setForeground(common.getTextColor());
         toggleColorButton.setFont(new Font("Dialog", Font.BOLD, 12));
         toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         toggleColorButton.setBounds(340, 20, 30, 30);
@@ -74,16 +63,12 @@ public class RegisterFrame extends Frame {
 
         ImageIcon backIcon = common.getBackIcon();
         JButton backButton = new JButton(backIcon);
-        backButton.setBackground(common.getSecondaryColor());
-        backButton.setForeground(common.getTextColor());
         backButton.setFont(new Font("Dialog", Font.BOLD, 12));
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.setBounds(15, 20, 30, 30);
         backButton.setToolTipText("Back");
 
         JButton registerButton = new JButton("Register");
-        registerButton.setBackground(common.getSecondaryColor());
-        registerButton.setForeground(common.getTextColor());
         registerButton.setFont(new Font("Dialog", Font.BOLD, 12));
         registerButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         registerButton.setBounds(140, 300, 100, 30);
@@ -124,23 +109,8 @@ public class RegisterFrame extends Frame {
 
         toggleColorButton.addActionListener(e -> {
             common.toggleColorMode();
-            UserProperties.setProperty("darkTheme", String.valueOf(common.useNightMode));
-            refreshTheme();
-            titleLabel.setForeground(common.getTextColor());
-            usernameField.setBackground(common.getTertiaryColor());
-            usernameField.setForeground(common.getTextColor());
-            emailField.setBackground(common.getTertiaryColor());
-            emailField.setForeground(common.getTextColor());
-            passwordField.setBackground(common.getTertiaryColor());
-            passwordField.setForeground(common.getTextColor());
-            rePasswordField.setBackground(common.getTertiaryColor());
-            rePasswordField.setForeground(common.getTextColor());
-            backButton.setBackground(common.getSecondaryColor());
-            backButton.setIcon(common.getBackIcon());
-            registerButton.setBackground(common.getSecondaryColor());
-            registerButton.setForeground(common.getTextColor());
-            toggleColorButton.setBackground(common.getPrimaryColor());
             toggleColorButton.setIcon(common.getModeIcon());
+            refreshTheme();
         });
 
         registerButton.addActionListener(new ActionListener() {

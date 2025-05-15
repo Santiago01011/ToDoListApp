@@ -17,6 +17,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 import javax.swing.border.EmptyBorder;
 
 import COMMON.common;
@@ -38,8 +39,8 @@ public class EditTaskPanel extends JPanel {
 
     public EditTaskPanel(Listener listener, Task task) {
         setLayout(new MigLayout("insets 5", "[grow]", "[][][][][][]"));
-        setBackground(common.getTertiaryColor());
-        Color outlineColor = common.getPanelColor().darker();
+        setBackground(UIManager.getColor("Card.background"));
+        Color outlineColor = UIManager.getColor("Panel.background").darker();
         int arc = 10, thickness = 2;
         putClientProperty("FlatLaf.style", "arc: " + arc);
         setBorder(new UI.components.RoundedLineBorder(outlineColor, thickness, arc));

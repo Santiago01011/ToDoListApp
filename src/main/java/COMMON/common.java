@@ -1,8 +1,9 @@
 package COMMON;
 
 import java.awt.Color;
-import java.io.FileInputStream;
 import java.io.InputStream;
+import java.util.Map;
+import java.util.HashMap;
 
 import javax.imageio.ImageIO;
 import javax.swing.Icon;
@@ -11,6 +12,8 @@ import java.awt.Image;
 
 
 public class common {
+
+    private static final Map<String, ImageIcon> iconCache = new HashMap<>();
 
     public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
 
@@ -111,17 +114,21 @@ public class common {
     }
 
     private static ImageIcon loadIcon(String resourcePath){
-        try {
-            InputStream is = common.class.getClassLoader().getResourceAsStream(resourcePath);
-
-            if (is == null)
-                is = new FileInputStream("src/main/resources/" + resourcePath);
-
+        if (iconCache.containsKey(resourcePath)) {
+            return iconCache.get(resourcePath);
+        }
+        try (InputStream is = common.class.getClassLoader().getResourceAsStream(resourcePath)) {
+            if (is == null) {
+                System.err.println("Resource not found on classpath: " + resourcePath);
+                return null;
+            }
             Image image = ImageIO.read(is);
             image = image.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
-            return new ImageIcon(image);
-        }catch (Exception e){
-            System.err.println("Error loading icon: " + resourcePath);
+            ImageIcon icon = new ImageIcon(image);
+            iconCache.put(resourcePath, icon);
+            return icon;
+        } catch (Exception e) {
+            System.err.println("Error loading icon: " + resourcePath + " - " + e.getMessage());
             return null;
         }
     }

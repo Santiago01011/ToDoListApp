@@ -3,6 +3,7 @@ package DBH;
 import COMMON.JSONUtils;
 import model.TaskHandler;
 import model.Task;
+import model.TaskStatus;
 import model.Folder;
 
 import java.io.IOException;
@@ -61,17 +62,27 @@ public class DBHandler {
                     List<Map<String, Object>> successList = (List<Map<String, Object>>) resultMap.get("success");
                     for (Map<String, Object> successItem : successList) {
                         String oldUUID = (String) successItem.get("old");
-                        String newUUID = (String) successItem.get("new");
-
-                        taskHandler.userTasksList.stream()
-                            .filter(task -> task.getTask_id().equals(oldUUID))
-                            .findFirst()
-                            .ifPresent(task -> {
-                                task.setTask_id(newUUID);
-                                task.setLast_sync(taskHandler.getLastSync());
-                                task.setUpdated_at(taskHandler.getLastSync());
-                                task.setSync_status("cloud");
-                            });
+                        String newUUID = (String) successItem.get("new");                        // Find and replace the task with updated values
+                        for (int i = 0; i < taskHandler.userTasksList.size(); i++) {
+                            Task task = taskHandler.userTasksList.get(i);
+                            if (task.getTask_id().equals(oldUUID)) {
+                                Task updatedTask = new Task.Builder(newUUID)
+                                    .taskTitle(task.getTitle())
+                                    .description(task.getDescription())
+                                    .status(task.getStatus())
+                                    .sync_status("cloud")
+                                    .dueDate(task.getDue_date())
+                                    .createdAt(task.getCreated_at())
+                                    .updatedAt(taskHandler.getLastSync())
+                                    .deletedAt(task.getDeleted_at())
+                                    .lastSync(taskHandler.getLastSync())
+                                    .folderId(task.getFolder_id())
+                                    .folderName(task.getFolder_name())
+                                    .build();
+                                taskHandler.userTasksList.set(i, updatedTask);
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -110,14 +121,26 @@ public class DBHandler {
                     for (Map<String, Object> successItem : successList) {
                         String taskId = (String) successItem.get("task_id");
                         taskHandler.clearShadowUpdate(taskId);
-                        taskHandler.userTasksList.removeIf(t -> "to_update".equals(t.getSync_status()) && t.getTask_id().equals(taskId));
-                        taskHandler.userTasksList.stream()
-                            .filter(t -> t.getTask_id().equals(taskId) && "local".equals(t.getSync_status()))
-                            .forEach(t -> {
-                                t.setLast_sync(taskHandler.getLastSync());
-                                t.setUpdated_at(taskHandler.getLastSync());
-                                t.setSync_status("cloud");
-                            });
+                        taskHandler.userTasksList.removeIf(t -> "to_update".equals(t.getSync_status()) && t.getTask_id().equals(taskId));                        // Find and replace tasks with updated sync status
+                        for (int i = 0; i < taskHandler.userTasksList.size(); i++) {
+                            Task t = taskHandler.userTasksList.get(i);
+                            if (t.getTask_id().equals(taskId) && "local".equals(t.getSync_status())) {
+                                Task updatedTask = new Task.Builder(t.getTask_id())
+                                    .taskTitle(t.getTitle())
+                                    .description(t.getDescription())
+                                    .status(t.getStatus())
+                                    .sync_status("cloud")
+                                    .dueDate(t.getDue_date())
+                                    .createdAt(t.getCreated_at())
+                                    .updatedAt(taskHandler.getLastSync())
+                                    .deletedAt(t.getDeleted_at())
+                                    .lastSync(taskHandler.getLastSync())
+                                    .folderId(t.getFolder_id())
+                                    .folderName(t.getFolder_name())
+                                    .build();
+                                taskHandler.userTasksList.set(i, updatedTask);
+                            }
+                        }
                     }
                 }
             }
@@ -166,29 +189,40 @@ public class DBHandler {
                     Map<String, Object> resultMap = JSONUtils.fromJsonString(jsonbResult);
                     @SuppressWarnings("unchecked")
                     List<String> columns = (List<String>) resultMap.get("columns");
-                    @SuppressWarnings("unchecked")
-                    List<List<Object>> data = (List<List<Object>>) resultMap.get("data");
+                    @SuppressWarnings("unchecked")                    List<List<Object>> data = (List<List<Object>>) resultMap.get("data");
                     for (List<Object> row : data) {
-                        Task task = new Task();
+                        // Use Builder pattern for immutable Task construction
+                        Task.Builder taskBuilder = Task.builder();
+                        
                         for (int i = 0; i < columns.size(); i++) {
                             String columnName = columns.get(i);
                             Object value = row.get(i);
                             if (value == null) continue;
+                            
                             switch (columnName) {
-                                case "folder_id" -> task.setFolder_id((String) value);
-                                case "folder_name" -> task.setFolder_name((String) value);
-                                case "task_id" -> task.setTask_id((String) value);
-                                case "task_title" -> task.setTitle((String) value);
-                                case "description" -> task.setDescription((String) value);
-                                case "sync_status" -> task.setSync_status((String) value);
-                                case "status" -> task.setStatus((String) value);
-                                case "due_date" -> task.setDue_date(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
-                                case "created_at" -> task.setCreated_at(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
-                                case "last_sync" -> task.setLast_sync(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
-                                case "deleted_at" -> task.setDeleted_at(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
+                                case "folder_id" -> taskBuilder.folderId((String) value);
+                                case "folder_name" -> taskBuilder.folderName((String) value);
+                                case "task_id" -> taskBuilder = new Task.Builder((String) value); // Initialize with ID
+                                case "task_title" -> taskBuilder.taskTitle((String) value);
+                                case "description" -> taskBuilder.description((String) value);
+                                case "sync_status" -> taskBuilder.sync_status((String) value);
+                                case "status" -> taskBuilder.status(TaskStatus.valueOf((String) value));
+                                case "due_date" -> taskBuilder.dueDate(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
+                                case "created_at" -> taskBuilder.createdAt(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
+                                case "updated_at" -> taskBuilder.updatedAt(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
+                                case "last_sync" -> taskBuilder.lastSync(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
+                                case "deleted_at" -> taskBuilder.deletedAt(java.time.OffsetDateTime.parse((String) value).toLocalDateTime());
                             }
                         }
-                        tasks.add(task);
+                        
+                        // Build the immutable task
+                        try {
+                            Task task = taskBuilder.build();
+                            tasks.add(task);
+                        } catch (IllegalArgumentException e) {
+                            System.err.println("Skipping invalid task: " + e.getMessage());
+                            // Skip tasks that don't meet validation requirements
+                        }
                     }
                 }
             }

@@ -10,9 +10,4 @@ target/
 .vscode/
 
 # Ignore files to doccument the project
-IMPROVEMENTS.md
-#doc.md
-update.md
-UI.md
-doc.md
-RELEASE_NOTES.md
+*.md

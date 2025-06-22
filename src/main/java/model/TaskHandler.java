@@ -16,6 +16,20 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+/**
+ * Legacy TaskHandler - Direct manipulation of task lists
+ * 
+ * @deprecated This class is deprecated as of version 2.0.0. 
+ * Use {@link TaskHandlerV2} instead for command-driven operations.
+ * This class is maintained for backward compatibility only and will be
+ * removed in a future version.
+ * 
+ * Migration path:
+ * - Replace TaskHandler with TaskHandlerV2
+ * - Use command-driven methods: createTask(), updateTask(), deleteTask()
+ * - Access tasks via getAllTasks() instead of direct userTasksList access
+ */
+@Deprecated
 public class TaskHandler {
     private static final Logger LOGGER = Logger.getLogger(TaskHandler.class.getName());
     public List<Task> userTasksList;

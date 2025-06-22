@@ -354,9 +354,9 @@ public record UpdateFinancialDataCommand(
 ## 📋 IMPLEMENTATION ROADMAP
 
 ### Phase 1: Foundation (Weeks 1-2)
-- [ ] Implement Command interfaces and basic implementations
-- [ ] Create CommandQueue with local persistence
-- [ ] Build command application logic for task projection
+- [-] Implement Command interfaces and basic implementations
+- [-] Create CommandQueue with local persistence
+- [-] Build command application logic for task projection
 - [ ] Add feature flag system for gradual rollout
 
 ### Phase 2: Backend Evolution (Weeks 3-4)

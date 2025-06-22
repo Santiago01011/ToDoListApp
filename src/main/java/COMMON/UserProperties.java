@@ -75,22 +75,21 @@ public class UserProperties {
     public static Object getProperty(String key) {
         return properties.get(key);
     }    
-    
-    public static void logOut() {
-        String currentUserDir = getCurrentUserDataDirectory();
+      public static void logOut() {
+        // Only clear session-related properties, preserve user data
+        properties.put("rememberMe", "false");
+        properties.put("username", "");
+        properties.put("password", "");
+        properties.put("lastSession", "");
+        properties.put("userUUID", "");
+        properties.put("token", "");
         
-        createDefaultProperties();
-        if (currentUserDir != null) {
-            try {
-                JSONUtils.createDefaultJsonFile(currentUserDir + File.separator + "tasks.json");
-                Path pendingCommandsPath = Paths.get(currentUserDir + File.separator + "pending_commands.json");
-                if (Files.exists(pendingCommandsPath)) {
-                    Files.delete(pendingCommandsPath);
-                }
-            } catch (IOException e) {
-                handleError("Error cleaning up user data during logout", e);
-            }
-        }
+        // Save the cleared session properties
+        saveProperties();
+        
+        // NOTE: User data (tasks.json, pending_commands.json, etc.) is preserved
+        // in the user-specific directory: ~/.todoapp/users/{userId}/
+        System.out.println("User logged out. Session cleared but user data preserved.");
     }
 
     private static void handleError(String message, Exception e) {

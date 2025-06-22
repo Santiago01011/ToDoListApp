@@ -89,7 +89,8 @@ public class UserController {
         dbHandler.setUserUUID(userUUID);
         dbHandler.startSyncProcess();
         TaskDashboardFrame dashboard = new TaskDashboardFrame("TaskFlow");
-        TaskController controller = new TaskController(taskHandler, dashboard, dbHandler);
+        // Pass TaskHandlerV2 to TaskController for command-driven operations
+        TaskController controller = new TaskController(taskHandlerV2, dashboard, dbHandler);
         dashboard.setController(controller);
         dashboard.initialize();
         dashboard.setVisible(true);

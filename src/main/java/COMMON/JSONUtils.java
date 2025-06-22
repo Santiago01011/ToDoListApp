@@ -25,18 +25,17 @@ public class JSONUtils {
         .registerModule(new JavaTimeModule())
         .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
         .configure(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE, false);
-    
-    public static void createBaseDirectory() {
+      public static void createBaseDirectory() {
         File baseDir = new File(BASE_DIRECTORY);
         if (!baseDir.exists()) {
             baseDir.mkdirs();
         }
-        if(!new File(BASE_DIRECTORY + File.separator + "tasks.json").exists())
-            createDefaultJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
+        // Note: No longer creating global tasks.json - all files are user-specific
     }
 
     /**
-     * Static block to create the base directory and tasks.json file if they do not exist.
+     * Static block to create the base directory.
+     * Note: tasks.json files are now created per-user in user-specific directories.
      */    
     static {
         createBaseDirectory();
@@ -163,25 +162,40 @@ public class JSONUtils {
     public static void updateJsonFile(String filePath, Map<String, Object> newData) throws IOException {
         writeJsonFile(newData, filePath);
     }
-    
-    /**
+      /**
+     * @deprecated Use user-specific file paths via UserProperties.getUserDataFilePath()
      * Reads the default tasks JSON file.
      * 
      * @return A Map representation of the tasks JSON content
      * @throws IOException If there is an error reading the file
      */
+    @Deprecated
     public static Map<String, Object> readTasksJson() throws IOException {
-        return readJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
+        String currentUserId = UserProperties.getCurrentUserId();
+        if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+            return readJsonFile(UserProperties.getUserDataFilePath(currentUserId, "tasks.json"));
+        } else {
+            // Fallback to global file for backward compatibility, but this should be avoided
+            return readJsonFile(BASE_DIRECTORY + File.separator + "tasks.json");
+        }
     }
     
     /**
+     * @deprecated Use user-specific file paths via UserProperties.getUserDataFilePath()
      * Writes to the default tasks JSON file.
      * 
      * @param data The data to write
      * @throws IOException If there is an error writing the file
      */
+    @Deprecated
     public static void writeTasksJson(Map<String, Object> data) throws IOException {
-        writeJsonFile(data, BASE_DIRECTORY + File.separator + "tasks.json");
+        String currentUserId = UserProperties.getCurrentUserId();
+        if (currentUserId != null && !currentUserId.trim().isEmpty()) {
+            writeJsonFile(data, UserProperties.getUserDataFilePath(currentUserId, "tasks.json"));
+        } else {
+            // Fallback to global file for backward compatibility, but this should be avoided
+            writeJsonFile(data, BASE_DIRECTORY + File.separator + "tasks.json");
+        }
     }
 
     /**
@@ -244,13 +258,14 @@ public class JSONUtils {
     public static List<List<Object>> getTasksData(Map<String, Object> tasksJson) {
         return (List<List<Object>>) tasksJson.get("data");
     }
-    
-    /**
+      /**
+     * @deprecated Use user-specific file paths via UserProperties.getUserDataFilePath()
      * Updates the last sync timestamp in the tasks JSON file.
      * 
      * @param timestamp The new timestamp
      * @throws IOException If there is an error updating the file
      */
+    @Deprecated
     public static void updateLastSync(String timestamp) throws IOException {
         Map<String, Object> tasksJson = readTasksJson();
         tasksJson.put("last_sync", timestamp);

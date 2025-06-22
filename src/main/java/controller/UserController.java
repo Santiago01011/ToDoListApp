@@ -5,6 +5,7 @@ import java.util.Map;
 import COMMON.UserProperties;
 import UI.LoginFrame;
 import model.TaskHandler;
+import model.TaskHandlerV2;
 import DBH.DBHandler;
 import UI.TaskDashboardFrame;
 import controller.TaskController;
@@ -81,10 +82,9 @@ public class UserController {
             System.err.println(e.getMessage());
             return false;
         }
-    }
-
-    public void launchDashboard(LoginFrame loginFrame) {
-        TaskHandler taskHandler = new TaskHandler();
+    }    public void launchDashboard(LoginFrame loginFrame) {
+        TaskHandlerV2 taskHandlerV2 = new TaskHandlerV2(userUUID, true); // Enable command queue by default
+        TaskHandler taskHandler = taskHandlerV2.getLegacyHandler(); // Get legacy handler for backward compatibility
         DBHandler dbHandler = new DBHandler(taskHandler);
         dbHandler.setUserUUID(userUUID);
         dbHandler.startSyncProcess();

@@ -47,9 +47,12 @@ public class Frame extends JFrame{
 
     private void applyThemeDefaults() {
         try {
+            FlatAnimatedLafChange.showSnapshot();
             UIManager.setLookAndFeel(common.useNightMode ? new NigthBlue() : new CoffeYellow());
+            FlatAnimatedLafChange.hideSnapshotWithAnimation();
         } catch (Exception ex) {
-            System.err.println("Failed to initialize LaF");
+            System.err.println("Failed to initialize LaF: " + ex.getMessage());
+            ex.printStackTrace();
         }
     }
 

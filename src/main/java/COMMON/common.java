@@ -111,6 +111,8 @@ public class common {
 
     public static void toggleColorMode(){
         useNightMode = !useNightMode;
+        // Persist the theme preference immediately
+        UserProperties.setProperty("darkTheme", String.valueOf(useNightMode));
     }
 
     private static ImageIcon loadIcon(String resourcePath){

@@ -1,6 +1,9 @@
 package DBH;
 
-import model.Folder;
+import COMMON.JSONUtils;
+import model.TaskHandler;
+import model.Task;
+import model.TaskStatus;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -23,6 +26,7 @@ public class DBHandler {
      */
     public DBHandler() {
         // Constructor simplified - task sync moved to SyncService
+
     }
 
     /**

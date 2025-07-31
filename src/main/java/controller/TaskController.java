@@ -1,6 +1,7 @@
 package controller;
 
 import model.TaskHandler;
+import model.TaskHandlerV2;
 import model.TaskStatus;
 import model.Task;
 import model.Folder;
@@ -26,20 +27,23 @@ import javax.swing.SwingUtilities;
 
 public class TaskController {
 
-    private TaskHandler taskHandler;
+    private TaskHandlerV2 taskHandlerV2;
+    private TaskHandler legacyTaskHandler; // For backward compatibility with DBHandler
     private TaskDashboardFrame view;
     private DBHandler dbHandler;
     private SyncService syncService;
 
     public void printUserTasks() {
         System.out.println("User Tasks:");
-        for (Task task : taskHandler.userTasksList) {
+        List<Task> tasks = taskHandlerV2.getAllTasks();
+        for (Task task : tasks) {
             System.out.println(task.viewTaskDesc() + "\n");
         }
     }
 
-    public TaskController(TaskHandler taskHandler, TaskDashboardFrame view, DBHandler dbHandler) {
-        this.taskHandler = taskHandler;
+    public TaskController(TaskHandlerV2 taskHandlerV2, TaskDashboardFrame view, DBHandler dbHandler) {
+        this.taskHandlerV2 = taskHandlerV2;
+        this.legacyTaskHandler = taskHandlerV2.getLegacyHandler(); // Keep reference for DBHandler compatibility
         this.view = view;
         this.dbHandler = dbHandler;
         this.syncService = new SyncService(taskHandler);
@@ -64,20 +68,18 @@ public class TaskController {
 
     public void loadInitialTasks() {
         view.refreshTaskListDisplay();
-    }
-
-    public void loadInitialFolderList() {
+    }    public void loadInitialFolderList() {
         CompletableFuture.supplyAsync(() -> {
             try {
                 return dbHandler.fetchAccessibleFolders();
             } catch (Exception ex) {
                 System.err.println("Warning: Unable to fetch folders (offline?): " + ex.getMessage());
-                return taskHandler.getFoldersList();
+                return legacyTaskHandler.getFoldersList();
             }
         }).thenAcceptAsync(folders -> {
-            taskHandler.setFoldersList(folders);
+            legacyTaskHandler.setFoldersList(folders);
             SwingUtilities.invokeLater(() ->
-                view.updateFolderList(taskHandler.getFoldersNamesList())
+                view.updateFolderList(legacyTaskHandler.getFoldersNamesList())
             );
         });
     }
@@ -96,9 +98,7 @@ public class TaskController {
         return sourceList.stream()
                 .filter(task -> task.getStatus().equals(status))
                 .toList();
-    }
-
-    /**
+    }    /**
     * Filters tasks based on the provided criteria object.
     * Applies filters sequentially.
     *
@@ -106,7 +106,7 @@ public class TaskController {
     * @return A new list containing tasks matching the criteria.
     */
     public List<Task> getTasksByFilters(FiltersCriteria criteria) {
-        List<Task> filteredTasks = new ArrayList<>(taskHandler.userTasksList);
+        List<Task> filteredTasks = new ArrayList<>(taskHandlerV2.getAllTasks());
         if (criteria.folderName() != null && !criteria.folderName().equals("All Folders"))
             filteredTasks = getTasksByFolder(filteredTasks, criteria.folderName());
         if ( criteria.statuses() == null && criteria.statuses().isEmpty() )
@@ -137,26 +137,17 @@ public class TaskController {
 
         
         return filteredTasks;
-    }
-
-    /**
+    }    /**
      * Handles creation of a new task from the UI input.
      */
     public void handleCreateTask(String title, String description, String folderName, LocalDateTime dueDate, TaskStatus status) {
         System.out.println("Controller: Creating new task: " + title);
-        String id = UUID.randomUUID().toString();
-        Task task = new Task.Builder(id)
-            .taskTitle(title)
-            .description(description)
-            .dueDate(dueDate)
-            .folderName(folderName)
-            .folderId(taskHandler.getFolderIdByName(folderName))
-            .status(status)
-            .sync_status("new")
-            .createdAt(LocalDateTime.now())
-            .updatedAt(LocalDateTime.now())
-            .build();
-        taskHandler.userTasksList.add(task);
+        
+        // Get folder ID for the folder name
+        String folderId = legacyTaskHandler.getFolderIdByName(folderName);
+        
+        // Use command-driven approach via TaskHandlerV2
+        taskHandlerV2.createTask(title, description, status, dueDate, folderId);
         view.refreshTaskListDisplay();
     }
 
@@ -191,49 +182,37 @@ public class TaskController {
         //     dialog.setVisible(true);
         // }
     }
-
-
     public void handleDeleteTaskRequest(String taskId) {
         System.out.println("Controller: Delete task request for ID " + taskId);
-        Task task = taskHandler.getTaskById(taskId);
+        Task task = getTaskById(taskId);
         if (task != null) {
-            taskHandler.updateTask(task, null, null, null, null, null, LocalDateTime.now());
+            taskHandlerV2.deleteTask(task, "User deleted");
             view.refreshTaskListDisplay();
         } else {
             System.err.println("Controller: Could not find task with ID " + taskId + " to delete.");
         }
-    }
-
-    public void handleWindowClosing() {
-        taskHandler.saveTasksToJson();
+    }    public void handleWindowClosing() {
+        taskHandlerV2.saveTasksToJson();
         if( !Boolean.valueOf((String) UserProperties.getProperty("rememberMe")) ){
             System.out.println("Controller: Logging out user and clearing credentials.");
             UserProperties.logOut();
         }
-    }
-
-    public List<String> getFolderList() {
-        return taskHandler.getFoldersNamesList();
-    }
-
-    public LocalDateTime getLastSyncTime() {
-        return taskHandler.getLastSync() != null ? taskHandler.getLastSync() : UserProperties.getProperty("lastSyncTime") != null ? LocalDateTime.parse((String) UserProperties.getProperty("lastSyncTime")) : null;
-    }
-
-    public void handleTaskCompletionToggle(Task task) {
+    }    public List<String> getFolderList() {
+        return legacyTaskHandler.getFoldersNamesList();
+    }    public LocalDateTime getLastSyncTime() {
+        return taskHandlerV2.getLastSync() != null ? taskHandlerV2.getLastSync() : UserProperties.getProperty("lastSyncTime") != null ? LocalDateTime.parse((String) UserProperties.getProperty("lastSyncTime")) : null;
+    }    public void handleTaskCompletionToggle(Task task) {
         if (task != null) {
-            taskHandler.updateTask(task, null, null, !task.getStatus().equals(TaskStatus.completed) ? TaskStatus.completed : TaskStatus.pending, null, null, null);
+            TaskStatus newStatus = !task.getStatus().equals(TaskStatus.completed) ? TaskStatus.completed : TaskStatus.pending;
+            taskHandlerV2.updateTask(task, null, null, newStatus, null, null);
             view.refreshTaskListDisplay();
         } else {
              System.err.println("Controller: Could not find task to toggle completion.");
         }
-    }
-
-    // --- User Action Handlers ---
-
+    }    // --- User Action Handlers ---    
     public void handleLogoutRequest() {
         System.out.println("Controller: Logout request received.");
-        UserProperties.setProperty("rememberMe", "false");
+        taskHandlerV2.saveTasksToJson();
         UserProperties.logOut();
         view.dispose();
         SwingUtilities.invokeLater(() -> {
@@ -257,31 +236,41 @@ public class TaskController {
         System.out.println("Controller: Delete Account request received.");
         // TODO: Implement logic to show a dialog for delete user and validate JWT to allow change
         
-    }
-
-    public void handleEditTaskRequest(String task_id, String title, String desc, String folder, LocalDateTime due,
+    }    public void handleEditTaskRequest(String task_id, String title, String desc, String folder, LocalDateTime due,
             TaskStatus status) {
         System.out.println("Controller: Edit task request for ID " + task_id);
-        Task task = taskHandler.getTaskById(task_id);
+        Task task = getTaskById(task_id);
         if (task != null) {
-            taskHandler.updateTask(task, title, desc, status, due, folder, null);
+            taskHandlerV2.updateTask(task, title, desc, status, due, folder);
             view.refreshTaskListDisplay();
         } else {
             System.err.println("Controller: Could not find task with ID " + task_id + " to edit.");
         }
-    }
-
-    /**
+    }    /**
      * Retrieves the task history for the current user.
      * 
      * @return List of Task objects representing the task history
      */
     public List<Task> getTaskHistory() {
         return new ArrayList<>(
-            taskHandler.userTasksList.stream()
+            taskHandlerV2.getAllTasks().stream()
                 .filter(task -> task.getStatus() == TaskStatus.completed)
                 .collect(Collectors.toList())
             );
     }
 
+    // --- Helper Methods ---
+    
+    /**
+     * Get a task by its ID using TaskHandlerV2
+     */
+    private Task getTaskById(String taskId) {
+        List<Task> allTasks = taskHandlerV2.getAllTasks();
+        return allTasks.stream()
+            .filter(task -> task.getTask_id().equals(taskId))
+            .findFirst()
+            .orElse(null);
+    }
+
+    // --- UI Data Methods ---
 }

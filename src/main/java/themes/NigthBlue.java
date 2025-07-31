@@ -17,4 +17,9 @@ public class NigthBlue extends FlatDarculaLaf {
 	public String getName() {
 		return NAME;
 	}
+
+	@Override
+	public String getDescription() {
+		return "NigthBlue Theme";
+	}
 }

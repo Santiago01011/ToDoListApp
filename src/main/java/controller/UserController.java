@@ -5,6 +5,7 @@ import java.util.Map;
 import COMMON.UserProperties;
 import UI.LoginFrame;
 import model.TaskHandler;
+import model.TaskHandlerV2;
 import DBH.DBHandler;
 import UI.TaskDashboardFrame;
 import controller.TaskController;
@@ -93,6 +94,7 @@ public class UserController {
         // Set user UUID for sync service
         controller.setUserUUID(userUUID);
         
+
         dashboard.setController(controller);
         dashboard.initialize();
         dashboard.setVisible(true);

@@ -9,6 +9,8 @@ import java.util.HashMap;
 import java.util.Map;
 import COMMON.UserProperties;
 import COMMON.JSONUtils;
+import model.sync.CommandBatch;
+import model.sync.SyncResponse;
 
 public class APIService {
     private static final HttpClient CLIENT = HttpClient.newHttpClient();
@@ -58,5 +60,19 @@ public class APIService {
         }
         HttpRequest request = builder.build();
         return CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+    }
+
+    /**
+    * Sends a command batch to the API V2 sync endpoint and returns the sync response.
+    */
+    public static SyncResponse syncCommands(CommandBatch batch) throws IOException, InterruptedException {
+        String requestBody = JSONUtils.toJsonString(batch);
+        HttpResponse<String> response = post("/api/v2/sync/commands", requestBody, true);
+        
+        if (response.statusCode() == 200) {
+            return JSONUtils.fromJsonString(response.body(), SyncResponse.class);
+        }
+        
+        throw new RuntimeException("Sync failed with status " + response.statusCode() + ": " + response.body());
     }
 }

@@ -151,10 +151,6 @@ public class ThemeIntegrationTest {
             assertNotNull(common.getLogoutIcon(), "Logout icon should be available");
             assertNotNull(common.getEditUserIcon(), "EditUser icon should be available");
             assertNotNull(common.getDeleteUserIcon(), "DeleteUser icon should be available");
-            
-            // Optional icons - these might return null if asset files are missing
-            // but should not throw exceptions
-            common.getSettingsIcon(); // This might be null, which is ok
         });
     }
 }

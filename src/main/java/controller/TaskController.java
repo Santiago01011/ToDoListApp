@@ -46,7 +46,7 @@ public class TaskController {
         this.legacyTaskHandler = taskHandlerV2.getLegacyHandler(); // Keep reference for DBHandler compatibility
         this.view = view;
         this.dbHandler = dbHandler;
-        this.syncService = new SyncService(taskHandler);
+        this.syncService = new SyncService(legacyTaskHandler);
         // Copy user UUID from DBHandler to SyncService if available
         if (dbHandler.getUserUUID() != null) {
             this.syncService.setUserUUID(dbHandler.getUserUUID());

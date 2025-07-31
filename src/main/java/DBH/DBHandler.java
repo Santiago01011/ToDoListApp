@@ -4,6 +4,7 @@ import COMMON.JSONUtils;
 import model.TaskHandler;
 import model.Task;
 import model.TaskStatus;
+import model.Folder;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;

@@ -85,12 +85,13 @@ public class UserController {
     }
 
     public void launchDashboard(LoginFrame loginFrame) {
-        TaskHandler taskHandler = new TaskHandler();
+        // Use TaskHandlerV2 instead of deprecated TaskHandler
+        TaskHandlerV2 taskHandlerV2 = new TaskHandlerV2(userUUID);
         DBHandler dbHandler = new DBHandler();
         dbHandler.setUserUUID(userUUID);
         
         TaskDashboardFrame dashboard = new TaskDashboardFrame("TaskFlow");
-        TaskController controller = new TaskController(taskHandler, dashboard, dbHandler);
+        TaskController controller = new TaskController(taskHandlerV2, dashboard, dbHandler);
         // Set user UUID for sync service
         controller.setUserUUID(userUUID);
         

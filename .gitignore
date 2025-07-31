@@ -11,6 +11,7 @@ target/
 
 # Ignore files to doccument the project
 *.md
+*.agdoc
 
 .sfdx
 -- @pgsql Chat Query Editor (127.0.0.sql

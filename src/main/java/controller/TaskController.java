@@ -9,6 +9,7 @@ import model.FiltersCriteria;
 import UI.LoginFrame;
 import UI.TaskDashboardFrame;
 import COMMON.UserProperties;
+import service.SyncService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,6 +31,7 @@ public class TaskController {
     private TaskHandler legacyTaskHandler; // For backward compatibility with DBHandler
     private TaskDashboardFrame view;
     private DBHandler dbHandler;
+    private SyncService syncService;
 
     public void printUserTasks() {
         System.out.println("User Tasks:");
@@ -44,6 +46,24 @@ public class TaskController {
         this.legacyTaskHandler = taskHandlerV2.getLegacyHandler(); // Keep reference for DBHandler compatibility
         this.view = view;
         this.dbHandler = dbHandler;
+        this.syncService = new SyncService(taskHandler);
+        // Copy user UUID from DBHandler to SyncService if available
+        if (dbHandler.getUserUUID() != null) {
+            this.syncService.setUserUUID(dbHandler.getUserUUID());
+        }
+    }
+
+    /**
+     * Sets the user UUID for sync operations.
+     * This method should be called after user authentication.
+     */
+    public void setUserUUID(String userUUID) {
+        if (dbHandler != null) {
+            dbHandler.setUserUUID(userUUID);
+        }
+        if (syncService != null) {
+            syncService.setUserUUID(userUUID);
+        }
     }
 
     public void loadInitialTasks() {
@@ -132,17 +152,17 @@ public class TaskController {
     }
 
     public void handleSyncRequest() {
-        System.out.println("Controller: Sync request received.");
-        CompletableFuture<Boolean> syncFuture = dbHandler.startSyncProcess();
-        syncFuture.thenAcceptAsync(succes -> {
-            if (succes) {
-                System.out.println("Controller: Async sync completed successfully. Updating UI.");
+        System.out.println("Controller: Sync request received - using API V2 sync.");
+        CompletableFuture<Boolean> syncFuture = syncService.startSyncProcess();
+        syncFuture.thenAcceptAsync(success -> {
+            if (success) {
+                System.out.println("Controller: API V2 sync completed successfully. Updating UI.");
                 view.updateLastSyncLabel(getLastSyncTime());
                 view.refreshTaskListDisplay();
                 loadInitialFolderList();
             }
         }).exceptionally(ex -> {
-            System.out.println("Controller: Exception during sync: " + ex.getMessage());
+            System.out.println("Controller: Exception during API V2 sync: " + ex.getMessage());
             return null;
         });
     }

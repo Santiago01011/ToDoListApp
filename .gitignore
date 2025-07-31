@@ -10,7 +10,10 @@ target/
 .vscode/
 
 # Ignore files to doccument the project
-IMPROVEMENTS.md
-#doc.md
-update.md
-UI.md
+*.md
+
+.sfdx
+-- @pgsql Chat Query Editor (127.0.0.sql
+Phase-2.sql
+
+*.excalidraw

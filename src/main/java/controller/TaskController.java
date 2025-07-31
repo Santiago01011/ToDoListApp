@@ -43,7 +43,7 @@ public class TaskController {
         this.view = view;
         this.dbHandler = dbHandler;
         this.syncService = new SyncService(taskHandler);
-        // Copy user UUID from DBHandler to SyncService
+        // Copy user UUID from DBHandler to SyncService if available
         if (dbHandler.getUserUUID() != null) {
             this.syncService.setUserUUID(dbHandler.getUserUUID());
         }

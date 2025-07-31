@@ -85,11 +85,14 @@ public class UserController {
 
     public void launchDashboard(LoginFrame loginFrame) {
         TaskHandler taskHandler = new TaskHandler();
-        DBHandler dbHandler = new DBHandler(taskHandler);
+        DBHandler dbHandler = new DBHandler();
         dbHandler.setUserUUID(userUUID);
-        dbHandler.startSyncProcess();
+        
         TaskDashboardFrame dashboard = new TaskDashboardFrame("TaskFlow");
         TaskController controller = new TaskController(taskHandler, dashboard, dbHandler);
+        // Set user UUID for sync service
+        controller.setUserUUID(userUUID);
+        
         dashboard.setController(controller);
         dashboard.initialize();
         dashboard.setVisible(true);

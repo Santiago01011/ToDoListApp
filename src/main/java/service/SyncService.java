@@ -65,10 +65,7 @@ public class SyncService {
         // Build command batch
         List<SyncCommand> commands = buildSyncCommands();
         
-        if (commands.isEmpty() && lastSync != null) {
-            // No local changes, but still check for server changes
-            commands = new ArrayList<>();
-        }
+        System.out.println("SyncService: Built " + commands.size() + " commands for sync");
 
         CommandBatch batch = new CommandBatch(
             userUUID,
@@ -78,17 +75,26 @@ public class SyncService {
         );
 
         // Send to API
-        SyncResponse response = APIService.syncCommands(batch);
+        try {
+            SyncResponse response = APIService.syncCommands(batch);
 
-        if (response.isSuccess()) {
-            // Process the response
-            processSyncResponse(response);
-            
-            // Update last sync time
-            taskHandler.setLastSync(response.getServerTimestamp() != null ? 
-                response.getServerTimestamp() : syncStartTime);
-        } else {
-            throw new RuntimeException("Sync failed: " + response.getErrorMessage());
+            if (response.isSuccess()) {
+                System.out.println("SyncService: API V2 sync successful");
+                // Process the response
+                processSyncResponse(response);
+                
+                // Update last sync time
+                taskHandler.setLastSync(response.getServerTimestamp() != null ? 
+                    response.getServerTimestamp() : syncStartTime);
+            } else {
+                throw new RuntimeException("Sync failed: " + response.getErrorMessage());
+            }
+        } catch (IOException | InterruptedException e) {
+            System.err.println("SyncService: Network error during sync: " + e.getMessage());
+            throw e;
+        } catch (RuntimeException e) {
+            System.err.println("SyncService: API error during sync: " + e.getMessage());
+            throw e;
         }
     }
 
@@ -121,10 +127,15 @@ public class SyncService {
      * Processes the response from the sync API and updates local task state.
      */
     private void processSyncResponse(SyncResponse response) {
+        int processedCommands = 0;
+        int serverChanges = 0;
+        int conflicts = 0;
+
         // Process successful command results
         if (response.getProcessedCommands() != null) {
             for (SyncResponse.CommandResult result : response.getProcessedCommands()) {
                 processCommandResult(result);
+                processedCommands++;
             }
         }
 
@@ -132,18 +143,23 @@ public class SyncService {
         if (response.getServerChanges() != null) {
             for (Map<String, Object> changeData : response.getServerChanges()) {
                 processServerChange(changeData);
+                serverChanges++;
             }
         }
 
         // Handle conflicts (for now, server wins)
         if (response.getConflicts() != null) {
             for (SyncResponse.ConflictResult conflict : response.getConflicts()) {
-                System.out.println("Conflict detected for entity " + conflict.getEntityId() + 
-                    ": " + conflict.getConflictType());
+                System.out.println("SyncService: Conflict detected for entity " + conflict.getEntityId() + 
+                    ": " + conflict.getConflictType() + " (server wins)");
                 // For now, accept server data
                 processServerChange(conflict.getServerData());
+                conflicts++;
             }
         }
+
+        System.out.println("SyncService: Processed " + processedCommands + " commands, " + 
+            serverChanges + " server changes, " + conflicts + " conflicts");
     }
 
     /**

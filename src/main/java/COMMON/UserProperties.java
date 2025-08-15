@@ -38,8 +38,8 @@ public class UserProperties {
         properties.put("password", "");
         properties.put("lastSession", "");
         properties.put("userUUID", "");
-        properties.put("authApiUrl", "http://localhost:8080");
-        properties.put("dbUrl", "jdbc:postgresql://127.0.0.1:5431/todo_list?user=task_manager&password=task_manager_password");
+        properties.put("authApiUrl", "http://localhost:7071");
+        properties.put("dbUrl", "jdbc:postgresql://127.0.0.1:5431/todo_list?user=task_manager&password=securepassword");
         properties.put("token", "");
         saveProperties();
     }

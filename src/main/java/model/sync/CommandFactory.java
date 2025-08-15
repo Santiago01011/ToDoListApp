@@ -27,12 +27,11 @@ public class CommandFactory {
         data.put("created_at", task.getCreated_at());
         
         return new SyncCommand(
-            "CREATE",
-            "task",
-            task.getTask_id(),
-            task.getTask_id(), // client_id is same as task_id for new tasks
-            LocalDateTime.now(),
-            data
+            task.getTask_id(),   // entityId
+            "CREATE_TASK",       // type
+            data,                // data
+            LocalDateTime.now(), // timestamp
+            task.getTask_id()    // commandId (use task ID as command ID)
         );
     }
     
@@ -65,12 +64,11 @@ public class CommandFactory {
         data.put("updated_at", task.getUpdated_at());
         
         return new SyncCommand(
-            "UPDATE",
-            "task",
-            task.getTask_id(),
-            task.getTask_id(),
-            LocalDateTime.now(),
-            data
+            task.getTask_id(),   // entityId
+            "UPDATE_TASK",       // type
+            data,                // data
+            LocalDateTime.now(), // timestamp
+            task.getTask_id()    // commandId
         );
     }
     
@@ -82,12 +80,11 @@ public class CommandFactory {
         data.put("deleted_at", task.getDeleted_at());
         
         return new SyncCommand(
-            "DELETE",
-            "task",
-            task.getTask_id(),
-            task.getTask_id(),
-            LocalDateTime.now(),
-            data
+            task.getTask_id(),   // entityId
+            "DELETE_TASK",       // type
+            data,                // data
+            LocalDateTime.now(), // timestamp
+            task.getTask_id()    // commandId
         );
     }
 }

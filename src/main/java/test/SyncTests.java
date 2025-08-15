@@ -36,8 +36,7 @@ public class SyncTests {
 
         // Test CREATE command
         SyncCommand createCmd = CommandFactory.createTaskCommand(task);
-        System.out.println("CREATE Command Type: " + createCmd.getCommandType());
-        System.out.println("Entity Type: " + createCmd.getEntityType());
+        System.out.println("CREATE Command Type: " + createCmd.getType());
         System.out.println("Entity ID: " + createCmd.getEntityId());
         System.out.println("Data contains title: " + createCmd.getData().containsKey("task_title"));
 
@@ -50,7 +49,7 @@ public class SyncTests {
             .build();
 
         SyncCommand updateCmd = CommandFactory.updateTaskCommand(shadowTask);
-        System.out.println("UPDATE Command Type: " + updateCmd.getCommandType());
+        System.out.println("UPDATE Command Type: " + updateCmd.getType());
         System.out.println("Update data keys: " + updateCmd.getData().keySet());
 
         // Test DELETE command
@@ -60,7 +59,7 @@ public class SyncTests {
             .build();
 
         SyncCommand deleteCmd = CommandFactory.deleteTaskCommand(deleteTask);
-        System.out.println("DELETE Command Type: " + deleteCmd.getCommandType());
+        System.out.println("DELETE Command Type: " + deleteCmd.getType());
         System.out.println("Delete data contains deleted_at: " + deleteCmd.getData().containsKey("deleted_at"));
     }
 

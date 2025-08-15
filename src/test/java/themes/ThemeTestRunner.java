@@ -32,18 +32,12 @@ public class ThemeTestRunner {
         
         // Test CoffeYellow
         CoffeYellow coffeeTheme = new CoffeYellow();
-        if (coffeeTheme == null) {
-            throw new RuntimeException("Failed to create CoffeYellow theme");
-        }
         if (!"CoffeYellow".equals(coffeeTheme.getName())) {
             throw new RuntimeException("CoffeYellow theme has incorrect name: " + coffeeTheme.getName());
         }
         
         // Test NigthBlue
         NigthBlue nightTheme = new NigthBlue();
-        if (nightTheme == null) {
-            throw new RuntimeException("Failed to create NigthBlue theme");
-        }
         if (!"NigthBlue".equals(nightTheme.getName())) {
             throw new RuntimeException("NigthBlue theme has incorrect name: " + nightTheme.getName());
         }

@@ -1,9 +1,4 @@
 package DBH;
-
-import COMMON.JSONUtils;
-import model.TaskHandler;
-import model.Task;
-import model.TaskStatus;
 import model.Folder;
 
 import java.sql.Connection;
@@ -20,15 +15,6 @@ import java.util.ArrayList;
  */
 public class DBHandler {
     private UUID userUUID = null;
-    
-    /**
-     * Constructor for DBHandler.
-     * Note: Task sync functionality has been moved to SyncService.
-     */
-    public DBHandler() {
-        // Constructor simplified - task sync moved to SyncService
-
-    }
 
     /**
      * <h4>Retrieves a list of folders accessible to the user from the cloud database.</h4>

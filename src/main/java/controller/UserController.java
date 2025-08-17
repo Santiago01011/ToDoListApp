@@ -4,11 +4,9 @@ import java.util.Map;
 
 import COMMON.UserProperties;
 import UI.LoginFrame;
-import model.TaskHandler;
 import model.TaskHandlerV2;
 import DBH.DBHandler;
 import UI.TaskDashboardFrame;
-import controller.TaskController;
 import service.APIService;
 
 public class UserController {
@@ -94,6 +92,18 @@ public class UserController {
         TaskController controller = new TaskController(taskHandlerV2, dashboard, dbHandler);
         // Set user UUID for sync service
         controller.setUserUUID(userUUID);
+
+        // Register a JVM shutdown hook to ensure tasks and folder metadata are persisted on exit.
+        // This guarantees the authoritative TaskHandlerV2 state is saved even if the app is closed
+        // from the OS or the window manager.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                taskHandlerV2.saveTasksToJson();
+                System.out.println("TaskHandlerV2: saved tasks on shutdown.");
+            } catch (Exception e) {
+                System.err.println("Failed to save tasks on shutdown: " + e.getMessage());
+            }
+        }));
         
 
         dashboard.setController(controller);

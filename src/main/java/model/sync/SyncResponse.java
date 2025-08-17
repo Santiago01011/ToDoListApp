@@ -3,7 +3,7 @@ package model.sync;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -24,7 +24,7 @@ public class SyncResponse {
     
     @JsonProperty("server_timestamp")
     @JsonAlias("serverTimestamp")
-    private LocalDateTime serverTimestamp;
+    private OffsetDateTime serverTimestamp;
     
     @JsonProperty("server_changes")
     @JsonAlias("serverChanges")
@@ -41,8 +41,8 @@ public class SyncResponse {
         return failedCommands == null || failedCommands.isEmpty(); 
     }
 
-    public LocalDateTime getServerTimestamp() { return serverTimestamp; }
-    public void setServerTimestamp(LocalDateTime serverTimestamp) { this.serverTimestamp = serverTimestamp; }
+    public OffsetDateTime getServerTimestamp() { return serverTimestamp; }
+    public void setServerTimestamp(OffsetDateTime serverTimestamp) { this.serverTimestamp = serverTimestamp; }
 
     public List<CommandResult> getProcessedCommands() { return processedCommands; }
     public void setProcessedCommands(List<CommandResult> processedCommands) { this.processedCommands = processedCommands; }

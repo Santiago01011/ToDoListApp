@@ -24,6 +24,9 @@ public class SyncCommand {
     
     @JsonProperty("commandId")  // Optional command ID
     private String commandId;
+    
+    @JsonProperty("changedFields")  // Optional: for UPDATE_TASK commands
+    private Map<String, Object> changedFields;
 
     public SyncCommand() {}
 
@@ -34,6 +37,16 @@ public class SyncCommand {
         this.data = data;
         this.timestamp = timestamp;
         this.commandId = commandId;
+    }
+
+    public SyncCommand(String entityId, String type, Map<String, Object> data, 
+                      LocalDateTime timestamp, String commandId, Map<String, Object> changedFields) {
+        this.entityId = entityId;
+        this.type = type;
+        this.data = data;
+        this.timestamp = timestamp;
+        this.commandId = commandId;
+        this.changedFields = changedFields;
     }
 
     // Getters and setters
@@ -51,4 +64,7 @@ public class SyncCommand {
 
     public String getCommandId() { return commandId; }
     public void setCommandId(String commandId) { this.commandId = commandId; }
+
+    public Map<String, Object> getChangedFields() { return changedFields; }
+    public void setChangedFields(Map<String, Object> changedFields) { this.changedFields = changedFields; }
 }

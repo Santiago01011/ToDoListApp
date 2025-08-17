@@ -19,6 +19,9 @@ public final class ResponseApplier {
     }
 
     public void apply(SyncResponse response) {
+        // Track tasks that were deleted in this sync to avoid re-adding them from serverChanges
+        java.util.Set<String> deletedTaskIds = new java.util.HashSet<>();
+        
         if (response.getProcessedCommands() != null) {
             for (var result : response.getProcessedCommands()) {
                 switch (result.getCommandType()) {
@@ -43,7 +46,15 @@ public final class ResponseApplier {
                     case "DELETE":
                     case "DELETE_TASK":
                         if (result.getClientId() != null) {
-                            handler.removeTaskById(result.getClientId());
+                            // Track both clientId and entityId for deletion filtering
+                            deletedTaskIds.add(result.getClientId());
+                            if (result.getEntityId() != null) {
+                                deletedTaskIds.add(result.getEntityId());
+                            }
+                            System.out.println("ResponseApplier: Processing DELETE for task " + result.getClientId() + " (entity: " + result.getEntityId() + ")");
+                            // Use entityId (task ID) for removal, not clientId (command ID)
+                            String taskIdToRemove = result.getEntityId() != null ? result.getEntityId() : result.getClientId();
+                            handler.removeTaskById(taskIdToRemove);
                         }
                         break;
                 }
@@ -54,6 +65,12 @@ public final class ResponseApplier {
             for (Map<String, Object> change : response.getServerChanges()) {
                 Task t = convertServerDataToTask(change);
                 if (t != null) {
+                    // Skip tasks that were just deleted in this sync batch
+                    if (deletedTaskIds.contains(t.getTask_id())) {
+                        System.out.println("ResponseApplier: Skipping re-add of deleted task: " + t.getTask_id());
+                        continue;
+                    }
+                    
                     // If server provided only folderId (no folder_name), try to resolve
                     if ((t.getFolder_name() == null || t.getFolder_name().isEmpty()) && t.getFolder_id() != null) {
                         List<Folder> folders = handler.getFoldersList();

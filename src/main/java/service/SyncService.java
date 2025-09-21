@@ -1,6 +1,7 @@
 package service;
 
 import model.Task;
+import model.Folder;
 import model.TaskHandlerV2;
 import model.commands.CommandQueue;
 import model.commands.Command;
@@ -61,9 +62,6 @@ public class SyncService {
     java.time.OffsetDateTime syncStartTime = java.time.OffsetDateTime.now();
     java.time.LocalDateTime lastSync = taskHandlerV2.getLastSync();
 
-    // Only process serverChanges after sync; do not reload all tasks from disk/server
-    // Initial sync: let serverChanges bootstrap the local list
-
     // Build command batch from the command queue
     List<SyncCommand> commands = buildSyncCommands();
         
@@ -78,13 +76,27 @@ public class SyncService {
             lastSyncOffset,
             commands
         );
+        
+        // Optimization: Add folder version to request for conditional fetching
+        List<Folder> cachedFolders = taskHandlerV2.getFoldersList();
+        if (!cachedFolders.isEmpty()) {
+            // Get current folder version from cache (would be provided by server in real impl)
+            String currentFolderVersion = String.valueOf(cachedFolders.hashCode()); // Simplified version
+            batch.setFolderVersion(currentFolderVersion);
+        } else {
+            // First sync - request folders
+            batch.setIncludeFolders(true);
+        }
 
         // Debug: Log the request being sent
-        System.out.println("SyncService: Sending batch to API:");
+        System.out.println("SyncService: Sending optimized batch to API:");
         System.out.println("  - User UUID: " + userUUID);
         System.out.println("  - Client Timestamp: " + syncStartTime);
         System.out.println("  - Last Sync: " + lastSync);
         System.out.println("  - Command Count: " + commands.size());
+        System.out.println("  - Folder Version: " + batch.getFolderVersion());
+        System.out.println("  - Include Folders: " + batch.isIncludeFolders());
+        
         if (!commands.isEmpty()) {
             System.out.println("  - Commands: ");
             for (SyncCommand cmd : commands) {

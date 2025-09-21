@@ -20,6 +20,13 @@ public class CommandBatch {
     
     @JsonProperty("commands")
     private List<SyncCommand> commands;
+    
+    // Optimization fields for conditional data fetching
+    @JsonProperty("folder_version")
+    private String folderVersion;
+    
+    @JsonProperty("include_folders")
+    private boolean includeFolders = false;
 
     public CommandBatch() {}
 
@@ -42,4 +49,11 @@ public class CommandBatch {
 
     public List<SyncCommand> getCommands() { return commands; }
     public void setCommands(List<SyncCommand> commands) { this.commands = commands; }
+
+    // Optimization fields
+    public String getFolderVersion() { return folderVersion; }
+    public void setFolderVersion(String folderVersion) { this.folderVersion = folderVersion; }
+
+    public boolean isIncludeFolders() { return includeFolders; }
+    public void setIncludeFolders(boolean includeFolders) { this.includeFolders = includeFolders; }
 }

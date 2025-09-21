@@ -18,8 +18,8 @@ public final class CommandConverter {
                     createData.put("title", createCmd.title());
                     createData.put("description", createCmd.description());
                     createData.put("status", createCmd.status() != null ? createCmd.status().toString() : null);
-                    createData.put("due_date", createCmd.dueDate());
-                    createData.put("folder_id", createCmd.folderId());
+                    createData.put("dueDate", createCmd.dueDate());
+                    createData.put("folderId", createCmd.folderId());  // Use camelCase to match database expectation
                     createData.put("created_at", LocalDateTime.now());
                     return new SyncCommand(
                         command.getEntityId(),
@@ -33,7 +33,7 @@ public final class CommandConverter {
             case UPDATE_TASK:
                 if (command instanceof model.commands.UpdateTaskCommand updateCmd) {
                     // The server expects changedFields at the root level, not inside data.
-                    // Map field names from camelCase to snake_case and normalize enum values.
+                    // Map field names to server expectations (database needs to be updated to match)
                     Map<String, Object> changed = updateCmd.changedFields();
                     Map<String, Object> normalized = new HashMap<>();
                     if (changed != null) {
@@ -46,8 +46,8 @@ public final class CommandConverter {
                             
                             // Map field names to server expectations
                             switch (key) {
-                                case "folderId" -> normalized.put("folder_id", val);
-                                case "dueDate" -> normalized.put("due_date", val);
+                                case "folderId" -> normalized.put("folder_id", val);  // Map to snake_case for now
+                                case "dueDate" -> normalized.put("due_date", val);   // Map to snake_case for now
                                 default -> normalized.put(key, val);
                             }
                         }

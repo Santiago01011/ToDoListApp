@@ -7,17 +7,17 @@ import model.FiltersCriteria;
 import UI.LoginFrame;
 import UI.TaskDashboardFrame;
 import COMMON.UserProperties;
-import service.SyncService;
+import service.OptimizedSyncService;
 
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 import DBH.DBHandler;
-import service.APIService;
+import DBH.NeonPool;
+import java.sql.Connection;
 
 import java.time.LocalDateTime;
 
@@ -29,24 +29,34 @@ public class TaskController {
     private TaskHandlerV2 taskHandlerV2;
     private TaskDashboardFrame view;
     private DBHandler dbHandler;
-    private SyncService syncService;
-
-    public void printUserTasks() {
-        System.out.println("User Tasks:");
-        List<Task> tasks = taskHandlerV2.getAllTasks();
-        for (Task task : tasks) {
-            System.out.println(task.viewTaskDesc() + "\n");
-        }
-    }
+    private OptimizedSyncService optimizedSyncService;
+    private Connection dbConnection;
 
     public TaskController(TaskHandlerV2 taskHandlerV2, TaskDashboardFrame view, DBHandler dbHandler) {
         this.taskHandlerV2 = taskHandlerV2;
         this.view = view;
         this.dbHandler = dbHandler;
-        this.syncService = new SyncService(taskHandlerV2); // Use TaskHandlerV2 for command-based sync
-        // Copy user UUID from DBHandler to SyncService if available
-        if (dbHandler.getUserUUID() != null) {
-            this.syncService.setUserUUID(dbHandler.getUserUUID());
+        try {
+            this.dbConnection = NeonPool.getConnection();
+            this.optimizedSyncService = new OptimizedSyncService(taskHandlerV2, dbConnection);
+        } catch (Exception ex) {
+            System.err.println("Controller: DB connection error: " + ex.getMessage());
+        }
+    }
+
+    /**
+     * Helper method to perform sync and update UI.
+     * @param uiUpdates Runnable to execute on the EDT after successful sync
+     * @param errorMessage Message to log on sync failure
+     */
+    private void performSyncWithUIUpdate(Runnable uiUpdates, String errorMessage) {
+        if (optimizedSyncService != null) {
+            optimizedSyncService.performOptimizedSync().thenAcceptAsync(r -> {
+                SwingUtilities.invokeLater(uiUpdates);
+            }).exceptionally(ex -> {
+                System.out.println("Controller: " + errorMessage + ": " + ex.getMessage());
+                return null;
+            });
         }
     }
 
@@ -58,30 +68,56 @@ public class TaskController {
         if (dbHandler != null) {
             dbHandler.setUserUUID(userUUID);
         }
-        if (syncService != null) {
-            syncService.setUserUUID(userUUID);
-        }
+        
     }
 
     public void loadInitialTasks() {
-        view.refreshTaskListDisplay();
-    }    public void loadInitialFolderList() {
-        CompletableFuture.supplyAsync(() -> {
-            try {
-                // Prefer API v2 endpoint
-                return APIService.fetchUserFolders();
-            } catch (Exception ex) {
-                System.err.println("Warning: Unable to fetch folders (offline?): " + ex.getMessage());
-                    return taskHandlerV2.getFoldersList();
-            }
-        }).thenAcceptAsync(folders -> {
-                taskHandlerV2.setFoldersList(folders);
-        SwingUtilities.invokeLater(() -> {
-            view.updateFolderList(taskHandlerV2.getFolderNamesList());
-            // Refresh the task list so any projected tasks pick up resolved folder names
+        if (optimizedSyncService != null) {
+            performSyncWithUIUpdate(() -> {
+                view.updateFolderList(taskHandlerV2.getFolderNamesList());
+                view.refreshTaskListDisplay();
+            }, "Initial sync failed");
+        } else {
             view.refreshTaskListDisplay();
-        });
-        });
+        }
+    }    public void loadInitialFolderList() {
+        System.out.println("Controller: loadInitialFolderList() called");
+        System.out.println("Controller: Before sync - Available folders: " + taskHandlerV2.getFolderNamesList());
+        
+        if (optimizedSyncService != null) {
+            // CRITICAL FIX: Load folders synchronously to prevent timing issues
+            try {
+                System.out.println("Controller: Loading folders synchronously to prevent timing issues...");
+                // First, try to load folders from local cache/storage
+                List<String> existingFolders = taskHandlerV2.getFolderNamesList();
+                if (existingFolders.isEmpty()) {
+                    System.out.println("Controller: No local folders found, performing synchronous sync...");
+                    // Force synchronous folder loading before UI is ready
+                    optimizedSyncService.performOptimizedSync().get(); // .get() makes it synchronous
+                }
+                
+                System.out.println("Controller: After folder loading - Available folders: " + taskHandlerV2.getFolderNamesList());
+                
+                // Now update UI with loaded folders
+                SwingUtilities.invokeLater(() -> {
+                    view.updateFolderList(taskHandlerV2.getFolderNamesList());
+                    view.refreshTaskListDisplay();
+                });
+            } catch (Exception e) {
+                System.err.println("Controller: Error during synchronous folder loading: " + e.getMessage());
+                // Fallback to async loading
+                performSyncWithUIUpdate(() -> {
+                    System.out.println("Controller: Fallback async - Available folders: " + taskHandlerV2.getFolderNamesList());
+                    view.updateFolderList(taskHandlerV2.getFolderNamesList());
+                    view.refreshTaskListDisplay();
+                }, "Folder load via DB failed");
+            }
+        } else {
+            SwingUtilities.invokeLater(() -> {
+                view.updateFolderList(taskHandlerV2.getFolderNamesList());
+                view.refreshTaskListDisplay();
+            });
+        }
     }
 
     public void loadInitialSyncTime() {
@@ -153,43 +189,40 @@ public class TaskController {
      */
     public void handleCreateTask(String title, String description, String folderName, LocalDateTime dueDate, TaskStatus status) {
         System.out.println("Controller: Creating new task: " + title);
+        System.out.println("Controller: Folder name from UI: '" + folderName + "'");
+        
         // Get folder ID for the folder name
         String folderId = taskHandlerV2.getFolderIdByName(folderName);
+        System.out.println("Controller: Resolved folder ID: '" + folderId + "'");
+        
+        // Debug: print available folders
+        List<String> availableFolders = taskHandlerV2.getFolderNamesList();
+        System.out.println("Controller: Available folders: " + availableFolders);
+        
         // Use command-driven approach via TaskHandlerV2
-        taskHandlerV2.createTask(title, description, status, dueDate, folderId);
+        Task createdTask = taskHandlerV2.createTask(title, description, status, dueDate, folderId);
+        System.out.println("Controller: Created task with folder_id: " + createdTask.getFolder_id() + ", folder_name: " + createdTask.getFolder_name());
+        
         view.refreshTaskListDisplay();
+        performSyncWithUIUpdate(() -> {
+            view.updateLastSyncLabel(getLastSyncTime());
+            view.refreshTaskListDisplay();
+        }, "Exception during DB sync after create");
     }
 
     public void handleSyncRequest() {
-        System.out.println("Controller: Sync request received - using API V2 sync.");
-        CompletableFuture<Boolean> syncFuture = syncService.startSyncProcess();
-        syncFuture.thenAcceptAsync(success -> {
-            if (success) {
-                System.out.println("Controller: API V2 sync completed successfully. Updating UI.");
-                view.updateLastSyncLabel(getLastSyncTime());
-                view.refreshTaskListDisplay();
-                loadInitialFolderList();
-            }
-        }).exceptionally(ex -> {
-            System.out.println("Controller: Exception during API V2 sync: " + ex.getMessage());
-            return null;
-        });
+        System.out.println("Controller: Sync request received - using DB-direct sync.");
+        if (optimizedSyncService == null) return;
+        performSyncWithUIUpdate(() -> {
+            view.updateLastSyncLabel(getLastSyncTime());
+            view.refreshTaskListDisplay();
+            loadInitialFolderList();
+        }, "Exception during DB sync");
     }
 
     public void handleHistoryRequest() {
         System.out.println("Controller: History request received.");
-        // TODO: Implement logic to show a 'History' view/frame
-    }
-
-
-    public void handleViewTaskRequest(String taskId) {
-        System.out.println("Controller: View task request for ID " + taskId);
-        // TODO: Implement logic to show a detailed view of the task
-        // Task task = taskHandler.getTaskById(taskId);
-        // if (task != null) {
-        //     TaskDetailDialog dialog = new TaskDetailDialog(view, task);
-        //     dialog.setVisible(true);
-        // }
+        view.displayTaskHistory();
     }
 
     public void handleDeleteTaskRequest(String taskId) {
@@ -198,6 +231,7 @@ public class TaskController {
         if (task != null) {
             taskHandlerV2.deleteTask(task, "User deleted");
             view.refreshTaskListDisplay();
+            performSyncWithUIUpdate(() -> view.refreshTaskListDisplay(), "Exception during DB sync after delete");
         } else {
             System.err.println("Controller: Could not find task with ID " + taskId + " to delete.");
         }
@@ -207,6 +241,7 @@ public class TaskController {
             System.out.println("Controller: Logging out user and clearing credentials.");
             UserProperties.logOut();
         }
+        try { if (dbConnection != null && !dbConnection.isClosed()) dbConnection.close(); } catch (Exception ignore) {}
     }    public List<String> getFolderList() {
     return taskHandlerV2.getFolderNamesList();
     }    public LocalDateTime getLastSyncTime() {
@@ -216,6 +251,7 @@ public class TaskController {
             TaskStatus newStatus = !task.getStatus().equals(TaskStatus.completed) ? TaskStatus.completed : TaskStatus.pending;
             taskHandlerV2.updateTask(task, null, null, newStatus, null, null);
             view.refreshTaskListDisplay();
+            performSyncWithUIUpdate(() -> view.refreshTaskListDisplay(), "Exception during DB sync after toggle");
         } else {
              System.err.println("Controller: Could not find task to toggle completion.");
         }
@@ -235,7 +271,6 @@ public class TaskController {
 
     public void handleChangeUsernameRequest() {
         System.out.println("Controller: Change Username request received.");
-        // TODO: Implement logic to show a dialog for changing username and validate JWT to allow change
         String newUsername = JOptionPane.showInputDialog(view, "Enter new username:");
         if (newUsername != null && !newUsername.trim().isEmpty()) {
             // Call API to change username
@@ -245,7 +280,7 @@ public class TaskController {
 
     public void handleDeleteAccountRequest() {
         System.out.println("Controller: Delete Account request received.");
-        // TODO: Implement logic to show a dialog for delete user and validate JWT to allow change    
+        // TODO: Implement logic to show a dialog for delete user and validate JWT to allow change
     }
 
     public void handleEditTaskRequest(
@@ -257,6 +292,7 @@ public class TaskController {
         if (task != null) {
             taskHandlerV2.updateTask(task, title, desc, status, due, folder);
             view.refreshTaskListDisplay();
+            performSyncWithUIUpdate(() -> view.refreshTaskListDisplay(), "Exception during DB sync after edit");
         } else {
             System.err.println("Controller: Could not find task with ID " + task_id + " to edit.");
         }

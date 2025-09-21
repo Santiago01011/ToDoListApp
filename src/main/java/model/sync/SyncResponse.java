@@ -3,6 +3,7 @@ package model.sync;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import model.Folder;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +34,14 @@ public class SyncResponse {
     @JsonProperty("error_message")
     @JsonAlias({"errorMessage", "error"})
     private String errorMessage;
+    
+    // Optimization fields for conditional data fetching
+    @JsonProperty("folders")
+    private List<Folder> folders;
+    
+    @JsonProperty("folder_version")
+    @JsonAlias("folderVersion")
+    private String folderVersion;
 
     public SyncResponse() {}
 
@@ -46,6 +55,10 @@ public class SyncResponse {
 
     public List<CommandResult> getProcessedCommands() { return processedCommands; }
     public void setProcessedCommands(List<CommandResult> processedCommands) { this.processedCommands = processedCommands; }
+    
+    // Jackson setter for "success" JSON field - maps to processedCommands
+    @JsonProperty("success")
+    public void setSuccess(List<CommandResult> success) { this.processedCommands = success; }
 
     public List<Map<String, Object>> getServerChanges() { return serverChanges; }
     public void setServerChanges(List<Map<String, Object>> serverChanges) { this.serverChanges = serverChanges; }
@@ -58,6 +71,13 @@ public class SyncResponse {
 
     public String getErrorMessage() { return errorMessage; }
     public void setErrorMessage(String errorMessage) { this.errorMessage = errorMessage; }
+
+    // Optimization fields getters and setters
+    public List<Folder> getFolders() { return folders; }
+    public void setFolders(List<Folder> folders) { this.folders = folders; }
+
+    public String getFolderVersion() { return folderVersion; }
+    public void setFolderVersion(String folderVersion) { this.folderVersion = folderVersion; }
 
     /**
      * Result of processing an individual command.

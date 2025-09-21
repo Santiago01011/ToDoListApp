@@ -9,7 +9,6 @@ import java.nio.file.*;
 
 import model.Task;
 import model.TaskStatus;
-import COMMON.JSONUtils;
 import COMMON.UserProperties;
 
 /**
@@ -32,18 +31,82 @@ public class CommandQueue {
     }
     
     /**
-     * Add a command to the queue for later synchronization
+     * Add a command to the queue for later synchronization with deduplication
      */
     public void enqueue(Command command) {
         if (!command.getUserId().equals(userId)) {
             throw new IllegalArgumentException("Command user ID does not match queue user ID");
         }
         
-        pendingCommands.add(command);
-        persistToFile();
+        // Try to merge with existing pending command for same entity
+        Command existingCommand = findLastPendingCommandForEntity(command.getEntityId());
+        if (existingCommand != null && canMergeCommands(existingCommand, command)) {
+            Command mergedCommand = mergeCommands(existingCommand, command);
+            replaceCommand(existingCommand, mergedCommand);
+            System.out.println("Command merged: " + command.getType() + " for entity " + command.getEntityId());
+        } else {
+            pendingCommands.add(command);
+            System.out.println("Command enqueued: " + command.getType() + " for entity " + command.getEntityId());
+        }
         
-        // TODO: Trigger async sync attempt if online
-        System.out.println("Command enqueued: " + command.getType() + " for entity " + command.getEntityId());
+        persistToFile();
+    }
+    
+    /**
+     * Find the last pending command for a specific entity
+     */
+    private Command findLastPendingCommandForEntity(String entityId) {
+        for (int i = pendingCommands.size() - 1; i >= 0; i--) {
+            Command cmd = pendingCommands.get(i);
+            if (cmd.getEntityId().equals(entityId)) {
+                return cmd;
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Check if two commands can be merged
+     */
+    private boolean canMergeCommands(Command existing, Command incoming) {
+        // Only merge UPDATE commands for the same entity
+        return existing instanceof UpdateTaskCommand && 
+               incoming instanceof UpdateTaskCommand &&
+               existing.getEntityId().equals(incoming.getEntityId());
+    }
+    
+    /**
+     * Merge two commands into a single optimized command
+     */
+    private Command mergeCommands(Command base, Command update) {
+        if (base instanceof UpdateTaskCommand && update instanceof UpdateTaskCommand) {
+            UpdateTaskCommand baseUpdate = (UpdateTaskCommand) base;
+            UpdateTaskCommand newUpdate = (UpdateTaskCommand) update;
+            
+            // Merge changed fields - newer values override older ones
+            Map<String, Object> mergedFields = new HashMap<>(baseUpdate.changedFields());
+            mergedFields.putAll(newUpdate.changedFields());
+            
+            // Create new merged command with latest timestamp
+            return UpdateTaskCommand.create(
+                base.getEntityId(),
+                base.getUserId(),
+                mergedFields
+            );
+        }
+        
+        // For non-mergeable commands, return the newer one
+        return update;
+    }
+    
+    /**
+     * Replace an existing command with a new one
+     */
+    private void replaceCommand(Command oldCommand, Command newCommand) {
+        int index = pendingCommands.indexOf(oldCommand);
+        if (index >= 0) {
+            pendingCommands.set(index, newCommand);
+        }
     }
     
     /**
@@ -57,7 +120,12 @@ public class CommandQueue {
         
         // Create a map for efficient lookups and updates
         Map<String, Task> taskMap = baseTasks.stream()
-            .collect(Collectors.toMap(Task::getTask_id, Function.identity()));
+            .collect(Collectors.toMap(
+                Task::getTask_id,
+                Function.identity(),
+                (a, b) -> b, // if duplicates exist, keep the last encountered
+                LinkedHashMap::new // preserve insertion order
+            ));
         
         // Apply each command in chronological order
         for (Command cmd : pendingCommands) {
@@ -152,7 +220,8 @@ public class CommandQueue {
         if (changes.containsKey("status")) {
             Object statusValue = changes.get("status");
             if (statusValue instanceof String) {
-                builder.status(TaskStatus.valueOf((String) statusValue));
+                TaskStatus parsed = TaskStatus.parse((String) statusValue);
+                if (parsed != null) builder.status(parsed);
             } else if (statusValue instanceof TaskStatus) {
                 builder.status((TaskStatus) statusValue);
             }

@@ -5,7 +5,6 @@ import java.util.Objects;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import model.TaskStatus;
 
 /**
  * Immutable Task class following the command queue pattern.

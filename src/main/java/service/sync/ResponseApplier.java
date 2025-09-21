@@ -9,7 +9,6 @@ import model.TaskHandlerV2;
 import model.TaskStatus;
 import model.Folder;
 import model.sync.SyncResponse;
-import service.APIService;
 
 public final class ResponseApplier {
     private final TaskHandlerV2 handler;
@@ -27,34 +26,31 @@ public final class ResponseApplier {
                 switch (result.getCommandType()) {
                     case "CREATE":
                     case "CREATE_TASK":
-                        if (result.getClientId() != null) {
-                            // Mark task as synced - server has accepted and persisted it
-                            handler.markTaskSynced(result.getClientId());
+                        if (result.getEntityId() != null) {
+                            // Use entityId (task ID) instead of clientId (command ID) for marking as synced
+                            handler.markTaskSynced(result.getEntityId());
                             
                             // If server provided a new ID, update the task ID mapping
-                            if (result.getServerId() != null) {
-                                handler.updateTaskId(result.getClientId(), result.getServerId());
+                            if (result.getServerId() != null && !result.getEntityId().equals(result.getServerId())) {
+                                handler.updateTaskId(result.getEntityId(), result.getServerId());
                             }
                         }
                         break;
                     case "UPDATE":
                     case "UPDATE_TASK":
-                        if (result.getClientId() != null) {
-                            handler.markTaskSynced(result.getClientId());
+                        if (result.getEntityId() != null) {
+                            // Use entityId (task ID) instead of clientId (command ID)
+                            handler.markTaskSynced(result.getEntityId());
                         }
                         break;
                     case "DELETE":
                     case "DELETE_TASK":
-                        if (result.getClientId() != null) {
-                            // Track both clientId and entityId for deletion filtering
-                            deletedTaskIds.add(result.getClientId());
-                            if (result.getEntityId() != null) {
-                                deletedTaskIds.add(result.getEntityId());
-                            }
-                            System.out.println("ResponseApplier: Processing DELETE for task " + result.getClientId() + " (entity: " + result.getEntityId() + ")");
-                            // Use entityId (task ID) for removal, not clientId (command ID)
-                            String taskIdToRemove = result.getEntityId() != null ? result.getEntityId() : result.getClientId();
-                            handler.removeTaskById(taskIdToRemove);
+                        if (result.getEntityId() != null) {
+                            // Track entityId for deletion filtering
+                            deletedTaskIds.add(result.getEntityId());
+                            System.out.println("ResponseApplier: Processing DELETE for task " + result.getEntityId());
+                            // Use entityId (task ID) for removal
+                            handler.removeTaskById(result.getEntityId());
                         }
                         break;
                 }
@@ -99,12 +95,18 @@ public final class ResponseApplier {
             handler.setLastSync(response.getServerTimestamp().toLocalDateTime());
         }
 
-        // After applying server changes, refresh folder list from API so new server-assigned
-        // folder IDs get their canonical names locally. Non-fatal if network call fails.
-        try {
-            List<Folder> fresh = APIService.fetchUserFolders();
-            if (fresh != null) handler.setFoldersList(fresh);
-        } catch (Exception ignored) {
+        // Optimized folder handling - only fetch if server provided new folders or version changed
+        if (response.getFolders() != null && !response.getFolders().isEmpty()) {
+            // Server provided folders in response - use them directly
+            System.out.println("ResponseApplier: Server provided " + response.getFolders().size() + " folders:");
+            for (Folder f : response.getFolders()) {
+                System.out.println("  - " + f.getFolder_name() + " -> " + f.getFolder_id());
+            }
+            handler.setFoldersList(response.getFolders(), response.getFolderVersion());
+            System.out.println("ResponseApplier: Updated folders from sync response (" + 
+                             response.getFolders().size() + " folders)");
+        } else {
+            System.out.println("ResponseApplier: Skipped folder refresh - no changes detected");
         }
     }
 
@@ -128,11 +130,8 @@ public final class ResponseApplier {
             if (payload.containsKey("description")) builder.description((String) payload.get("description"));
 
             if (payload.containsKey("status")) {
-                try {
-                    builder.status(TaskStatus.valueOf((String) payload.get("status")));
-                } catch (IllegalArgumentException e) {
-                    builder.status(TaskStatus.pending);
-                }
+                TaskStatus parsed = TaskStatus.parse(String.valueOf(payload.get("status")));
+                if (parsed != null) builder.status(parsed);
             }
 
             LocalDateTime dueDt = parseDateTime(payload.get("due_date"));
@@ -159,7 +158,7 @@ public final class ResponseApplier {
             else if (payload.containsKey("folderId")) builder.folderId((String) payload.get("folderId"));
             if (payload.containsKey("folder_name")) builder.folderName((String) payload.get("folder_name"));
 
-            builder.sync_status("cloud");
+            // sync_status is managed by TaskHandlerV2/OptimizedSyncService; avoid forcing here
             return builder.build();
         } catch (Exception e) {
             return null;

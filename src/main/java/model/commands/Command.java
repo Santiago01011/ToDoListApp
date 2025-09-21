@@ -8,7 +8,8 @@ import java.time.LocalDateTime;
  * This sealed interface ensures only specific command types can be implemented.
  */
 public sealed interface Command 
-    permits CreateTaskCommand, UpdateTaskCommand, DeleteTaskCommand {
+    permits CreateTaskCommand, UpdateTaskCommand, DeleteTaskCommand,
+            AddJournalEntryCommand, StartJournalSessionCommand, RecordProposedActionCommand {
     
     /**
      * Unique identifier for this command instance

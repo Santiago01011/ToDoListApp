@@ -41,6 +41,16 @@ public class UserProperties {
         properties.put("authApiUrl", "http://localhost:7071");
         properties.put("dbUrl", "jdbc:postgresql://127.0.0.1:5431/todo_list?user=task_manager&password=securepassword");
         properties.put("token", "");
+        
+        // Journal settings (privacy-first defaults)
+        properties.put("journal.enabled", "true");
+        properties.put("journal.voice.enabled", "false");
+        properties.put("journal.voice.engine", "none");
+        properties.put("journal.enrichment.mode", "OFF");
+        properties.put("journal.retention.rawDays", null); // null = keep forever
+        properties.put("journal.autoParse", "true");
+        properties.put("journal.privacy.neverSyncJournal", "true"); // Hard-coded guard
+        
         saveProperties();
     }
 
@@ -229,5 +239,59 @@ public class UserProperties {
             throw new IllegalStateException("No user is currently logged in");
         }
         return userDir + File.separator + filename;
+    }
+    
+    // Journal settings convenience methods
+    
+    /**
+     * Check if journaling is enabled for the current user
+     */
+    public static boolean isJournalEnabled() {
+        return "true".equals(getProperty("journal.enabled"));
+    }
+    
+    /**
+     * Check if voice input is enabled for journaling
+     */
+    public static boolean isJournalVoiceEnabled() {
+        return "true".equals(getProperty("journal.voice.enabled"));
+    }
+    
+    /**
+     * Get the voice engine setting (vosk, whisper_api, none)
+     */
+    public static String getJournalVoiceEngine() {
+        return (String) getProperty("journal.voice.engine");
+    }
+    
+    /**
+     * Get the enrichment mode (OFF, LOCAL, CLOUD_OPT_IN)
+     */
+    public static String getJournalEnrichmentMode() {
+        return (String) getProperty("journal.enrichment.mode");
+    }
+    
+    /**
+     * Check if auto-parsing of journal entries is enabled
+     */
+    public static boolean isJournalAutoParse() {
+        return "true".equals(getProperty("journal.autoParse"));
+    }
+    
+    /**
+     * Get the raw data retention period in days (null means keep forever)
+     */
+    public static Integer getJournalRetentionDays() {
+        Object value = getProperty("journal.retention.rawDays");
+        if (value == null) return null;
+        if (value instanceof Integer) return (Integer) value;
+        if (value instanceof String) {
+            try {
+                return Integer.parseInt((String) value);
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return null;
     }
 }

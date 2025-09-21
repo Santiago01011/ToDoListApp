@@ -1,6 +1,7 @@
 package model;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -24,6 +25,7 @@ public final class Task {
     private final LocalDateTime last_sync;
     private final String folder_id;
     private final String folder_name;
+    private final Map<String, String> metadata; // For journal backlinks and other metadata
 
     // Private constructor - only Builder can create instances
     private Task(Builder builder) {
@@ -39,6 +41,7 @@ public final class Task {
         this.last_sync = builder.last_sync;
         this.folder_id = builder.folder_id;
         this.folder_name = builder.folder_name;
+        this.metadata = builder.metadata != null ? Map.copyOf(builder.metadata) : Map.of();
     }
 
     // Jackson constructor for JSON deserialization
@@ -55,7 +58,8 @@ public final class Task {
         @JsonProperty("deleted_at") LocalDateTime deleted_at,
         @JsonProperty("last_sync") LocalDateTime last_sync,
         @JsonProperty("folder_id") String folder_id,
-        @JsonProperty("folder_name") String folder_name
+        @JsonProperty("folder_name") String folder_name,
+        @JsonProperty("metadata") Map<String, String> metadata
     ) {
         this.task_id = task_id;
         this.task_title = task_title;
@@ -69,6 +73,7 @@ public final class Task {
         this.last_sync = last_sync;
         this.folder_id = folder_id;
         this.folder_name = folder_name;
+        this.metadata = metadata != null ? Map.copyOf(metadata) : Map.of();
     }
 
     /**
@@ -93,7 +98,8 @@ public final class Task {
             .deletedAt(this.deleted_at)
             .lastSync(this.last_sync)
             .folderId(this.folder_id)
-            .folderName(this.folder_name);
+            .folderName(this.folder_name)
+            .metadata(this.metadata);
     }
 
     // Convenience "with" methods for common updates
@@ -140,6 +146,7 @@ public final class Task {
         private LocalDateTime last_sync;
         private String folder_id;
         private String folder_name;
+        private Map<String, String> metadata;
 
         public Builder() {}
 
@@ -199,6 +206,11 @@ public final class Task {
 
         public Builder folderName(String folder_name) {
             this.folder_name = folder_name;
+            return this;
+        }
+
+        public Builder metadata(Map<String, String> metadata) {
+            this.metadata = metadata;
             return this;
         }
 
@@ -274,6 +286,10 @@ public final class Task {
 
     public String getFolder_name() {
         return folder_name;
+    }
+
+    public Map<String, String> getMetadata() {
+        return metadata;
     }
 
     // Legacy compatibility methods (deprecated)

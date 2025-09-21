@@ -41,14 +41,12 @@ public class CommandBatchSerializationTest {
         // Parse back to ensure structure exists
         Map<String, Object> parsed = JSONUtils.fromJsonString(json);
         assertTrue(parsed.containsKey("commands"));
-        @SuppressWarnings("unchecked")
         List<Map<String, Object>> cmds = (List<Map<String, Object>>) parsed.get("commands");
         assertEquals(1, cmds.size());
         
         // changedFields should be at root level of command, not in data
         Map<String, Object> command = cmds.get(0);
         assertTrue(command.containsKey("changedFields"));
-        @SuppressWarnings("unchecked")
         Map<String, Object> changedFields = (Map<String, Object>) command.get("changedFields");
         assertNotNull(changedFields);
         assertTrue(changedFields.containsKey("title"));

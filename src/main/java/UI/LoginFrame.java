@@ -8,7 +8,6 @@ import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import java.awt.Cursor;
-import java.awt.Font;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 
@@ -47,7 +46,7 @@ public class LoginFrame extends Frame{
         headerPanel.setOpaque(false);
         
         JLabel titleLabel = new JLabel("Login");
-        titleLabel.setFont(new Font("Dialog", Font.BOLD, 30));
+        titleLabel.setFont(UIConstants.TITLE_FONT_LARGE);
         titleLabel.requestFocusInWindow();
         
         JButton toggleColorButton = new JButton(common.getModeIcon());
@@ -76,8 +75,8 @@ public class LoginFrame extends Frame{
         add(loginButton, "w 100!, center, wrap");
         add(registerLabel, "center");
 
-        addFocusListeners(usernameField, "Username");
-        addFocusListeners(passwordField, "Password");
+        UIUtils.addPlaceholderText(usernameField, "Username");
+        UIUtils.addPlaceholderText(passwordField, "Password");
 
         usernameField.addActionListener(e -> loginButton.doClick());
         passwordField.addActionListener(e -> loginButton.doClick());

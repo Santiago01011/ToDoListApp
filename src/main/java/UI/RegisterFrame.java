@@ -1,6 +1,5 @@
 package UI;
 
-import COMMON.UserProperties;
 import COMMON.common;
 import controller.UserController;
 
@@ -35,48 +34,48 @@ public class RegisterFrame extends Frame {
     private void addRegisterUIComponents() {
 
         titleLabel = new JLabel("Register", SwingConstants.CENTER);
-        titleLabel.setFont(new Font("Dialog", Font.BOLD, 25));
+        titleLabel.setFont(UIConstants.TITLE_FONT_MEDIUM);
         titleLabel.setBounds(140, 50, 100, 30);
 
         JTextField usernameField = new JTextField("Username");
-        usernameField.setFont(new Font("Dialog", Font.PLAIN, 15));
+        usernameField.setFont(UIConstants.FIELD_FONT);
         usernameField.setBounds(90, 100, 200, 30);
 
         JTextField emailField = new JTextField("Email");
-        emailField.setFont(new Font("Dialog", Font.PLAIN, 15));
+        emailField.setFont(UIConstants.FIELD_FONT);
         emailField.setBounds(90, 150, 200, 30);
 
         JPasswordField passwordField = new JPasswordField("Password");
-        passwordField.setFont(new Font("Dialog", Font.PLAIN, 15));
+        passwordField.setFont(UIConstants.FIELD_FONT);
         passwordField.setBounds(90, 200, 200, 30);
 
         JPasswordField rePasswordField = new JPasswordField("Password");
-        rePasswordField.setFont(new Font("Dialog", Font.PLAIN, 15));
+        rePasswordField.setFont(UIConstants.FIELD_FONT);
         rePasswordField.setBounds(90, 250, 200, 30);
 
         ImageIcon toggleColorIcon = common.getModeIcon();
         JButton toggleColorButton = new JButton(toggleColorIcon);
-        toggleColorButton.setFont(new Font("Dialog", Font.BOLD, 12));
+        toggleColorButton.setFont(UIConstants.BUTTON_FONT);
         toggleColorButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         toggleColorButton.setBounds(340, 20, 30, 30);
         toggleColorButton.setToolTipText("Toggle color mode");
 
         ImageIcon backIcon = common.getBackIcon();
         JButton backButton = new JButton(backIcon);
-        backButton.setFont(new Font("Dialog", Font.BOLD, 12));
+        backButton.setFont(UIConstants.BUTTON_FONT);
         backButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         backButton.setBounds(15, 20, 30, 30);
         backButton.setToolTipText("Back");
 
         JButton registerButton = new JButton("Register");
-        registerButton.setFont(new Font("Dialog", Font.BOLD, 12));
+        registerButton.setFont(UIConstants.BUTTON_FONT);
         registerButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
         registerButton.setBounds(140, 300, 100, 30);
 
-        addFocusListeners(usernameField, "Username");
-        addFocusListeners(emailField, "Email");
-        addFocusListeners(passwordField, "Password");
-        addFocusListeners(rePasswordField, "Password");
+        UIUtils.addPlaceholderText(usernameField, "Username");
+        UIUtils.addPlaceholderText(emailField, "Email");
+        UIUtils.addPlaceholderText(passwordField, "Password");
+        UIUtils.addPlaceholderText(rePasswordField, "Password");
         addRegisterActionListeners(usernameField, emailField, passwordField, rePasswordField, toggleColorButton,
                 backButton, registerButton);
 

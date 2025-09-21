@@ -1,8 +1,5 @@
 package UI.components;
 
-import java.awt.Cursor;
-import java.awt.Frame;
-import java.awt.event.ActionListener;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -19,11 +16,11 @@ import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
 
 import COMMON.common;
+import UI.UIUtils;
 import model.TaskStatus;
 import net.miginfocom.swing.MigLayout;
 import raven.datetime.DatePicker;
 import raven.datetime.TimePicker;
-
 
 public class NewTaskPanel extends JPanel {
     public interface Listener {
@@ -40,14 +37,13 @@ public class NewTaskPanel extends JPanel {
         add(new JLabel("New Task"), "wrap");
 
         JTextField titleField = new JTextField("Enter task title...");
-        addFocusListeners(titleField, "Enter task title...");
+        UIUtils.addPlaceholderText(titleField, "Enter task title...");
         
         add(new JLabel("Title:"), "split 2"); add(titleField, "growx, wrap");
 
         JTextArea descArea = new JTextArea(3,10);
         descArea.setLineWrap(true); descArea.setWrapStyleWord(true);
         add(new JLabel("Description:"), "split 2"); add(new JScrollPane(descArea), "growx, wrap");
-
 
         datePicker = new DatePicker(); datePicker.setDateFormat("dd/MM/yyyy"); datePicker.setCloseAfterSelected(true);
         timePicker = new TimePicker(); timePicker.set24HourView(true);
@@ -62,8 +58,7 @@ public class NewTaskPanel extends JPanel {
         add(new JLabel("Status:"), "split 2"); add(statusBox, "growx, wrap");
 
         JButton saveBtn = new JButton("Save");
-        saveBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        saveBtn.setToolTipText("Save Task");
+        UIUtils.styleButton(saveBtn, "Save Task");
         saveBtn.addActionListener(e -> {
             String title = titleField.getText().trim();
             if (title.isEmpty() || title.equals("Enter task title...")) {
@@ -83,10 +78,8 @@ public class NewTaskPanel extends JPanel {
             datePicker.clearSelectedDate();
             timePicker.clearSelectedTime();
         });
-        JButton cancelBtn = new JButton(common.getBackIcon()); cancelBtn.setToolTipText("Cancel");
-        cancelBtn.setBorderPainted(false);
-        cancelBtn.setContentAreaFilled(false);
-        cancelBtn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        JButton cancelBtn = new JButton(common.getBackIcon()); 
+        UIUtils.styleIconButton(cancelBtn, "Cancel");
         cancelBtn.addActionListener(e -> listener.onCancel());
         add(saveBtn, "split 2, growx, gapright 10");
         add(cancelBtn, "right, gapright 10, wrap");
@@ -97,25 +90,6 @@ public class NewTaskPanel extends JPanel {
             folderBox.removeAllItems();
             if (folders != null) folders.forEach(folderBox::addItem);
             if (folderBox.getItemCount()>0) folderBox.setSelectedIndex(0);
-        });
-    }
-
-    public void addFocusListeners(JTextField textField, String defaultText){
-        textField.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusGained(java.awt.event.FocusEvent e) {
-                if (textField.getText().equals(defaultText)) {
-                    textField.setText("");
-                }
-            }
-        });
-        textField.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusLost(java.awt.event.FocusEvent e) {
-                if (textField.getText().isEmpty()) {
-                    textField.setText(defaultText);
-                }
-            }
         });
     }
 }

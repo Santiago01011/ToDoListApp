@@ -45,4 +45,23 @@ public enum TaskStatus {
                 return null;
         }
     }
+
+    /**
+     * Robust parser that accepts enum names (any case), display labels, and hyphen/space variants.
+     * Examples: "in_progress", "In Progress", "in-progress" -> in_progress
+     */
+    public static TaskStatus parse(String value) {
+        if (value == null) return null;
+        String raw = value.trim();
+        if (raw.isEmpty()) return null;
+        // Try display labels first
+        TaskStatus byDisplay = getStringToStatus(raw);
+        if (byDisplay != null) return byDisplay;
+        // Normalize: hyphens/spaces -> underscores, to lower-case
+        String norm = raw.replace('-', '_').replace(' ', '_').toLowerCase();
+        for (TaskStatus ts : TaskStatus.values()) {
+            if (ts.name().equals(norm)) return ts;
+        }
+        return null;
+    }
 }

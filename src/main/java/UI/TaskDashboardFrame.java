@@ -1,12 +1,9 @@
 package UI;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
 import java.awt.Component;
 import java.awt.Container;
-import java.awt.Cursor;
 import java.awt.Dimension;
-import java.awt.Font;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
@@ -17,11 +14,8 @@ import java.awt.event.ActionEvent;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
-import java.util.HashSet;
 import java.util.Collections;
 import java.util.ArrayList;
-import java.util.function.Consumer;
-
 import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
@@ -29,7 +23,6 @@ import javax.swing.JScrollPane;
 import javax.swing.JViewport;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
-import java.awt.LayoutManager;
 
 import COMMON.UserProperties;
 import COMMON.common;
@@ -117,6 +110,7 @@ public class TaskDashboardFrame extends Frame {
             return;
         }
         initComponents();
+        setupKeyboardShortcuts();
         taskController.loadInitialFolderList();
         taskController.loadInitialTasks();
         updateLastSyncLabel();
@@ -273,111 +267,187 @@ public class TaskDashboardFrame extends Frame {
         });
     }
 
-    private void slideInNewTaskPanel() {
-        if (isNewTaskVisible) return;
-        isNewTaskVisible = true;
+    private void setupKeyboardShortcuts() {
+        // Get the input map and action map for the root pane
+        javax.swing.JRootPane rootPane = getRootPane();
+        javax.swing.InputMap inputMap = rootPane.getInputMap(javax.swing.JComponent.WHEN_IN_FOCUSED_WINDOW);
+        javax.swing.ActionMap actionMap = rootPane.getActionMap();
 
+        // Ctrl+N: New Task
+        inputMap.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_N, java.awt.event.InputEvent.CTRL_DOWN_MASK), "newTask");
+        actionMap.put("newTask", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (!isNewTaskVisible && !isHistoryVisible) {
+                    slideInNewTaskPanel();
+                }
+            }
+        });
+
+        // Ctrl+H: History
+        inputMap.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_H, java.awt.event.InputEvent.CTRL_DOWN_MASK), "history");
+        actionMap.put("history", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (!isNewTaskVisible && !isHistoryVisible) {
+                    taskController.handleHistoryRequest();
+                    displayTaskHistory();
+                }
+            }
+        });
+
+        // Ctrl+S: Sync
+        inputMap.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_S, java.awt.event.InputEvent.CTRL_DOWN_MASK), "sync");
+        actionMap.put("sync", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                taskController.handleSyncRequest();
+            }
+        });
+
+        // Escape: Close panels or cancel
+        inputMap.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ESCAPE, 0), "escape");
+        actionMap.put("escape", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (isNewTaskVisible) {
+                    slideOutNewTaskPanel();
+                    bottomBarPanel.enableBottomBarButtons();
+                } else if (isHistoryVisible) {
+                    slideOutHistoryPanel();
+                    bottomBarPanel.enableBottomBarButtons();
+                }
+            }
+        });
+
+        // Ctrl+F: Focus on folder filter
+        inputMap.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F, java.awt.event.InputEvent.CTRL_DOWN_MASK), "focusFilter");
+        actionMap.put("focusFilter", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                if (topBarPanel != null) {
+                    // This would need to be implemented in TopBarPanel to expose the combo box
+                    // For now, just request focus on the main panel
+                    mainPanel.requestFocusInWindow();
+                }
+            }
+        });
+
+        // F1: Show help (could open a help dialog)
+        inputMap.put(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_F1, 0), "help");
+        actionMap.put("help", new javax.swing.AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent e) {
+                javax.swing.JOptionPane.showMessageDialog(TaskDashboardFrame.this,
+                    "Keyboard Shortcuts:\n" +
+                    "• Ctrl+N: New Task\n" +
+                    "• Ctrl+H: History\n" +
+                    "• Ctrl+S: Sync\n" +
+                    "• Escape: Close panels\n" +
+                    "• F1: Show this help",
+                    "Keyboard Shortcuts",
+                    javax.swing.JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+    }
+
+    /**
+     * Generic slide animation method for panel transitions.
+     * @param slidingPanel The panel that slides in/out
+     * @param stationaryPanel The panel that stays or moves in opposite direction
+     * @param slideIn True for slide in, false for slide out
+     * @param fromRight True if sliding from right, false if from left
+     */
+    private void slidePanel(JPanel slidingPanel, JPanel stationaryPanel, boolean slideIn, boolean fromRight) {
         int width = contentContainer.getWidth();
         int totalSteps = Math.max(1, ANIMATION_DURATION / TIMER_DELAY);
         int delta = Math.max(1, width / totalSteps);
 
         Timer timer = new Timer(TIMER_DELAY, null);
         timer.addActionListener(e -> {
-            Point mainLoc = mainPanel.getLocation();
-            Point newLoc  = newTaskPanel.getLocation();
+            Point stationaryLoc = stationaryPanel.getLocation();
+            Point slidingLoc = slidingPanel.getLocation();
 
-            if (newLoc.x <= 0) {
-                newTaskPanel.setLocation(0, 0);
-                mainPanel.setLocation(-width, 0);
-                timer.stop();
+            if (slideIn) {
+                // Slide in animation
+                if (fromRight) {
+                    // Sliding from right (history panel)
+                    if (slidingLoc.x >= 0) {
+                        slidingPanel.setLocation(0, 0);
+                        stationaryPanel.setLocation(width, 0);
+                        timer.stop();
+                    } else {
+                        stationaryPanel.setLocation(stationaryLoc.x + delta, 0);
+                        slidingPanel.setLocation(slidingLoc.x + delta, 0);
+                    }
+                } else {
+                    // Sliding from left (new task panel)
+                    if (slidingLoc.x <= 0) {
+                        slidingPanel.setLocation(0, 0);
+                        stationaryPanel.setLocation(-width, 0);
+                        timer.stop();
+                    } else {
+                        stationaryPanel.setLocation(stationaryLoc.x - delta, 0);
+                        slidingPanel.setLocation(slidingLoc.x - delta, 0);
+                    }
+                }
             } else {
-                mainPanel.setLocation(mainLoc.x - delta, 0);
-                newTaskPanel.setLocation(newLoc.x - delta, 0);
+                // Slide out animation
+                if (fromRight) {
+                    // Sliding to right (history panel)
+                    if (stationaryLoc.x <= 0) {
+                        stationaryPanel.setLocation(0, 0);
+                        slidingPanel.setLocation(-width, 0);
+                        timer.stop();
+                    } else {
+                        stationaryPanel.setLocation(stationaryLoc.x - delta, 0);
+                        slidingPanel.setLocation(slidingLoc.x - delta, 0);
+                    }
+                } else {
+                    // Sliding to left (new task panel)
+                    if (stationaryLoc.x >= 0) {
+                        stationaryPanel.setLocation(0, 0);
+                        slidingPanel.setLocation(width, 0);
+                        timer.stop();
+                    } else {
+                        stationaryPanel.setLocation(stationaryLoc.x + delta, 0);
+                        slidingPanel.setLocation(slidingLoc.x + delta, 0);
+                    }
+                }
             }
         });
         timer.start();
+    }
+
+    private void slideInNewTaskPanel() {
+        if (isNewTaskVisible) return;
+        isNewTaskVisible = true;
+        slidePanel(newTaskPanel, mainPanel, true, false); // slide in from left
     }
 
     private void slideOutNewTaskPanel() {
         if (!isNewTaskVisible) return;
         isNewTaskVisible = false;
-
-        int width = contentContainer.getWidth();
-        int totalSteps = Math.max(1, ANIMATION_DURATION / TIMER_DELAY);
-        int delta = Math.max(1, width / totalSteps);
-
-        Timer timer = new Timer(TIMER_DELAY, null);
-        timer.addActionListener(e -> {
-            Point mainLoc = mainPanel.getLocation();
-            Point newLoc  = newTaskPanel.getLocation();
-
-            if (mainLoc.x >= 0) {
-                mainPanel.setLocation(0, 0);
-                newTaskPanel.setLocation(width, 0);
-                timer.stop();
-            } else {
-                mainPanel.setLocation(mainLoc.x + delta, 0);
-                newTaskPanel.setLocation(newLoc.x + delta, 0);
-            }
-        });
-        timer.start();
+        slidePanel(newTaskPanel, mainPanel, false, false); // slide out to left
     }
 
     private void slideInHistoryPanel() {
         if (isHistoryVisible) return;
         isHistoryVisible = true;
-
-        int width = contentContainer.getWidth();
-        int totalSteps = Math.max(1, ANIMATION_DURATION / TIMER_DELAY);
-        int delta = Math.max(1, width / totalSteps);
-
-        Timer timer = new Timer(TIMER_DELAY, null);
-        timer.addActionListener(e -> {
-            Point mainLoc = mainPanel.getLocation();
-            Point historyLoc = historyPanel.getLocation();
-
-            if (historyLoc.x >= 0) {
-                historyPanel.setLocation(0, 0);
-                mainPanel.setLocation(width, 0);
-                timer.stop();
-            } else {
-                mainPanel.setLocation(mainLoc.x + delta, 0);
-                historyPanel.setLocation(historyLoc.x + delta, 0);
-            }
-        });
-        timer.start();
+        slidePanel(historyPanel, mainPanel, true, true); // slide in from right
     }    
     
     private void slideOutHistoryPanel() {
         if (!isHistoryVisible) return;
         isHistoryVisible = false;
-
-        int width = contentContainer.getWidth();
-        int totalSteps = Math.max(1, ANIMATION_DURATION / TIMER_DELAY);
-        int delta = Math.max(1, width / totalSteps);
-
-        Timer timer = new Timer(TIMER_DELAY, null);
-        timer.addActionListener(e -> {
-            Point mainLoc = mainPanel.getLocation();
-            Point historyLoc = historyPanel.getLocation();
-
-            if (mainLoc.x <= 0) {
-                mainPanel.setLocation(0, 0);
-                historyPanel.setLocation(-width, 0);
-                timer.stop();
-            } else {
-                mainPanel.setLocation(mainLoc.x - delta, 0);
-                historyPanel.setLocation(historyLoc.x - delta, 0);
-            }
-        });
-        timer.start();
+        slidePanel(historyPanel, mainPanel, false, true); // slide out to right
     }
 
     /**
      * Displays the task history by sliding in the history panel
      * and loading task history data from the controller.
      */
-    private void displayTaskHistory() {
+    public void displayTaskHistory() {
         slideInHistoryPanel();
         List<Task> taskHistory = taskController.getTaskHistory();
         historyPanel.displayTaskHistory(taskHistory);
@@ -463,8 +533,16 @@ public class TaskDashboardFrame extends Frame {
                 
                 activeEditCardPanel = cardPanel;
                 editTaskCardPanel = new EditTaskPanel(new EditTaskPanel.Listener() {
-                    public void onSaveEdit(String title, String desc, String folder, LocalDateTime due, TaskStatus status) {
-                        taskController.handleEditTaskRequest(taskToEdit.getTask_id(), title, desc, folder, due, status);
+                    public void onUpdate(Task updatedTask) {
+                        // Save the task updates through the controller
+                        taskController.handleEditTaskRequest(
+                            updatedTask.getTask_id(),
+                            updatedTask.getTitle(),
+                            updatedTask.getDescription(),
+                            updatedTask.getFolder_name(),
+                            updatedTask.getDue_date(),
+                            updatedTask.getStatus()
+                        );
                         
                         final int editPosition = findComponentPosition(editTaskCardPanel);
                         
@@ -486,7 +564,7 @@ public class TaskDashboardFrame extends Frame {
                         });
                     }
                     
-                    public void onCancelEdit() {
+                    public void onCancel() {
                         final int editPosition = findComponentPosition(editTaskCardPanel);
                         
                         final int originalCardHeight = cardPanel.getPreferredSize().height;
@@ -505,7 +583,9 @@ public class TaskDashboardFrame extends Frame {
                             activeEditCardPanel = null;
                         });
                     }
-                }, taskToEdit);
+                });
+                
+                editTaskCardPanel.setTask(taskToEdit);
                 
                 editTaskCardPanel.setFolders(currentFolderList);
                 taskListPanel.add(editTaskCardPanel, "growx, gapbottom 10, h 0!", position);

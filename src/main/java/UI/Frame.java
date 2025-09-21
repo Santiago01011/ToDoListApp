@@ -1,10 +1,7 @@
 package UI;
 
-import java.awt.Font;
-
 import javax.swing.ImageIcon;
 import javax.swing.JFrame;
-import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.SwingUtilities;
 
@@ -25,25 +22,6 @@ public class Frame extends JFrame{
         setIconImage(appIcon.getImage());
     }
 
-
-    public void addFocusListeners(JTextField textField, String defaultText){
-        textField.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusGained(java.awt.event.FocusEvent e) {
-                if (textField.getText().equals(defaultText)) {
-                    textField.setText("");
-                }
-            }
-        });
-        textField.addFocusListener(new java.awt.event.FocusAdapter() {
-            @Override
-            public void focusLost(java.awt.event.FocusEvent e) {
-                if (textField.getText().isEmpty()) {
-                    textField.setText(defaultText);
-                }
-            }
-        });
-    }
 
     private void applyThemeDefaults() {
         try {

@@ -2,9 +2,9 @@ package model;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import model.TaskStatus;
 
 /**
  * Immutable Task class following the command queue pattern.
@@ -72,10 +72,10 @@ public final class Task {
     }
 
     /**
-     * Factory method to create a new Builder
+     * Factory method to create a new Builder with auto-generated task ID
      */
     public static Builder builder() {
-        return new Builder();
+        return new Builder(UUID.randomUUID().toString());
     }
 
     /**

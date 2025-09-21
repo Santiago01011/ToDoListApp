@@ -1,6 +1,5 @@
 package model;
 
-import java.util.Collections;
 import java.util.Set;
 
 public record FiltersCriteria(String folderName, Set<TaskStatus> statuses) {

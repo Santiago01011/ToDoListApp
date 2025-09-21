@@ -1,7 +1,5 @@
 package UI.components;
 
-import java.awt.Cursor;
-import java.awt.Font;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -10,7 +8,6 @@ import java.util.Map;
 import java.util.EnumMap;
 import java.util.Arrays;
 
-import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
@@ -21,11 +18,12 @@ import javax.swing.JMenuItem;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JRadioButtonMenuItem;
-import javax.swing.SwingConstants;
 
 import COMMON.common;
 import model.TaskStatus;
 import net.miginfocom.swing.MigLayout;
+import UI.UIConstants;
+import UI.UIUtils;
 
 public class TopBarPanel extends JPanel {
     public interface Listener {
@@ -61,7 +59,7 @@ public class TopBarPanel extends JPanel {
         JLabel logoLabel = new JLabel(common.getAppIcon());
         add(logoLabel, "gapright 10");
         JLabel titleLabel = new JLabel("TaskFlow");
-        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 21f));
+        titleLabel.setFont(UIConstants.TITLE_FONT_SMALL);
         add(titleLabel, "gapright 15, aligny center");
         
         folderFilterBox = new JComboBox<>();
@@ -73,28 +71,21 @@ public class TopBarPanel extends JPanel {
         add(folderFilterBox, "width 150!");
         
         JButton filterButton = new JButton(common.getFilterIcon());
-        styleIcon(filterButton, "Filter Tasks");
+        UIUtils.styleIconButton(filterButton, "Filter Tasks");
         createFilterPopup();
         filterButton.addActionListener(e -> filterPopupMenu.show(filterButton, 0, filterButton.getHeight()));
         add(filterButton, "gapright 15");
 
         JButton userButton = new JButton(common.getUserConfigIcon());
-        styleIcon(userButton, "User Profile");
+        UIUtils.styleIconButton(userButton, "User Profile");
         createUserPopup();
         userButton.addActionListener(e -> userPopupMenu.show(userButton, 0, userButton.getHeight()));
         add(userButton);
 
         toggleColorButton = new JButton(common.getModeIcon());
-        styleIcon(toggleColorButton, "Toggle color mode");
+        UIUtils.styleIconButton(toggleColorButton, "Toggle color mode");
         toggleColorButton.addActionListener(e -> listener.onToggleTheme());
         add(toggleColorButton, "aligny center, gapleft 10");
-    }
-
-    private void styleIcon(JButton btn, String tip) {
-        btn.setToolTipText(tip);
-        btn.setBorderPainted(false);
-        btn.setContentAreaFilled(false);
-        btn.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
     private void createFilterPopup() {

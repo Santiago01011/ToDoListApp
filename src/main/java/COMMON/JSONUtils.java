@@ -52,8 +52,9 @@ public class JSONUtils {
             file.getParentFile().mkdirs();
             Map<String, Object> emptyStructure = new HashMap<>();
             emptyStructure.put("data", new ArrayList<List<Object>>());
-            emptyStructure.put("columns", List.of("folder_id", "folder_name", "task_id", "task_title", "description", "sync_status", "status", "due_date", "created_at"));
+            emptyStructure.put("columns", List.of("folder_id", "folder_name", "task_id", "task_title", "description", "sync_status", "last_sync", "status", "due_date", "created_at", "deleted_at"));
             emptyStructure.put("last_sync", null);
+            emptyStructure.put("folders", new ArrayList<>());
             
             MAPPER.writeValue(file, emptyStructure);
         } catch (IOException e) {
@@ -138,6 +139,17 @@ public class JSONUtils {
      */
     public static Map<String, Object> fromJsonString(String json) throws IOException {
         return MAPPER.readValue(json, new TypeReference<Map<String, Object>>() {});
+    }
+
+    /**
+     * Converts a JSON string representing an array of objects to a List of Maps.
+     *
+     * @param json The JSON string to convert (e.g., "[{\"a\":1},{\"b\":2}]")
+     * @return A List of Map entries
+     * @throws IOException If there is an error converting the JSON
+     */
+    public static List<Map<String, Object>> fromJsonListOfMaps(String json) throws IOException {
+        return MAPPER.readValue(json, new TypeReference<List<Map<String, Object>>>() {});
     }
     
     /**

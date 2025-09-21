@@ -91,12 +91,9 @@ class TaskStatusTest {
         @Test
         @DisplayName("Should handle null input in getStatusToString")
         void testGetStatusToStringWithNull() {
-            // Assuming the method handles null gracefully
-            // If not, this test should expect an exception
-            assertDoesNotThrow(() -> {
-                String result = TaskStatus.getStatusToString(null);
-                // Result could be null or a default string
-                assertTrue(result == null || result.equals("Unknown") || result.equals(""));
+            // The method throws NullPointerException for null input
+            assertThrows(NullPointerException.class, () -> {
+                TaskStatus.getStatusToString(null);
             });
         }
 

@@ -1,16 +1,17 @@
 package service;
 
 import model.Task;
-import model.TaskHandler;
-import model.TaskStatus;
+import model.Folder;
+import model.TaskHandlerV2;
+import model.commands.CommandQueue;
+import model.commands.Command;
+import service.sync.CommandConverter;
+import service.sync.ResponseApplier;
 import model.sync.CommandBatch;
-import model.sync.CommandFactory;
 import model.sync.SyncCommand;
 import model.sync.SyncResponse;
-import COMMON.UserProperties;
 
 import java.io.IOException;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,11 +23,10 @@ import java.util.concurrent.CompletableFuture;
  * Replaces the direct database sync functionality in DBHandler.
  */
 public class SyncService {
-    private TaskHandler taskHandler;
+    private TaskHandlerV2 taskHandlerV2; // New command-based handler
     private String userUUID;
-
-    public SyncService(TaskHandler taskHandler) {
-        this.taskHandler = taskHandler;
+    public SyncService(TaskHandlerV2 taskHandlerV2) {
+        this.taskHandlerV2 = taskHandlerV2;
     }
 
     public void setUserUUID(String userUUID) {
@@ -59,36 +59,121 @@ public class SyncService {
      * Performs the actual sync with the API V2 command endpoint.
      */
     private void syncWithAPI() throws IOException, InterruptedException {
-        LocalDateTime syncStartTime = LocalDateTime.now();
-        LocalDateTime lastSync = taskHandler.getLastSync();
+    java.time.OffsetDateTime syncStartTime = java.time.OffsetDateTime.now();
+    java.time.LocalDateTime lastSync = taskHandlerV2.getLastSync();
 
-        // Build command batch
-        List<SyncCommand> commands = buildSyncCommands();
+    // Build command batch from the command queue
+    List<SyncCommand> commands = buildSyncCommands();
         
         System.out.println("SyncService: Built " + commands.size() + " commands for sync");
+
+    // Convert local lastSync (LocalDateTime) to OffsetDateTime for transport if present
+    java.time.OffsetDateTime lastSyncOffset = lastSync != null ? lastSync.atOffset(java.time.ZoneOffset.systemDefault().getRules().getOffset(java.time.Instant.now())) : null;
 
         CommandBatch batch = new CommandBatch(
             userUUID,
             syncStartTime,
-            lastSync,
+            lastSyncOffset,
             commands
         );
+        
+        // Optimization: Add folder version to request for conditional fetching
+        List<Folder> cachedFolders = taskHandlerV2.getFoldersList();
+        if (!cachedFolders.isEmpty()) {
+            // Get current folder version from cache (would be provided by server in real impl)
+            String currentFolderVersion = String.valueOf(cachedFolders.hashCode()); // Simplified version
+            batch.setFolderVersion(currentFolderVersion);
+        } else {
+            // First sync - request folders
+            batch.setIncludeFolders(true);
+        }
+
+        // Debug: Log the request being sent
+        System.out.println("SyncService: Sending optimized batch to API:");
+        System.out.println("  - User UUID: " + userUUID);
+        System.out.println("  - Client Timestamp: " + syncStartTime);
+        System.out.println("  - Last Sync: " + lastSync);
+        System.out.println("  - Command Count: " + commands.size());
+        System.out.println("  - Folder Version: " + batch.getFolderVersion());
+        System.out.println("  - Include Folders: " + batch.isIncludeFolders());
+        
+        if (!commands.isEmpty()) {
+            System.out.println("  - Commands: ");
+            for (SyncCommand cmd : commands) {
+                System.out.println("    * Type: " + cmd.getType() + ", EntityId: " + cmd.getEntityId() + ", CommandId: " + cmd.getCommandId());
+            }
+        }
 
         // Send to API
         try {
-            SyncResponse response = APIService.syncCommands(batch);
-
-            if (response.isSuccess()) {
-                System.out.println("SyncService: API V2 sync successful");
-                // Process the response
-                processSyncResponse(response);
-                
-                // Update last sync time
-                taskHandler.setLastSync(response.getServerTimestamp() != null ? 
-                    response.getServerTimestamp() : syncStartTime);
-            } else {
-                throw new RuntimeException("Sync failed: " + response.getErrorMessage());
+            // Debug: print detailed changedFields contents for UPDATE_TASK commands
+            if (!commands.isEmpty()) {
+                for (SyncCommand scmd : commands) {
+                    if ("UPDATE_TASK".equals(scmd.getType())) {
+                        Object data = scmd.getData();
+                        Object changedFields = scmd.getChangedFields();
+                        System.out.println("SyncService: UPDATE_TASK payload for entity " + scmd.getEntityId() + ": data=" + data + ", changedFields=" + changedFields);
+                    }
+                }
             }
+            SyncResponse response = APIService.syncCommands(batch);
+            
+            // Debug: Print full response structure
+            System.out.println("SyncService: Received response - Success commands: " + 
+                (response.getProcessedCommands() != null ? response.getProcessedCommands().size() : 0) +
+                ", Failed commands: " + (response.getFailedCommands() != null ? response.getFailedCommands().size() : 0) +
+                ", Server changes: " + (response.getServerChanges() != null ? response.getServerChanges().size() : 0) +
+                ", Conflicts: " + (response.getConflicts() != null ? response.getConflicts().size() : 0));
+
+            // Debug: Log server changes in detail (supports nested 'data' payload)
+            if (response.getServerChanges() != null && !response.getServerChanges().isEmpty()) {
+                System.out.println("SyncService: Server changes received:");
+                for (int i = 0; i < response.getServerChanges().size(); i++) {
+                    Map<String, Object> change = response.getServerChanges().get(i);
+                    String id = change.get("task_id") != null ? String.valueOf(change.get("task_id")) : String.valueOf(change.get("entityId"));
+                    String title = null;
+                    String status = null;
+                    Object dataObj = change.get("data");
+                    if (dataObj instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> p = (Map<String, Object>) dataObj;
+                        title = p.get("task_title") != null ? String.valueOf(p.get("task_title")) : (p.get("title") != null ? String.valueOf(p.get("title")) : null);
+                        status = p.get("status") != null ? String.valueOf(p.get("status")) : null;
+                    } else {
+                        title = change.get("task_title") != null ? String.valueOf(change.get("task_title")) : null;
+                        status = change.get("status") != null ? String.valueOf(change.get("status")) : null;
+                    }
+                    System.out.println("  [" + i + "] Task ID: " + id + 
+                        ", Title: " + title + 
+                        ", Status: " + status);
+                }
+            } else {
+                System.out.println("SyncService: No server changes received from API");
+            }
+
+            // Debug: Log processed commands
+            if (response.getProcessedCommands() != null && !response.getProcessedCommands().isEmpty()) {
+                System.out.println("SyncService: Processed commands:");
+                for (SyncResponse.CommandResult result : response.getProcessedCommands()) {
+                    System.out.println("  - Type: " + result.getCommandType() + 
+                        ", Client ID: " + result.getClientId() + 
+                        ", Server ID: " + result.getServerId() + 
+                        ", Success: " + result.isSuccess());
+                }
+            }
+
+            // Debug: Log failed commands
+            if (response.getFailedCommands() != null && !response.getFailedCommands().isEmpty()) {
+                System.out.println("SyncService: Failed commands:");
+                for (SyncResponse.CommandResult result : response.getFailedCommands()) {
+                    System.out.println("  - Type: " + result.getCommandType() + 
+                        ", Client ID: " + result.getClientId() + 
+                        ", Error: " + result.getErrorMessage());
+                }
+            }
+
+            // Delegate handling to a helper to make it testable
+            handleSyncResponse(response, syncStartTime);
         } catch (IOException | InterruptedException e) {
             System.err.println("SyncService: Network error during sync: " + e.getMessage());
             throw e;
@@ -104,197 +189,160 @@ public class SyncService {
     private List<SyncCommand> buildSyncCommands() {
         List<SyncCommand> commands = new ArrayList<>();
 
-        // Commands for new tasks
-        for (Task task : taskHandler.userTasksList) {
-            if ("new".equals(task.getSync_status())) {
-                commands.add(CommandFactory.createTaskCommand(task));
-            }
+        // Build commands from TaskHandlerV2's command queue
+        if (taskHandlerV2 == null) {
+            throw new IllegalStateException("SyncService requires a TaskHandlerV2 instance");
         }
-
-        // Commands for updated tasks (from shadow updates)
-        for (Task shadowTask : taskHandler.getShadowUpdatesForSync()) {
-            if (shadowTask.getDeleted_at() != null) {
-                commands.add(CommandFactory.deleteTaskCommand(shadowTask));
-            } else {
-                commands.add(CommandFactory.updateTaskCommand(shadowTask));
+        {
+            System.out.println("SyncService: Building commands from CommandQueue");
+            CommandQueue commandQueue = taskHandlerV2.getCommandQueue();
+            List<Command> pendingCommands = commandQueue.getPendingCommands();
+            
+            System.out.println("SyncService: Found " + pendingCommands.size() + " pending commands");
+            
+            for (Command command : pendingCommands) {
+                SyncCommand syncCommand = CommandConverter.toSyncCommand(command);
+                if (syncCommand != null) commands.add(syncCommand);
             }
-        }
+    }
 
         return commands;
     }
 
     /**
-     * Processes the response from the sync API and updates local task state.
+     * Convert a Command from the queue to a SyncCommand for API transmission
      */
-    private void processSyncResponse(SyncResponse response) {
-        int processedCommands = 0;
-        int serverChanges = 0;
-        int conflicts = 0;
+    // Command conversion delegated to CommandConverter
 
-        // Process successful command results
-        if (response.getProcessedCommands() != null) {
-            for (SyncResponse.CommandResult result : response.getProcessedCommands()) {
-                processCommandResult(result);
-                processedCommands++;
-            }
-        }
+    // Response processing is delegated to ResponseApplier
 
-        // Process server changes
-        if (response.getServerChanges() != null) {
-            for (Map<String, Object> changeData : response.getServerChanges()) {
-                processServerChange(changeData);
-                serverChanges++;
-            }
-        }
+    // Processing of command results and server changes is handled by ResponseApplier
 
-        // Handle conflicts (for now, server wins)
-        if (response.getConflicts() != null) {
-            for (SyncResponse.ConflictResult conflict : response.getConflicts()) {
-                System.out.println("SyncService: Conflict detected for entity " + conflict.getEntityId() + 
-                    ": " + conflict.getConflictType() + " (server wins)");
-                // For now, accept server data
-                processServerChange(conflict.getServerData());
-                conflicts++;
-            }
-        }
+    // Fetch/merge helpers moved to ResponseApplier
 
-        System.out.println("SyncService: Processed " + processedCommands + " commands, " + 
-            serverChanges + " server changes, " + conflicts + " conflicts");
-    }
-
-    /**
-     * Processes the result of a single command execution.
-     */
-    private void processCommandResult(SyncResponse.CommandResult result) {
-        if (!result.isSuccess()) {
-            System.err.println("Command failed - Client ID: " + result.getClientId() + 
-                ", Type: " + result.getCommandType() + 
-                ", Error: " + result.getErrorMessage());
+    // Post-sync: pull notifications and ack them
+    private void fetchAndProcessNotifications() throws IOException, InterruptedException {
+        List<Map<String, Object>> notifications = APIService.fetchPendingNotifications();
+        if (notifications == null || notifications.isEmpty()) {
+            System.out.println("SyncService: No pending notifications");
             return;
         }
 
-        String clientId = result.getClientId();
-        String serverId = result.getServerId();
+        System.out.println("SyncService: Processing " + notifications.size() + " notifications");
+        List<String> deliveredIds = new ArrayList<>();
 
-        switch (result.getCommandType()) {
-            case "CREATE":
-                // Update task ID from temporary client ID to server ID
-                Task newTask = taskHandler.userTasksList.stream()
-                    .filter(task -> task.getTask_id().equals(clientId))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (newTask != null) {
-                    newTask.setTask_id(serverId);
-                    newTask.setSync_status("cloud");
-                    newTask.setLast_sync(taskHandler.getLastSync());
-                }
-                break;
+        for (Map<String, Object> n : notifications) {
+            String notifId = n.get("notification_id") != null ? String.valueOf(n.get("notification_id")) : null;
+            String eventType = n.get("event_type") != null ? String.valueOf(n.get("event_type")) : null;
+            String entityType = n.get("entity_type") != null ? String.valueOf(n.get("entity_type")) : null;
+            String entityId = n.get("entity_id") != null ? String.valueOf(n.get("entity_id")) : null;
 
-            case "UPDATE":
-                // Clear shadow update and mark task as synced
-                taskHandler.clearShadowUpdate(clientId);
-                taskHandler.userTasksList.removeIf(t -> 
-                    "to_update".equals(t.getSync_status()) && t.getTask_id().equals(clientId));
-                
-                taskHandler.userTasksList.stream()
-                    .filter(t -> t.getTask_id().equals(clientId) && "local".equals(t.getSync_status()))
-                    .forEach(t -> {
-                        t.setSync_status("cloud");
-                        t.setLast_sync(taskHandler.getLastSync());
-                    });
-                break;
+            @SuppressWarnings("unchecked")
+            Map<String, Object> eventData = n.get("event_data") instanceof Map ? (Map<String, Object>) n.get("event_data") : null;
 
-            case "DELETE":
-                // Remove task from local list
-                taskHandler.userTasksList.removeIf(t -> t.getTask_id().equals(clientId));
-                taskHandler.clearShadowUpdate(clientId);
-                break;
-        }
-    }
+            System.out.println("SyncService: Notification - id=" + notifId + ", type=" + eventType + ", entity=" + entityType + ":" + entityId);
 
-    /**
-     * Processes a server change and updates local tasks accordingly.
-     */
-    private void processServerChange(Map<String, Object> changeData) {
-        String taskId = (String) changeData.get("task_id");
-        if (taskId == null) return;
-
-        // Convert server data to Task object
-        Task serverTask = convertServerDataToTask(changeData);
-        if (serverTask == null) return;
-
-        // Check if we have this task locally
-        Task localTask = taskHandler.getTaskById(taskId);
-        
-        if (localTask == null) {
-            // New task from server
-            taskHandler.userTasksList.add(serverTask);
-        } else {
-            // Update existing task if server version is newer
-            LocalDateTime serverLastSync = serverTask.getLast_sync();
-            LocalDateTime localLastSync = localTask.getLast_sync();
-            
-            if (serverLastSync != null && 
-                (localLastSync == null || serverLastSync.isAfter(localLastSync))) {
-                
-                int index = taskHandler.userTasksList.indexOf(localTask);
-                if (index >= 0) {
-                    taskHandler.userTasksList.set(index, serverTask);
+            if ("task".equalsIgnoreCase(entityType)) {
+                if ("task_deleted".equalsIgnoreCase(eventType)) {
+                    if (entityId != null) {
+                        taskHandlerV2.removeTaskById(entityId);
+                    }
+                } else if ("task_updated".equalsIgnoreCase(eventType) || "task_created".equalsIgnoreCase(eventType) || "SYNC_TASK".equalsIgnoreCase(eventType)) {
+                    Map<String, Object> wrapper = new HashMap<>();
+                    if (entityId != null) wrapper.put("entityId", entityId);
+                    if (eventData != null) wrapper.put("data", eventData);
+                    Task serverTask = ResponseApplier.convertServerDataToTask(wrapper);
+                    if (serverTask != null) {
+                        Task existing = taskHandlerV2.getTaskById(serverTask.getTask_id());
+                        if (existing == null) {
+                            taskHandlerV2.addOrReplaceTask(serverTask);
+                        } else {
+                            taskHandlerV2.addOrReplaceTask(serverTask);
+                        }
+                    }
                 }
             }
+
+            if (notifId != null) deliveredIds.add(notifId);
+        }
+
+        if (!deliveredIds.isEmpty()) {
+            boolean ack = APIService.markNotificationsDelivered(deliveredIds);
+            System.out.println("SyncService: Notifications ack result: " + ack + " (count=" + deliveredIds.size() + ")");
         }
     }
 
     /**
-     * Converts server change data to a Task object.
+     * Handle a SyncResponse: apply server changes, persist failures, remove acked commands,
+     * fetch notifications, and update last sync time. Extracted for testability.
      */
-    private Task convertServerDataToTask(Map<String, Object> data) {
+    public void handleSyncResponse(model.sync.SyncResponse response, java.time.OffsetDateTime syncStartTime) {
+        if (response == null) return;
+
+        // Always apply server changes so local state is updated even when some commands failed
         try {
-            Task.Builder builder = new Task.Builder((String) data.get("task_id"));
-            
-            if (data.containsKey("task_title")) {
-                builder.taskTitle((String) data.get("task_title"));
+            new ResponseApplier(taskHandlerV2).apply(response);
+        } catch (Exception apEx) {
+            System.err.println("SyncService: Error applying server changes: " + apEx.getMessage());
+        }
+
+        // Remove acknowledged commands (both processed successes and explicit failures) to avoid retry storms
+        java.util.Set<String> toRemove = new java.util.HashSet<>();
+        if (response.getProcessedCommands() != null) {
+            for (model.sync.SyncResponse.CommandResult r : response.getProcessedCommands()) {
+                if (r.getClientId() != null) toRemove.add(r.getClientId());
             }
-            if (data.containsKey("description")) {
-                builder.description((String) data.get("description"));
+        }
+        // Persist failed command details for diagnostics and also remove them from the queue
+        if (response.getFailedCommands() != null && !response.getFailedCommands().isEmpty()) {
+            java.util.List<java.util.Map<String, Object>> failures = new java.util.ArrayList<>();
+            for (model.sync.SyncResponse.CommandResult r : response.getFailedCommands()) {
+                java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                m.put("clientId", r.getClientId());
+                m.put("commandType", r.getCommandType());
+                m.put("entityId", r.getEntityId());
+                m.put("error", r.getErrorMessage());
+                failures.add(m);
+                if (r.getClientId() != null) toRemove.add(r.getClientId());
             }
-            if (data.containsKey("status")) {
-                try {
-                    builder.status(TaskStatus.valueOf((String) data.get("status")));
-                } catch (IllegalArgumentException e) {
-                    System.err.println("Invalid status value: " + data.get("status"));
-                    builder.status(TaskStatus.pending);
-                }
+            // Write failures to user data for later inspection
+            try {
+                String path = COMMON.UserProperties.getUserDataFilePath(userUUID, "failed_commands.json");
+                java.util.Map<String, Object> report = new java.util.LinkedHashMap<>();
+                report.put("timestamp", java.time.OffsetDateTime.now().toString());
+                report.put("failures", failures);
+                COMMON.JSONUtils.writeJsonFile(report, path);
+                System.err.println("SyncService: Persisted failed command report to: " + path);
+            } catch (Exception wex) {
+                System.err.println("SyncService: Could not persist failed commands: " + wex.getMessage());
             }
-            if (data.containsKey("due_date") && data.get("due_date") != null) {
-                builder.dueDate(LocalDateTime.parse((String) data.get("due_date")));
+        }
+
+        if (!toRemove.isEmpty()) {
+            try {
+                taskHandlerV2.getCommandQueue().removeCommands(toRemove);
+            } catch (Exception remEx) {
+                System.err.println("SyncService: Error removing commands from queue: " + remEx.getMessage());
             }
-            if (data.containsKey("created_at") && data.get("created_at") != null) {
-                builder.createdAt(LocalDateTime.parse((String) data.get("created_at")));
-            }
-            if (data.containsKey("updated_at") && data.get("updated_at") != null) {
-                builder.updatedAt(LocalDateTime.parse((String) data.get("updated_at")));
-            }
-            if (data.containsKey("last_sync") && data.get("last_sync") != null) {
-                builder.lastSync(LocalDateTime.parse((String) data.get("last_sync")));
-            }
-            if (data.containsKey("deleted_at") && data.get("deleted_at") != null) {
-                builder.deletedAt(LocalDateTime.parse((String) data.get("deleted_at")));
-            }
-            if (data.containsKey("folder_id")) {
-                builder.folderId((String) data.get("folder_id"));
-            }
-            if (data.containsKey("folder_name")) {
-                builder.folderName((String) data.get("folder_name"));
-            }
-            
-            builder.sync_status("cloud");
-            
-            return builder.build();
-        } catch (Exception e) {
-            System.err.println("Error converting server data to task: " + e.getMessage());
-            return null;
+        }
+
+        // After processing commands and server changes, pull notifications (if any)
+        try {
+            fetchAndProcessNotifications();
+        } catch (Exception notifEx) {
+            System.err.println("SyncService: Notification processing failed: " + notifEx.getMessage());
+        }
+
+        // Update last sync time - convert server timestamp (OffsetDateTime) to LocalDateTime
+        if (response.getServerTimestamp() != null) {
+            taskHandlerV2.setLastSync(response.getServerTimestamp().toLocalDateTime());
+        } else {
+            taskHandlerV2.setLastSync(syncStartTime.toLocalDateTime());
+        }
+        if (response.getFailedCommands() != null && !response.getFailedCommands().isEmpty()) {
+            System.err.println("SyncService: Sync completed with failures. See failed_commands.json for details.");
+        } else {
+            System.out.println("SyncService: API V2 sync successful");
         }
     }
 }

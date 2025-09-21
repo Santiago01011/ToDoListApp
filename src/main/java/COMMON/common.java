@@ -1,14 +1,18 @@
 package COMMON;
 
-import java.awt.Color;
 import java.io.InputStream;
 import java.util.Map;
 import java.util.HashMap;
 
 import javax.imageio.ImageIO;
-import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import java.awt.Image;
+import javax.swing.UIManager;
+import java.awt.Color;
+
+import com.formdev.flatlaf.extras.FlatSVGIcon;
+
+import model.TaskStatus;
 
 
 public class common {
@@ -18,115 +22,144 @@ public class common {
     public static boolean useNightMode = Boolean.valueOf((String) UserProperties.getProperty("darkTheme"));
 
     /*
-     * Methods to get the path of the icons based on the mode
+     * Methods to get SVG icons from the assets folder
+     * Icons are automatically colored to match the current theme's text color
      * The icons are stored in the assets folder in the resources directory
      * This should work in both development and production environments
-     * The method will return the path of the icon based on the current mode
      */
     public static ImageIcon getModeIcon(){
-        String path = useNightMode ? "assets/day_mode.png" : "assets/night_mode.png";
+        String path = useNightMode ? "icons/day_mode.svg" : "icons/night_mode.svg";
         return loadIcon(path);
     }
 
     public static ImageIcon getAppIcon(){
-        return loadIcon("assets/app_icon.png");
+        return loadIcon("icons/app_icon.svg");
     }
 
     public static ImageIcon getAddIcon(){
-        String path = useNightMode ? "assets/add_night.png" : "assets/add_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/add.svg");
     }
 
     public static ImageIcon getViewIcon(){
-        String path = useNightMode ? "assets/view_night.png" : "assets/view_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/view.svg");
     }
 
     public static ImageIcon getDeleteIcon(){
-        String path = useNightMode ? "assets/delete_night.png" : "assets/delete_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/delete.svg");
     }
 
     public static ImageIcon getBackIcon(){
-        String path = useNightMode ? "assets/back_night.png" : "assets/back_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/back.svg");
     }
 
     public static ImageIcon getEditIcon(){
-        String path = useNightMode ? "assets/edit_night.png" : "assets/edit_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/edit.svg");
     }
 
     public static ImageIcon getLogOutIcon(){
-        String path = useNightMode ? "assets/logout_night.png" : "assets/logout_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/logout.svg");
     }
 
     public static ImageIcon getUserConfigIcon(){
-        String path = useNightMode ? "assets/userConfig_night.png" : "assets/userConfig_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/userConfig.svg");
     }
 
     public static ImageIcon getSaveIcon(){
-        String path = useNightMode ? "assets/save_night.png" : "assets/save_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/save.svg");
     }
 
     public static ImageIcon getSyncIcon(){
-        String path = useNightMode ? "assets/sync_night.png" : "assets/sync_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/sync.svg");
     }
 
     public static ImageIcon getSettingsIcon() {
-        String path = useNightMode ? "assets/settings_night.png" : "assets/settings_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/settings.svg");
     }
 
     public static ImageIcon getFilterIcon() {
-        String path = useNightMode ? "assets/filter_night.png" : "assets/filter_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/filter.svg");
     }
 
     public static ImageIcon getRestoreIcon(){
-        String path = useNightMode ? "assets/restore_night.png" : "assets/restore_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/restore.svg");
     }
 
     // Added methods for user action icons
     public static ImageIcon getLogoutIcon() {
-        String path = useNightMode ? "assets/logout_night.png" : "assets/logout_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/logout.svg");
     }
 
     public static ImageIcon getEditUserIcon() {
-        String path = useNightMode ? "assets/editUser_night.png" : "assets/editUser_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/editUser.svg");
     }
 
     public static ImageIcon getDeleteUserIcon() {
-        String path = useNightMode ? "assets/deleteUser_night.png" : "assets/deleteUser_day.png";
-        return loadIcon(path);
+        return loadIcon("icons/deleteUser.svg");
     }
 
 
     public static void toggleColorMode(){
         useNightMode = !useNightMode;
+        // Clear icon cache so icons get reloaded with new theme colors
+        iconCache.clear();
         // Persist the theme preference immediately
         UserProperties.setProperty("darkTheme", String.valueOf(useNightMode));
+    }
+
+    // Status color methods for task status badges
+    public static String getStatusBackgroundColor(TaskStatus status) {
+        switch (status) {
+            case completed:
+                return "@StatusCompleted";
+            case in_progress:
+                return "@StatusInProgress";
+            case pending:
+                return "@StatusPending";
+            case incoming_due:
+                return "@StatusIncomingDue";
+            case overdue:
+                return "@StatusOverdue";
+            case newest:
+                return "@StatusNewest";
+            default:
+                return "$Component.borderColor";
+        }
     }
 
     private static ImageIcon loadIcon(String resourcePath){
         if (iconCache.containsKey(resourcePath)) {
             return iconCache.get(resourcePath);
         }
-        try (InputStream is = common.class.getClassLoader().getResourceAsStream(resourcePath)) {
-            if (is == null) {
-                System.err.println("Resource not found on classpath: " + resourcePath);
-                return null;
+
+        try {
+            ImageIcon icon;
+            if (resourcePath.endsWith(".svg")) {
+                // Handle SVG files using FlatLaf's built-in SVG support
+                FlatSVGIcon svgIcon = new FlatSVGIcon(resourcePath, 20, 20);
+                // Apply the current theme's label foreground color to the SVG icon
+                Color labelColor = UIManager.getColor("Label.foreground");
+                if (labelColor != null) {
+                    svgIcon.setColorFilter(new FlatSVGIcon.ColorFilter() {
+                        @Override
+                        public Color filter(Color color) {
+                            return labelColor;
+                        }
+                    });
+                }
+                icon = new ImageIcon(svgIcon.getImage());
+            } else {
+                // Handle PNG files as before
+                try (InputStream is = common.class.getClassLoader().getResourceAsStream(resourcePath)) {
+                    if (is == null) {
+                        System.err.println("Resource not found on classpath: " + resourcePath);
+                        return null;
+                    }
+                    Image image = ImageIO.read(is);
+                    image = image.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+                    icon = new ImageIcon(image);
+                }
             }
-            Image image = ImageIO.read(is);
-            image = image.getScaledInstance(20, 20, Image.SCALE_SMOOTH);
-            ImageIcon icon = new ImageIcon(image);
+
             iconCache.put(resourcePath, icon);
             return icon;
         } catch (Exception e) {

@@ -7,10 +7,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import javax.swing.UIManager;
 import javax.swing.SwingUtilities;
-import themes.CoffeYellow;
-import themes.NigthBlue;
 import COMMON.common;
-import COMMON.UserProperties;
 
 /**
  * Tests for Frame theme application functionality

@@ -7,8 +7,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 import javax.swing.UIManager;
 import javax.swing.ImageIcon;
-import themes.CoffeYellow;
-import themes.NigthBlue;
 
 /**
  * Tests for theme functionality in the common class

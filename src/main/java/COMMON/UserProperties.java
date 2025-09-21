@@ -38,8 +38,8 @@ public class UserProperties {
         properties.put("password", "");
         properties.put("lastSession", "");
         properties.put("userUUID", "");
-        properties.put("authApiUrl", "http://localhost:8080");
-        properties.put("dbUrl", "jdbc:postgresql://127.0.0.1:5431/todo_list?user=task_manager&password=task_manager_password");
+        properties.put("authApiUrl", "http://localhost:7071");
+        properties.put("dbUrl", "jdbc:postgresql://127.0.0.1:5431/todo_list?user=task_manager&password=securepassword");
         properties.put("token", "");
         saveProperties();
     }
@@ -59,7 +59,11 @@ public class UserProperties {
     }
 
     public static void saveProperties() {
-        try (Writer writer = new FileWriter(USER_PROPS_FILE)) {
+        // Use current user.home to support test environments
+        String currentUserHome = System.getProperty("user.home");
+        String currentUserPropsFile = currentUserHome + File.separator + ".todoapp" + File.separator + "user.yml";
+        
+        try (Writer writer = new FileWriter(currentUserPropsFile)) {
             Yaml yaml = new Yaml();
             yaml.dump(properties, writer);
         } catch (IOException e) {
@@ -90,6 +94,69 @@ public class UserProperties {
         // NOTE: User data (tasks.json, pending_commands.json, etc.) is preserved
         // in the user-specific directory: ~/.todoapp/users/{userId}/
         System.out.println("User logged out. Session cleared but user data preserved.");
+    }
+
+    /**
+     * FOR TESTING ONLY: Clear all properties and reset to defaults
+     * This method should only be used in test environments
+     */
+    public static void clearAllPropertiesForTesting() {
+        properties.clear();
+        createDefaultProperties();
+    }
+
+    /**
+     * FOR TESTING ONLY: Remove all test-related properties
+     * Removes properties that start with known test prefixes
+     */
+    public static void cleanupTestProperties() {
+        properties.entrySet().removeIf(entry -> {
+            String key = entry.getKey();
+            return key.startsWith("bulkTest") || 
+                   key.startsWith("concurrentTest") || 
+                   key.startsWith("longValueTest") ||
+                   key.startsWith("testProperty") ||
+                   key.startsWith("nullTest") ||
+                   key.startsWith("stringProp") ||
+                   key.startsWith("intProp") ||
+                   key.startsWith("boolProp") ||
+                   key.startsWith("doubleProp") ||
+                   key.startsWith("persistenceTest") ||
+                   key.startsWith("unicodeTest") ||
+                   key.contains("concurrentUserProp") ||
+                   key.equals("key-with_special.chars@123");
+        });
+        saveProperties();
+    }
+
+    /**
+     * FOR TESTING ONLY: Force reinitialize properties from the current user.home
+     * This allows tests to work with temporary directories
+     */
+    public static void reinitializeForTesting() {
+        // Update the file path based on current user.home
+        String currentUserHome = System.getProperty("user.home");
+        String currentBaseDir = currentUserHome + File.separator + ".todoapp";
+        String currentUserPropsFile = currentBaseDir + File.separator + "user.yml";
+        
+        try {
+            Files.createDirectories(Paths.get(currentBaseDir));
+            
+            // Load from the new location or create defaults
+            Yaml yaml = new Yaml();
+            if (Files.exists(Paths.get(currentUserPropsFile))) {
+                try (FileInputStream fis = new FileInputStream(currentUserPropsFile)) {
+                    Map<String, Object> loadedProps = yaml.load(fis);
+                    properties = loadedProps != null ? new HashMap<>(loadedProps) : new HashMap<>();
+                }
+            } else {
+                properties = new HashMap<>();
+                createDefaultProperties();
+            }
+        } catch (IOException e) {
+            properties = new HashMap<>();
+            createDefaultProperties();
+        }
     }
 
     private static void handleError(String message, Exception e) {

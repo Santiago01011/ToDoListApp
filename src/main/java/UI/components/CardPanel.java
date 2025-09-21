@@ -4,13 +4,7 @@ import java.awt.Color;
 import java.awt.LayoutManager;
 import javax.swing.JPanel;
 import javax.swing.UIManager;
-import javax.swing.border.EmptyBorder;
 import net.miginfocom.swing.MigLayout;
-import UI.components.RoundedLineBorder;
-import javax.swing.border.Border;
-import javax.swing.border.LineBorder;
-import java.awt.Insets;
-
 /**
  * A reusable card component with rounded corners and customizable appearance.
  * This class serves as a base for all card-like panels in the application.

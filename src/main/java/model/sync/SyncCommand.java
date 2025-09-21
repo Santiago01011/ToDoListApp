@@ -7,54 +7,64 @@ import java.util.Map;
 /**
  * Base sync command structure for API V2 command batch endpoint.
  * Represents an individual command operation (create, update, delete) for tasks.
+ * Uses the NEW format with "type" field and "entityId".
  */
 public class SyncCommand {
-    @JsonProperty("command_type")
-    private String commandType;
-    
-    @JsonProperty("entity_type") 
-    private String entityType;
-    
-    @JsonProperty("entity_id")
+    @JsonProperty("entityId")  // Required UUID of the task
     private String entityId;
     
-    @JsonProperty("client_id")
-    private String clientId;
+    @JsonProperty("type")  // Required: CREATE_TASK, UPDATE_TASK, DELETE_TASK
+    private String type;
     
-    @JsonProperty("timestamp")
+    @JsonProperty("data")  // Required: The task data
+    private Map<String, Object> data;
+    
+    @JsonProperty("timestamp")  // Optional timestamp
     private LocalDateTime timestamp;
     
-    @JsonProperty("data")
-    private Map<String, Object> data;
+    @JsonProperty("commandId")  // Optional command ID
+    private String commandId;
+    
+    @JsonProperty("changedFields")  // Optional: for UPDATE_TASK commands
+    private Map<String, Object> changedFields;
 
     public SyncCommand() {}
 
-    public SyncCommand(String commandType, String entityType, String entityId, String clientId, 
-                      LocalDateTime timestamp, Map<String, Object> data) {
-        this.commandType = commandType;
-        this.entityType = entityType;
+    public SyncCommand(String entityId, String type, Map<String, Object> data, 
+                      LocalDateTime timestamp, String commandId) {
         this.entityId = entityId;
-        this.clientId = clientId;
-        this.timestamp = timestamp;
+        this.type = type;
         this.data = data;
+        this.timestamp = timestamp;
+        this.commandId = commandId;
+    }
+
+    public SyncCommand(String entityId, String type, Map<String, Object> data, 
+                      LocalDateTime timestamp, String commandId, Map<String, Object> changedFields) {
+        this.entityId = entityId;
+        this.type = type;
+        this.data = data;
+        this.timestamp = timestamp;
+        this.commandId = commandId;
+        this.changedFields = changedFields;
     }
 
     // Getters and setters
-    public String getCommandType() { return commandType; }
-    public void setCommandType(String commandType) { this.commandType = commandType; }
-
-    public String getEntityType() { return entityType; }
-    public void setEntityType(String entityType) { this.entityType = entityType; }
-
     public String getEntityId() { return entityId; }
     public void setEntityId(String entityId) { this.entityId = entityId; }
 
-    public String getClientId() { return clientId; }
-    public void setClientId(String clientId) { this.clientId = clientId; }
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public Map<String, Object> getData() { return data; }
+    public void setData(Map<String, Object> data) { this.data = data; }
 
     public LocalDateTime getTimestamp() { return timestamp; }
     public void setTimestamp(LocalDateTime timestamp) { this.timestamp = timestamp; }
 
-    public Map<String, Object> getData() { return data; }
-    public void setData(Map<String, Object> data) { this.data = data; }
+    public String getCommandId() { return commandId; }
+    public void setCommandId(String commandId) { this.commandId = commandId; }
+
+    public Map<String, Object> getChangedFields() { return changedFields; }
+    public void setChangedFields(Map<String, Object> changedFields) { this.changedFields = changedFields; }
 }
